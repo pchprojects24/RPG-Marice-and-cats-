@@ -51,6 +51,7 @@
     <!-- HUD -->
     <div id="hud">
       <span id="floor-label">Main Floor</span>
+      <span id="quest-counter">Objectives: 0/3 cats fed</span>
       <span id="interact-prompt">E: Interact</span>
     </div>
 
@@ -122,6 +123,70 @@
         full hearts, and a perfect snuggle pile.
       </p>
       <button id="btn-restart" class="title-btn">Play Again</button>
+    </div>
+
+    <!-- Quest Log Panel -->
+    <div id="quest-panel">
+      <div class="quest-panel-header">
+        <h3>📋 Quest Log</h3>
+        <button id="btn-close-quest" class="close-btn">✕</button>
+      </div>
+      <div id="quest-list">
+        <div class="quest-item">
+          <span class="quest-icon">🐱</span>
+          <span class="quest-text">Find and feed Alice</span>
+          <span class="quest-status pending">⏳</span>
+        </div>
+        <div class="quest-item">
+          <span class="quest-icon">🐱</span>
+          <span class="quest-text">Find and feed Olive</span>
+          <span class="quest-status pending">⏳</span>
+        </div>
+        <div class="quest-item">
+          <span class="quest-icon">🐱</span>
+          <span class="quest-text">Find and feed Beatrice</span>
+          <span class="quest-status pending">⏳</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Menu -->
+    <div id="settings-panel">
+      <div class="settings-panel-header">
+        <h3>⚙️ Settings</h3>
+        <button id="btn-close-settings" class="close-btn">✕</button>
+      </div>
+      <div id="settings-content">
+        <div class="setting-item">
+          <label for="sfx-volume">Sound Effects Volume:</label>
+          <input type="range" id="sfx-volume" min="0" max="100" value="70">
+          <span id="sfx-value">70%</span>
+        </div>
+        <div class="setting-item">
+          <label for="music-volume">Music Volume:</label>
+          <input type="range" id="music-volume" min="0" max="100" value="50">
+          <span id="music-value">50%</span>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="screen-shake">
+            Enable Screen Shake Effects
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="particle-effects" checked>
+            Enable Particle Effects
+          </label>
+        </div>
+        <button id="btn-save-settings" class="title-btn">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Bottom Action Buttons -->
+    <div id="bottom-buttons">
+      <button id="btn-toggle-quest" class="hud-btn">📋</button>
+      <button id="btn-toggle-settings" class="hud-btn">⚙️</button>
     </div>
 
   </div>

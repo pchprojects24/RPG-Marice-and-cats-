@@ -166,6 +166,46 @@ function showToast(text, duration) {
   }, duration);
 }
 
+// ======================== QUEST TRACKING ========================
+
+function updateQuestCounter() {
+  const counter = document.getElementById('quest-counter');
+  const fed = [
+    gameState.flags.alice_fed,
+    gameState.flags.olive_fed,
+    gameState.flags.beatrice_fed
+  ].filter(Boolean).length;
+  counter.textContent = `Objectives: ${fed}/3 cats fed`;
+}
+
+function updateQuestList() {
+  const quests = document.querySelectorAll('.quest-item');
+
+  // Alice quest
+  const aliceStatus = quests[0].querySelector('.quest-status');
+  if (gameState.flags.alice_fed) {
+    aliceStatus.textContent = '✅';
+    aliceStatus.classList.remove('pending');
+    aliceStatus.classList.add('complete');
+  }
+
+  // Olive quest
+  const oliveStatus = quests[1].querySelector('.quest-status');
+  if (gameState.flags.olive_fed) {
+    oliveStatus.textContent = '✅';
+    oliveStatus.classList.remove('pending');
+    oliveStatus.classList.add('complete');
+  }
+
+  // Beatrice quest
+  const beatriceStatus = quests[2].querySelector('.quest-status');
+  if (gameState.flags.beatrice_fed) {
+    beatriceStatus.textContent = '✅';
+    beatriceStatus.classList.remove('pending');
+    beatriceStatus.classList.add('complete');
+  }
+}
+
 // ======================== INVENTORY ========================
 
 function addItem(itemId) {
@@ -185,6 +225,12 @@ function removeItem(itemId) {
     renderInventory();
     saveGame();
   }
+}
+
+// Update quest tracking when cats are fed
+function markCatFed(catName) {
+  updateQuestCounter();
+  updateQuestList();
 }
 
 const ITEM_DISPLAY = {
@@ -416,6 +462,7 @@ function handleInteraction(obj) {
         gameState.flags.alice_fed = true;
         startDialogue('alice_after', 'alice', function() {
           showToast('Alice hints about the sofa!');
+          markCatFed('alice');
           saveGame();
         });
       } else {
@@ -468,6 +515,7 @@ function handleInteraction(obj) {
           addItem('laundry_basket');
           gameState.flags.has_laundry_basket = true;
           showToast('Got Laundry Basket!');
+          markCatFed('olive');
           saveGame();
         });
       } else {
@@ -486,6 +534,7 @@ function handleInteraction(obj) {
         gameState.flags.beatrice_fed = true;
         gameState.flags.game_complete = true;
         startDialogue('beatrice_after', 'beatrice', function() {
+          markCatFed('beatrice');
           saveGame();
           showEnding();
         });
@@ -1718,12 +1767,16 @@ function startNewGame() {
   };
   renderInventory();
   updateFloorLabel();
+  updateQuestCounter();
+  updateQuestList();
   hideTitleScreen();
 }
 
 function continueGame() {
   renderInventory();
   updateFloorLabel();
+  updateQuestCounter();
+  updateQuestList();
   hideTitleScreen();
 }
 
@@ -1771,6 +1824,55 @@ function init() {
   // Dialogue overlay click to advance
   dialogueOverlay.addEventListener('click', function() {
     advanceDialogue();
+  });
+
+  // Quest panel toggle
+  const questPanel = document.getElementById('quest-panel');
+  const btnToggleQuest = document.getElementById('btn-toggle-quest');
+  const btnCloseQuest = document.getElementById('btn-close-quest');
+
+  btnToggleQuest.addEventListener('click', function() {
+    questPanel.classList.toggle('active');
+    // Close settings if open
+    document.getElementById('settings-panel').classList.remove('active');
+  });
+
+  btnCloseQuest.addEventListener('click', function() {
+    questPanel.classList.remove('active');
+  });
+
+  // Settings panel toggle
+  const settingsPanel = document.getElementById('settings-panel');
+  const btnToggleSettings = document.getElementById('btn-toggle-settings');
+  const btnCloseSettings = document.getElementById('btn-close-settings');
+
+  btnToggleSettings.addEventListener('click', function() {
+    settingsPanel.classList.toggle('active');
+    // Close quest if open
+    questPanel.classList.remove('active');
+  });
+
+  btnCloseSettings.addEventListener('click', function() {
+    settingsPanel.classList.remove('active');
+  });
+
+  // Settings volume sliders
+  const sfxVolume = document.getElementById('sfx-volume');
+  const sfxValue = document.getElementById('sfx-value');
+  const musicVolume = document.getElementById('music-volume');
+  const musicValue = document.getElementById('music-value');
+
+  sfxVolume.addEventListener('input', function() {
+    sfxValue.textContent = this.value + '%';
+  });
+
+  musicVolume.addEventListener('input', function() {
+    musicValue.textContent = this.value + '%';
+  });
+
+  document.getElementById('btn-save-settings').addEventListener('click', function() {
+    showToast('Settings saved!', 1500);
+    settingsPanel.classList.remove('active');
   });
 
   // Start game loop
