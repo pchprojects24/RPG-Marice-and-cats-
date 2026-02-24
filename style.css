@@ -477,7 +477,7 @@ html, body {
   text-shadow: 0 0 8px rgba(255,215,0,0.5);
 }
 
-#numpad-display {
+#numpad-input {
   background: #0d0d1a;
   border: 2px solid #4a3728;
   border-radius: 8px;
@@ -490,6 +490,11 @@ html, body {
   font-family: 'Courier New', monospace;
   min-height: 52px;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+  outline: none;
+}
+
+#numpad-input:focus {
+  border-color: #ffd700;
 }
 
 #numpad-error {
@@ -500,69 +505,24 @@ html, body {
   font-weight: bold;
 }
 
-#numpad-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 64px);
-  grid-template-rows: repeat(4, 56px);
-  gap: 8px;
-}
-
-.numpad-btn {
-  width: 64px;
-  height: 56px;
-  border: 2px solid #6b4226;
+.numpad-enter-btn {
+  padding: 10px 32px;
+  background: linear-gradient(180deg, #1a3a1a 0%, #102a10 100%);
+  border: 2px solid #2a7c2a;
   border-radius: 10px;
-  background: linear-gradient(180deg, #3a2f1f 0%, #2a1f14 100%);
-  color: #f0e6d3;
-  font-size: 22px;
+  color: #7fff7f;
+  font-size: 16px;
   font-family: 'Courier New', monospace;
   font-weight: bold;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.1s;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
-  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
+  width: 100%;
 }
 
-.numpad-btn:hover {
-  background: linear-gradient(180deg, #4a3f2f 0%, #3a2f1f 100%);
-  border-color: #ffd700;
-  color: #ffd700;
-  transform: translateY(-1px);
-  box-shadow: 0 5px 10px rgba(0,0,0,0.5), 0 0 8px rgba(255,215,0,0.2);
-}
-
-.numpad-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-  background: linear-gradient(180deg, #2a1f14 0%, #3a2f1f 100%);
-}
-
-.numpad-clear {
-  background: linear-gradient(180deg, #3a2019 0%, #2a1410 100%);
-  border-color: #8b3a1a;
-  color: #ff8888;
-  font-size: 18px;
-}
-
-.numpad-clear:hover {
-  border-color: #ff4444;
-  color: #ff4444;
-}
-
-.numpad-enter {
-  background: linear-gradient(180deg, #1a3a1a 0%, #102a10 100%);
-  border-color: #2a7c2a;
-  color: #7fff7f;
-  font-size: 22px;
-}
-
-.numpad-enter:hover {
+.numpad-enter-btn:hover {
   border-color: #7fff7f;
   color: #fff;
-  box-shadow: 0 5px 10px rgba(0,0,0,0.5), 0 0 8px rgba(127,255,127,0.3);
+  box-shadow: 0 0 8px rgba(127,255,127,0.3);
 }
 
 .numpad-cancel-btn {
