@@ -84,7 +84,9 @@ let dialogueCat = null; // which cat's portrait to show
 let dialogueCallback = null; // called when dialogue ends
 
 const dialogueOverlay = document.getElementById('dialogue-overlay');
-const dialoguePortrait = document.getElementById('dialogue-portrait');
+const dialoguePortraits = document.getElementById('dialogue-portraits');
+const dialoguePortraitCat = document.getElementById('dialogue-portrait-cat');
+const dialoguePortraitMarice = document.getElementById('dialogue-portrait-marice');
 const dialogueSpeaker = document.getElementById('dialogue-speaker');
 const dialogueText = document.getElementById('dialogue-text');
 
@@ -106,12 +108,14 @@ function showDialogueMessage() {
   const msg = dialogueQueue[dialogueIndex];
   if (!msg) return;
 
-  // Always show the cat portrait (not Marice)
-  if (dialogueCat && portraits[dialogueCat]) {
-    dialoguePortrait.src = portraits[dialogueCat].src;
-    dialoguePortrait.style.display = 'block';
+  // Show cat + Marice portraits together during cat dialogues
+  const hasCatPortrait = dialogueCat && portraits[dialogueCat];
+  if (hasCatPortrait && portraits.marice) {
+    dialoguePortraitCat.src = portraits[dialogueCat].src;
+    dialoguePortraitMarice.src = portraits.marice.src;
+    dialoguePortraits.style.display = 'flex';
   } else {
-    dialoguePortrait.style.display = 'none';
+    dialoguePortraits.style.display = 'none';
   }
 
   dialogueSpeaker.textContent = msg.speaker;
@@ -609,31 +613,64 @@ const SPRITES = {
   },
 
   // Cupboard
-  cupboard: function(x, y) {
-    ctx.fillStyle = '#8B7355';
-    ctx.fillRect(x + 2, y + 2, 20, 20);
-    ctx.fillStyle = '#6b5b45';
-    ctx.fillRect(x + 3, y + 3, 18, 18);
+  cupboard: function(x, y, variant) {
+    ctx.fillStyle = '#9b7a55';
+    ctx.fillRect(x + 1, y + 1, 22, 22);
+    ctx.fillStyle = '#7c5b36';
+    ctx.fillRect(x + 2, y + 3, 20, 18);
+    ctx.fillStyle = '#b08c63';
+    ctx.fillRect(x + 3, y + 4, 18, 16);
     ctx.strokeStyle = '#4a3728';
     ctx.lineWidth = 1;
-    ctx.strokeRect(x + 4, y + 4, 7, 7);
-    ctx.strokeRect(x + 13, y + 4, 7, 7);
+    ctx.strokeRect(x + 4, y + 5, 7, 14);
+    ctx.strokeRect(x + 13, y + 5, 7, 14);
     // Handles
-    ctx.fillStyle = '#ffd700';
-    ctx.fillRect(x + 9, y + 6, 2, 3);
-    ctx.fillRect(x + 13, y + 6, 2, 3);
+    ctx.fillStyle = '#ffe6a7';
+    ctx.fillRect(x + 9, y + 10, 2, 3);
+    ctx.fillRect(x + 13, y + 10, 2, 3);
+    // Top shine
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(x + 2, y + 2, 20, 3);
+
+    if (variant === 'treat' || variant === 'feast') {
+      const accent = variant === 'treat' ? '#7fff7f' : '#ff9ecf';
+      ctx.fillStyle = accent;
+      ctx.fillRect(x + 5, y + 3, 14, 2);
+      // Paw/plate hint
+      ctx.fillRect(x + 10, y + 7, 2, 2);
+      ctx.fillRect(x + 9, y + 9, 4, 2);
+      ctx.fillRect(x + 10, y + 11, 2, 2);
+    }
   },
 
   // Sofa
   sofa: function(x, y) {
-    ctx.fillStyle = '#6b5b95'; // purple sofa
-    ctx.fillRect(x + 2, y + 6, 20, 14);
-    ctx.fillStyle = '#7b6ba5';
-    ctx.fillRect(x + 4, y + 8, 16, 10);
+    // Base frame
+    ctx.fillStyle = '#3e2b22';
+    ctx.fillRect(x + 1, y + 10, 22, 10);
+    // Seat + back cushions
+    ctx.fillStyle = '#b07b5b';
+    ctx.fillRect(x + 2, y + 8, 20, 12);
+    ctx.fillStyle = '#c68f6b';
+    ctx.fillRect(x + 3, y + 10, 18, 8);
+    ctx.fillStyle = '#8a5f46';
+    ctx.fillRect(x + 2, y + 4, 20, 6);
     // Armrests
-    ctx.fillStyle = '#5b4b85';
+    ctx.fillStyle = '#6d4835';
     ctx.fillRect(x + 1, y + 6, 4, 14);
     ctx.fillRect(x + 19, y + 6, 4, 14);
+    // Stitch lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(x + 4, y + 12);
+    ctx.lineTo(x + 20, y + 12);
+    ctx.moveTo(x + 4, y + 15);
+    ctx.lineTo(x + 20, y + 15);
+    ctx.stroke();
+    // Legs
+    ctx.fillStyle = '#2a1812';
+    ctx.fillRect(x + 4, y + 20, 4, 3);
+    ctx.fillRect(x + 16, y + 20, 4, 3);
   },
 
   // Door (basement)
@@ -865,7 +902,12 @@ function drawInteractables(floor) {
       case 'cupboard_empty':
       case 'cupboard_purrpops':
       case 'cupboard_feast':
-        SPRITES.cupboard(x, y);
+        SPRITES.cupboard(
+          x,
+          y,
+          obj.type === 'cupboard_purrpops' ? 'treat' :
+            obj.type === 'cupboard_feast' ? 'feast' : null
+        );
         break;
       case 'cat_alice':
         SPRITES.catTree(x, y);
@@ -893,8 +935,13 @@ function drawInteractables(floor) {
         SPRITES.sofa(x, y);
         if (!gameState.flags.sofa_searched) {
           // Blanket on sofa
-          ctx.fillStyle = '#e8d5b7';
-          ctx.fillRect(x + 6, y + 9, 12, 8);
+          ctx.fillStyle = '#f4d05e';
+          ctx.fillRect(x + 5, y + 8, 14, 9);
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 5.5, y + 8.5, 13, 8);
+          ctx.fillStyle = 'rgba(255, 215, 64, 0.65)';
+          ctx.fillRect(x + 10, y + 7, 3, 3);
         }
         break;
       case 'basement_door':

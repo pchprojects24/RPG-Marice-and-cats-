@@ -4,7 +4,7 @@
  * Each dialogue is an array of message objects:
  *   { speaker: "Marice"|"Alice"|"Olive"|"Beatrice", text: "..." }
  *
- * The portrait displayed is always the cat's portrait (not Marice's).
+ * Cat dialogues now show the cat and Marice portraits together.
  * Speaker names are shown as tags above the text.
  *
  * Each dialogue sequence is exactly 3 messages.

@@ -230,14 +230,31 @@ html, body {
   gap: 12px;
 }
 
-#dialogue-portrait {
-  width: 120px;
-  height: 120px;
+#dialogue-portraits {
+  width: 100%;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialogue-portrait {
+  width: 116px;
+  height: 116px;
   border: 3px solid #8B6914;
   border-radius: 8px;
   image-rendering: pixelated;
-  background: #1a1a2e;
+  background: #0f0f18;
   object-fit: contain;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.35);
+}
+
+#dialogue-portrait-marice {
+  border-color: #ff9ecf;
+}
+
+#dialogue-portrait-cat {
+  border-color: #ffd700;
 }
 
 #dialogue-speaker {
@@ -426,7 +443,7 @@ html, body {
     font-size: 12px;
   }
 
-  #dialogue-portrait {
+  .dialogue-portrait {
     width: 96px;
     height: 96px;
   }
