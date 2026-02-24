@@ -607,7 +607,7 @@ function handleInteraction(obj) {
 
     // ---- SOFA ----
     case 'sofa_blanket':
-      if (gameState.flags.sofa_searched || gameState.flags.has_basement_key) {
+      if (gameState.flags.sofa_searched || gameState.flags.has_basement_key || !gameState.flags.alice_fed) {
         startDialogue('sofa_blanket_empty', null, null);
       } else {
         gameState.flags.sofa_searched = true;
@@ -1609,8 +1609,11 @@ function drawInteractables(floor) {
           ctx.strokeStyle = 'rgba(255,255,255,0.85)';
           ctx.lineWidth = 1;
           ctx.strokeRect(x + 5.5, y + 8.5, 13, 8);
-          ctx.fillStyle = 'rgba(255, 215, 64, 0.65)';
-          ctx.fillRect(x + 10, y + 7, 3, 3);
+          // Only show the key-hint glow after Alice has told the player about it
+          if (gameState.flags.alice_fed) {
+            ctx.fillStyle = 'rgba(255, 215, 64, 0.65)';
+            ctx.fillRect(x + 10, y + 7, 3, 3);
+          }
         }
         break;
       case 'basement_door':
