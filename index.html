@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Marice &amp; Cats — House Adventure</title>
+  <!--
+    ===================================================
+    Marice & Cats — House Adventure
+    A Zelda-style 2D top-down prototype
+    ===================================================
+
+    CONTROLS:
+      Keyboard:
+        - WASD or Arrow Keys: Move (grid-based)
+        - E / Space / Enter: Interact / Advance dialogue
+      Mobile:
+        - On-screen D-pad: Move
+        - INTERACT button: Interact / Advance dialogue
+
+    HOW TO PLAY:
+      1. Explore the main floor. Talk to Alice on her cat tree.
+      2. Find Purrpops in the kitchen cupboards and give them to Alice.
+      3. Alice hints about the Basement Key under the sofa blanket.
+      4. Unlock the basement door and go downstairs.
+      5. Find Olive under the treadmill. Give her Purrpops too.
+      6. Olive gives you a Laundry Basket — clear the stairs.
+      7. Go upstairs, find Beatrice under her blanket.
+      8. Give Beatrice a plate of Shrimp & Salmon Feast.
+      9. Enjoy the ending!
+
+    DEPLOY VIA GITHUB PAGES:
+      1. Push this repo to GitHub.
+      2. Go to Settings → Pages.
+      3. Set source to the branch containing these files (root /).
+      4. Save — the site will be live at https://<user>.github.io/<repo>/
+
+    ASSETS:
+      Place cat/character portraits (512x512 PNG) in assets/portraits/:
+        - marice_portrait_512.png
+        - alice_portrait_512.png
+        - olive_portrait_512.png
+        - beatrice_portrait_512.png
+  -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="game-container">
+
+    <!-- HUD -->
+    <div id="hud">
+      <span id="floor-label">Main Floor</span>
+      <span id="interact-prompt">E: Interact</span>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast"></div>
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Inventory Bar -->
+    <div id="inventory-bar"></div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+      <!-- D-Pad -->
+      <div id="dpad">
+        <div class="dpad-btn empty"></div>
+        <button id="btn-up" class="dpad-btn" aria-label="Up">&#9650;</button>
+        <div class="dpad-btn empty"></div>
+        <button id="btn-left" class="dpad-btn" aria-label="Left">&#9664;</button>
+        <div class="dpad-btn empty"></div>
+        <button id="btn-right" class="dpad-btn" aria-label="Right">&#9654;</button>
+        <div class="dpad-btn empty"></div>
+        <button id="btn-down" class="dpad-btn" aria-label="Down">&#9660;</button>
+        <div class="dpad-btn empty"></div>
+      </div>
+      <!-- Action Buttons -->
+      <div id="action-buttons">
+        <button id="btn-interact" class="action-btn" disabled aria-label="Interact">INTERACT</button>
+      </div>
+    </div>
+
+    <!-- Dialogue Overlay -->
+    <div id="dialogue-overlay">
+      <div id="dialogue-box">
+        <img id="dialogue-portrait" src="" alt="Character portrait">
+        <div id="dialogue-speaker">Speaker</div>
+        <div id="dialogue-text">Dialogue text goes here...</div>
+        <div id="dialogue-advance">Tap / Space / Enter to continue</div>
+      </div>
+    </div>
+
+    <!-- Title Screen -->
+    <div id="title-screen">
+      <h1>Marice &amp; Cats</h1>
+      <h2>House Adventure</h2>
+      <div class="subtitle">
+        Find Alice, Olive, and Beatrice!<br>
+        Feed the cats. Explore the house. Get snuggles.
+      </div>
+      <button id="btn-new-game" class="title-btn">New Game</button>
+      <button id="btn-continue" class="title-btn">Continue</button>
+    </div>
+
+    <!-- Ending Overlay -->
+    <div id="ending-overlay">
+      <h1>You found them all!</h1>
+      <div id="ending-portraits">
+        <img src="assets/portraits/alice_portrait_512.png" alt="Alice">
+        <img src="assets/portraits/olive_portrait_512.png" alt="Olive">
+        <img src="assets/portraits/beatrice_portrait_512.png" alt="Beatrice">
+      </div>
+      <p>
+        All three cats have been found, fed, and (mostly) forgiven you
+        for disturbing their hiding spots. Beatrice even offered a snuggle.
+        <br><br>
+        Marice's house is warm, cozy, and just a little bit chaotic —
+        exactly the way it should be.
+      </p>
+      <button id="btn-restart" class="title-btn">Play Again</button>
+    </div>
+
+  </div>
+
+  <!-- Data scripts (must load before game.js) -->
+  <script src="data/maps.js"></script>
+  <script src="data/dialogue.js"></script>
+  <!-- Game engine -->
+  <script src="game.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,455 @@
+/*
+ * style.css — Marice & Cats House Adventure
+ * Zelda-style 2D top-down game UI
+ */
+
+/* ======================== Reset & Base ======================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a1a2e;
+  font-family: 'Courier New', monospace;
+  color: #f0e6d3;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ======================== Game Container ======================== */
+#game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ======================== HUD ======================== */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+#floor-label {
+  font-weight: bold;
+  color: #ffd700;
+  font-size: 14px;
+}
+
+#interact-prompt {
+  color: #7fff7f;
+  font-weight: bold;
+  font-size: 13px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#interact-prompt.visible {
+  opacity: 1;
+}
+
+/* ======================== Canvas ======================== */
+#game-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 3px solid #4a3728;
+  background: #000;
+}
+
+/* ======================== Inventory Bar ======================== */
+#inventory-bar {
+  position: absolute;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 8px;
+  border: 2px solid #4a3728;
+  z-index: 10;
+  min-height: 36px;
+  align-items: center;
+}
+
+#inventory-bar:empty::after {
+  content: 'No items';
+  color: #888;
+  font-size: 11px;
+}
+
+.inv-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #2a1f14;
+  border: 1px solid #6b4226;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #f0e6d3;
+  white-space: nowrap;
+}
+
+.inv-item .inv-icon {
+  font-size: 14px;
+}
+
+/* ======================== Mobile Controls ======================== */
+#mobile-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 20px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+/* D-Pad */
+#dpad {
+  display: grid;
+  grid-template-columns: 52px 52px 52px;
+  grid-template-rows: 52px 52px 52px;
+  gap: 2px;
+  pointer-events: auto;
+}
+
+.dpad-btn {
+  width: 52px;
+  height: 52px;
+  border: 2px solid #6b4226;
+  border-radius: 8px;
+  background: rgba(42, 31, 20, 0.85);
+  color: #f0e6d3;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dpad-btn:active {
+  background: rgba(107, 66, 38, 0.9);
+}
+
+.dpad-btn.empty {
+  visibility: hidden;
+}
+
+/* Action Buttons */
+#action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.action-btn {
+  width: 70px;
+  height: 70px;
+  border: 2px solid #4a7c59;
+  border-radius: 50%;
+  background: rgba(20, 40, 20, 0.85);
+  color: #7fff7f;
+  font-size: 13px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:active {
+  background: rgba(74, 124, 89, 0.9);
+}
+
+.action-btn:disabled {
+  border-color: #555;
+  color: #555;
+  background: rgba(30, 30, 30, 0.85);
+}
+
+/* ======================== Dialogue Overlay ======================== */
+#dialogue-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#dialogue-overlay.active {
+  display: flex;
+}
+
+#dialogue-box {
+  width: 100%;
+  max-width: 460px;
+  background: #2a1f14;
+  border: 3px solid #6b4226;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#dialogue-portrait {
+  width: 120px;
+  height: 120px;
+  border: 3px solid #8B6914;
+  border-radius: 8px;
+  image-rendering: pixelated;
+  background: #1a1a2e;
+  object-fit: contain;
+}
+
+#dialogue-speaker {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffd700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+#dialogue-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #f0e6d3;
+  text-align: center;
+  min-height: 60px;
+  padding: 0 8px;
+}
+
+#dialogue-advance {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+  animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ======================== Toast Notification ======================== */
+#toast {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: bold;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  text-align: center;
+}
+
+#toast.visible {
+  opacity: 1;
+}
+
+/* ======================== Title Screen ======================== */
+#title-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #1a1a2e;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+#title-screen h1 {
+  font-size: 28px;
+  color: #ffd700;
+  text-align: center;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#title-screen h2 {
+  font-size: 16px;
+  color: #d4b896;
+  font-weight: normal;
+}
+
+#title-screen .subtitle {
+  font-size: 13px;
+  color: #888;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.title-btn {
+  padding: 12px 36px;
+  background: #2a1f14;
+  border: 2px solid #6b4226;
+  border-radius: 8px;
+  color: #ffd700;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.title-btn:hover {
+  background: #3a2f1f;
+}
+
+/* ======================== Ending Overlay ======================== */
+#ending-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 150;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+#ending-overlay.active {
+  display: flex;
+}
+
+#ending-overlay h1 {
+  font-size: 26px;
+  color: #ffd700;
+  text-align: center;
+}
+
+#ending-overlay p {
+  font-size: 15px;
+  color: #f0e6d3;
+  text-align: center;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+#ending-portraits {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+#ending-portraits img {
+  width: 80px;
+  height: 80px;
+  border: 2px solid #8B6914;
+  border-radius: 8px;
+  image-rendering: pixelated;
+  background: #1a1a2e;
+  object-fit: contain;
+}
+
+/* ======================== Responsive Scaling ======================== */
+@media (max-width: 520px) {
+  #game-canvas {
+    width: 100vw !important;
+    height: auto !important;
+  }
+
+  #inventory-bar {
+    bottom: 155px;
+    font-size: 10px;
+  }
+
+  .dpad-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 18px;
+  }
+
+  #dpad {
+    grid-template-columns: 46px 46px 46px;
+    grid-template-rows: 46px 46px 46px;
+  }
+
+  .action-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 12px;
+  }
+
+  #dialogue-portrait {
+    width: 96px;
+    height: 96px;
+  }
+
+  #dialogue-text {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 521px) and (max-width: 768px) {
+  #game-canvas {
+    max-width: 95vw;
+  }
+}
+
+/* Hide mobile controls on desktop with keyboard */
+@media (hover: hover) and (pointer: fine) {
+  #mobile-controls {
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+
+  #mobile-controls:hover {
+    opacity: 1;
+  }
+}
