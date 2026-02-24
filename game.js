@@ -436,7 +436,18 @@ function handleStairTransition(row, col) {
     const s = FLOORS.main.stairs.toUpstairs;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       if (!gameState.flags.laundry_cleared) {
-        startDialogue('laundry_pile_blocked', null, null);
+        if (hasItem('laundry_basket')) {
+          // Player walked into the laundry pile while carrying the basket — clear it
+          removeItem('laundry_basket');
+          gameState.flags.laundry_cleared = true;
+          startDialogue('laundry_pile_clear', null, function() {
+            showToast('Stairway cleared!');
+            saveGame();
+            changeFloor('upstairs');
+          });
+        } else {
+          startDialogue('laundry_pile_blocked', null, null);
+        }
         return true;
       }
       changeFloor('upstairs');
@@ -548,17 +559,30 @@ function handleInteraction(obj) {
       break;
 
     case 'cupboard_purrpops':
-      startDialogue('cupboard_purrpops', null, function() {
-        addItem('purrpops');
-        showToast('Got Purrpops!');
-      });
+      // Cupboard is empty once both cats that need purrpops have been fed,
+      // or if the player is already carrying purrpops
+      if (gameState.flags.alice_fed && gameState.flags.olive_fed) {
+        startDialogue('cupboard_empty', null, null);
+      } else if (hasItem('purrpops')) {
+        startDialogue('cupboard_empty', null, null);
+      } else {
+        startDialogue('cupboard_purrpops', null, function() {
+          addItem('purrpops');
+          showToast('Got Purrpops!');
+        });
+      }
       break;
 
     case 'cupboard_feast':
-      startDialogue('cupboard_feast', null, function() {
-        addItem('feast_plate');
-        showToast('Got Shrimp & Salmon Feast plate!');
-      });
+      // Cupboard is empty once Beatrice has been fed, or if already carrying the plate
+      if (gameState.flags.beatrice_fed || hasItem('feast_plate')) {
+        startDialogue('cupboard_empty', null, null);
+      } else {
+        startDialogue('cupboard_feast', null, function() {
+          addItem('feast_plate');
+          showToast('Got Shrimp & Salmon Feast plate!');
+        });
+      }
       break;
 
     // ---- ALICE ----
@@ -834,8 +858,8 @@ function handleInteraction(obj) {
 
 // Check stair-step for laundry clearing (when player tries to go upstairs)
 function checkLaundryInteraction() {
-  if (gameState.currentFloor !== 'main') return;
-  if (gameState.flags.laundry_cleared) return;
+  if (gameState.currentFloor !== 'main') return false;
+  if (gameState.flags.laundry_cleared) return false;
 
   const p = gameState.player;
   const s = FLOORS.main.stairs.toUpstairs;
@@ -1501,7 +1525,7 @@ function drawFurnitureBlock(floor, row, col, x, y) {
 
   // Context-based furniture rendering
   if (floorId === 'main') {
-    if (row === 2 && col === 18) SPRITES.slidingDoor(x, y); // decorative
+    if (row === 2 && col === 18) SPRITES.furniture(x, y); // dining room cabinet
     else if (row === 6 && (col === 3)) SPRITES.sofa(x, y);
     else if (row === 7 && (col === 3)) SPRITES.sofa(x, y);
     else if (row === 10 && col === 1) SPRITES.toilet(x, y);
