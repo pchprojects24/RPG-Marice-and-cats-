@@ -701,21 +701,51 @@ const SPRITES = {
 
   // Stairs
   stairs: function(x, y, hasLaundry) {
-    // Stair steps
-    ctx.fillStyle = '#a0522d';
-    for (let i = 0; i < 4; i++) {
-      ctx.fillRect(x + 2 + i * 2, y + 4 + i * 4, TILE_SIZE - 4 - i * 4, 4);
+    // Side rails for depth
+    ctx.fillStyle = '#5a3316';
+    ctx.fillRect(x + 1, y + 2, 2, TILE_SIZE - 4);
+    ctx.fillRect(x + TILE_SIZE - 3, y + 2, 2, TILE_SIZE - 4);
+
+    // Stair steps with highlights
+    const stepColors = ['#c07a42', '#ad6936', '#98572d', '#824726'];
+    let offsetY = y + 3;
+    for (let i = 0; i < stepColors.length; i++) {
+      const inset = i * 2;
+      const stepHeight = 5;
+      const stepWidth = TILE_SIZE - 6 - inset * 2;
+      const startX = x + 3 + inset;
+
+      ctx.fillStyle = stepColors[i];
+      ctx.fillRect(startX, offsetY, stepWidth, stepHeight);
+
+      // Top lip highlight
+      ctx.fillStyle = 'rgba(255, 230, 210, 0.25)';
+      ctx.fillRect(startX, offsetY, stepWidth, 1);
+      // Shadow at tread edge
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.fillRect(startX, offsetY + stepHeight - 1, stepWidth, 1);
+
+      offsetY += stepHeight;
     }
-    // Laundry pile on stairs
+
+    // Landing shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(x + 2, y + TILE_SIZE - 5, TILE_SIZE - 4, 3);
+
     if (hasLaundry) {
+      // Laundry pile on stairs
       ctx.fillStyle = '#ddd';
-      ctx.fillRect(x + 4, y + 2, 16, 12);
+      ctx.fillRect(x + 5, y + 2, 14, 9);
       ctx.fillStyle = '#bbb';
-      ctx.fillRect(x + 6, y + 4, 12, 8);
+      ctx.fillRect(x + 6, y + 6, 12, 8);
       ctx.fillStyle = '#e88';
-      ctx.fillRect(x + 8, y + 3, 4, 4);
+      ctx.fillRect(x + 8, y + 4, 4, 4);
       ctx.fillStyle = '#88e';
-      ctx.fillRect(x + 12, y + 5, 5, 4);
+      ctx.fillRect(x + 13, y + 6, 5, 4);
+    } else {
+      // Soft runner down the middle
+      ctx.fillStyle = 'rgba(255, 219, 172, 0.25)';
+      ctx.fillRect(x + 9, y + 3, 6, TILE_SIZE - 8);
     }
   },
 
