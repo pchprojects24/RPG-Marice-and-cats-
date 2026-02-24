@@ -2050,10 +2050,9 @@ function numpadSubmit() {
     document.getElementById('numpad-error').textContent = 'Enter all 4 digits.';
     return;
   }
+  const cb = numpadCallback;
   hideNumpad();
-  if (numpadCallback) {
-    const cb = numpadCallback;
-    numpadCallback = null;
+  if (cb) {
     cb(code);
   }
 }
