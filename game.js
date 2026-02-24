@@ -32,8 +32,8 @@ resizeCanvas();
 // ======================== GAME STATE ========================
 
 let gameState = {
-  currentFloor: 'main',
-  player: { row: 8, col: 9, facing: 'down' },
+  currentFloor: 'outside',
+  player: { row: outsideStart.row, col: outsideStart.col, facing: 'down' },
   inventory: [],          // array of item ID strings
   flags: {
     alice_fed: false,
@@ -44,7 +44,8 @@ let gameState = {
     has_laundry_basket: false,
     laundry_cleared: false,
     sofa_searched: false,
-    game_complete: false
+    game_complete: false,
+    front_door_unlocked: false
   },
   // Smooth movement animation
   moving: false,
@@ -508,6 +509,27 @@ function handleInteraction(obj) {
     // ---- CUPBOARDS ----
     case 'fridge':
       startDialogue('fridge', null, null);
+      break;
+    case 'riddle_board':
+      startDialogue('outside_riddle_board', null, null);
+      break;
+    case 'front_door':
+      if (gameState.flags.front_door_unlocked) {
+        changeFloor('main');
+        break;
+      }
+      startDialogue('front_door_locked', null, function() {
+        const input = prompt('Enter the 4-digit code from the riddle:');
+        if (input === null) return;
+        const code = (input || '').replace(/\s+/g, '');
+        if (code === '3134') {
+          gameState.flags.front_door_unlocked = true;
+          showToast('Front door unlocked!');
+          changeFloor('main');
+        } else {
+          showToast('Incorrect code. Hint: the code is in the riddle.');
+        }
+      });
       break;
     case 'stove':
       startDialogue('stove', null, null);
@@ -1373,6 +1395,8 @@ function drawFurnitureBlock(floor, row, col, x, y) {
     else if (row === 10 && col === 14) SPRITES.sink(x, y);
     else if (row === 11 && col === 16) SPRITES.shower(x, y);
     else SPRITES.furniture(x, y);
+  } else {
+    SPRITES.furniture(x, y);
   }
 }
 
@@ -1410,6 +1434,9 @@ function drawInteractables(floor) {
       case 'cat_alice':
         SPRITES.catTree(x, y);
         SPRITES.cat(x, y - 4, '#f5a623', '#ff8'); // orange tabby
+        break;
+      case 'front_door':
+        SPRITES.door(x, y, !gameState.flags.front_door_unlocked);
         break;
       case 'cat_olive':
         SPRITES.treadmill(x, y);
@@ -1484,6 +1511,9 @@ function drawInteractables(floor) {
         break;
       case 'game_console':
         SPRITES.genericItem(x, y, '#000', '#4169e1');
+        break;
+      case 'riddle_board':
+        SPRITES.genericItem(x, y, '#c79c4c', '#7a5c1b');
         break;
       case 'side_table':
         SPRITES.genericItem(x, y, '#8b6914', '#daa520');
@@ -1826,7 +1856,7 @@ function loadGame() {
     if (!raw) return false;
     const data = JSON.parse(raw);
 
-    gameState.currentFloor = data.currentFloor || 'main';
+    gameState.currentFloor = data.currentFloor || 'outside';
     gameState.player.row = data.player.row;
     gameState.player.col = data.player.col;
     gameState.player.facing = data.player.facing || 'down';
@@ -1855,8 +1885,8 @@ function hideTitleScreen() {
 
 function startNewGame() {
   clearSave();
-  gameState.currentFloor = 'main';
-  gameState.player = { row: 8, col: 9, facing: 'down' };
+  gameState.currentFloor = 'outside';
+  gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
   gameState.inventory = [];
   gameState.flags = {
     alice_fed: false,
@@ -1867,7 +1897,8 @@ function startNewGame() {
     has_laundry_basket: false,
     laundry_cleared: false,
     sofa_searched: false,
-    game_complete: false
+    game_complete: false,
+    front_door_unlocked: false
   };
   renderInventory();
   updateFloorLabel();
