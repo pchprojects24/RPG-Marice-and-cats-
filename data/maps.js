@@ -61,8 +61,62 @@ const TILE_COLORS = {
     [T.INTERACT]: '#c9a87c',
     [T.STAIRS]: '#a0522d',
     [T.COUNTER]: '#7a5c3a'
+  },
+  // Outside / front yard
+  outside: {
+    [T.FLOOR]: '#74b66a',    // grass
+    [T.WALL]: '#5b4636',     // fence/house facade
+    [T.FURNITURE]: '#3f7f4c', // shrubs/trees
+    [T.DOOR]: '#4a7c59',     // front door
+    [T.INTERACT]: '#74b66a',
+    [T.STAIRS]: '#a0522d',
+    [T.COUNTER]: '#74b66a'
   }
 };
+
+// ============================================================
+// OUTSIDE MAP (20x15)
+// Front yard with a keypad-locked door and a riddle board
+// ============================================================
+const outsideGrid = [
+  // Row 0: border
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  // Row 1: border
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  // Row 2: house facade with front door
+  [1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1],
+  // Row 3: porch in front of door
+  [1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1],
+  // Row 4: yard opening
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 5: yard with shrubs
+  [1,0,2,0,0,0,2,0,0,0,0,0,0,2,0,0,0,2,0,1],
+  // Row 6
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 7
+  [1,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 8
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 9: riddle board
+  [1,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 10
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 11
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 12
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 13
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 14: border
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+const outsideInteractables = [
+  { row: 2, col: 9, type: 'front_door', label: 'Front Door', sprite: 'door_locked' },
+  { row: 9, col: 4, type: 'riddle_board', label: 'Notice Board', sprite: 'board' },
+];
+
+const outsideStart = { row: 12, col: 10 };
 
 // ============================================================
 // MAIN FLOOR MAP (20x15)
@@ -331,6 +385,14 @@ const upstairsStart = { row: 11, col: 8 };
 // Floor data export
 // ============================================================
 const FLOORS = {
+  outside: {
+    grid: outsideGrid,
+    interactables: outsideInteractables,
+    stairs: {},
+    start: outsideStart,
+    palette: TILE_COLORS.outside,
+    name: 'Front Yard'
+  },
   main: {
     grid: mainFloorGrid,
     interactables: mainFloorInteractables,
@@ -375,5 +437,9 @@ const ROOM_LABELS = {
     { text: 'Guest Bedroom', row: 1, col: 13 },
     { text: "Marice's Office", row: 8, col: 1 },
     { text: 'Washroom', row: 8, col: 15 },
+  ],
+  outside: [
+    { text: 'Front Yard', row: 11, col: 4 },
+    { text: 'Porch', row: 3, col: 9 },
   ]
 };

@@ -391,5 +391,21 @@ const DIALOGUE = {
 
   linen_closet: [
     { speaker: 'Marice', text: "Linen closet with extra sheets and blankets. Always prepared for guests." }
+  ],
+
+  // ============================
+  // OUTSIDE / ENTRY
+  // ============================
+
+  outside_riddle_board: [
+    { speaker: 'Marice', text: "A note on the board reads:" },
+    { speaker: 'Marice', text: "\"There are three cats and one of you. Find the three cats so together you'll be four.\"" },
+    { speaker: 'Marice', text: "The code is in the riddle. Four digits." }
+  ],
+
+  front_door_locked: [
+    { speaker: 'Marice', text: "The front door is locked with a number pad." },
+    { speaker: 'Marice', text: "It wants a four-digit code — that riddle about three cats and me must be the key." },
+    { speaker: 'Marice', text: "Hint to self: the code is hidden in the riddle." }
   ]
 };
