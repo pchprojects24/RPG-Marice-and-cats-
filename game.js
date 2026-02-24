@@ -906,29 +906,78 @@ const SPRITES = {
 
   // Cat sprite (generic, colored per cat)
   cat: function(x, y, color, accentColor) {
-    // Body
+    // Shadow under cat for depth
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(x + 5, y + 19, 15, 2);
+
+    // Body (loaf shape)
     ctx.fillStyle = color;
-    ctx.fillRect(x + 5, y + 8, 14, 10);
-    // Head
-    ctx.fillRect(x + 6, y + 3, 12, 8);
-    // Ears
-    ctx.fillRect(x + 6, y + 1, 4, 4);
-    ctx.fillRect(x + 14, y + 1, 4, 4);
+    ctx.fillRect(x + 5, y + 10, 14, 8);
+    ctx.fillRect(x + 6, y + 9, 12, 1);
+    ctx.fillRect(x + 7, y + 8, 10, 1);
+
+    // Chest/front (lighter)
+    ctx.fillStyle = accentColor || '#ffb6c1';
+    ctx.fillRect(x + 8, y + 12, 8, 5);
+
+    // Head (rounder)
+    ctx.fillStyle = color;
+    ctx.fillRect(x + 7, y + 4, 10, 6);
+    ctx.fillRect(x + 6, y + 5, 12, 4);
+    ctx.fillRect(x + 8, y + 3, 8, 1);
+
+    // Ears (triangular)
+    ctx.fillRect(x + 7, y + 2, 3, 3);
+    ctx.fillRect(x + 14, y + 2, 3, 3);
     // Inner ears
     ctx.fillStyle = accentColor || '#ffb6c1';
-    ctx.fillRect(x + 7, y + 2, 2, 2);
-    ctx.fillRect(x + 15, y + 2, 2, 2);
-    // Eyes
-    ctx.fillStyle = '#333';
-    ctx.fillRect(x + 8, y + 6, 2, 2);
-    ctx.fillRect(x + 14, y + 6, 2, 2);
+    ctx.fillRect(x + 8, y + 3, 1, 1);
+    ctx.fillRect(x + 15, y + 3, 1, 1);
+
+    // Eyes (bigger, more expressive)
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 9, y + 6, 2, 2);
+    ctx.fillRect(x + 13, y + 6, 2, 2);
+    // Pupils
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 10, y + 7, 1, 1);
+    ctx.fillRect(x + 14, y + 7, 1, 1);
+
     // Nose
     ctx.fillStyle = '#ffb6c1';
-    ctx.fillRect(x + 11, y + 8, 2, 2);
-    // Tail
+    ctx.fillRect(x + 11, y + 8, 2, 1);
+
+    // Mouth (cute smile)
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 11, y + 9, 1, 1);
+    ctx.fillRect(x + 12, y + 9, 1, 1);
+
+    // Whiskers
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    // Left whiskers
+    ctx.moveTo(x + 7, y + 7);
+    ctx.lineTo(x + 4, y + 6);
+    ctx.moveTo(x + 7, y + 8);
+    ctx.lineTo(x + 4, y + 8);
+    // Right whiskers
+    ctx.moveTo(x + 17, y + 7);
+    ctx.lineTo(x + 20, y + 6);
+    ctx.moveTo(x + 17, y + 8);
+    ctx.lineTo(x + 20, y + 8);
+    ctx.stroke();
+
+    // Tail (curved)
     ctx.fillStyle = color;
-    ctx.fillRect(x + 18, y + 8, 3, 2);
-    ctx.fillRect(x + 20, y + 6, 2, 3);
+    ctx.fillRect(x + 18, y + 10, 3, 4);
+    ctx.fillRect(x + 19, y + 8, 2, 2);
+    ctx.fillRect(x + 20, y + 7, 1, 1);
+
+    // Front paws (visible)
+    ctx.fillStyle = color;
+    ctx.fillRect(x + 7, y + 17, 2, 2);
+    ctx.fillRect(x + 15, y + 17, 2, 2);
   },
 
   // Cupboard
@@ -1417,17 +1466,8 @@ function drawInteractables(floor) {
         break;
       case 'cat_beatrice':
         SPRITES.bed(x, y, true);
-        if (!gameState.flags.beatrice_fed) {
-          // Blanket lump
-          ctx.fillStyle = '#6b5b95';
-          ctx.fillRect(x + 6, y + 10, 12, 8);
-          // Ears poking out
-          ctx.fillStyle = '#2a2a2a';
-          ctx.fillRect(x + 8, y + 8, 3, 3);
-          ctx.fillRect(x + 13, y + 8, 3, 3);
-        } else {
-          SPRITES.cat(x, y + 2, '#2a2a2a', '#ffb6c1'); // black cat
-        }
+        // Beatrice is always visible, sitting on top of the bed
+        SPRITES.cat(x + 2, y + 6, '#2a2a2a', '#ffb6c1'); // black cat, positioned on bed
         break;
       case 'sofa_blanket':
         SPRITES.sofa(x, y);
