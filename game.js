@@ -530,16 +530,15 @@ function handleInteraction(obj) {
         break;
       }
       startDialogue('front_door_locked', null, function() {
-        const input = prompt('Enter the 4-digit code from the riddle:');
-        if (input === null) return;
-        const code = (input || '').replace(/\s+/g, '');
-        if (code === '3134') {
-          gameState.flags.front_door_unlocked = true;
-          showToast('Front door unlocked!');
-          changeFloor('main');
-        } else {
-          showToast('Incorrect code. Hint: the code is in the riddle.');
-        }
+        showNumpad(function(code) {
+          if (code === '3134') {
+            gameState.flags.front_door_unlocked = true;
+            showToast('Front door unlocked!');
+            changeFloor('main');
+          } else {
+            showToast('Incorrect code. Hint: the code is in the riddle.');
+          }
+        });
       });
       break;
     case 'stove':
@@ -1907,6 +1906,24 @@ function gameLoop() {
 // ======================== INPUT HANDLING ========================
 
 document.addEventListener('keydown', function(e) {
+  // Numpad keyboard input
+  if (document.getElementById('numpad-overlay').classList.contains('active')) {
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      numpadPressDigit(e.key);
+    } else if (e.code === 'Backspace') {
+      e.preventDefault();
+      numpadBackspace();
+    } else if (e.code === 'Enter') {
+      e.preventDefault();
+      numpadSubmit();
+    } else if (e.code === 'Escape') {
+      e.preventDefault();
+      hideNumpad();
+    }
+    return;
+  }
+
   keysDown[e.code] = true;
 
   // Interact / advance dialogue
@@ -2020,6 +2037,99 @@ function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
 }
 
+// ======================== NUMPAD ========================
+
+let numpadCallback = null;
+let numpadCode = '';
+
+function showNumpad(onSubmit) {
+  numpadCallback = onSubmit;
+  numpadCode = '';
+  updateNumpadDisplay();
+  document.getElementById('numpad-error').textContent = '';
+  document.getElementById('numpad-overlay').classList.add('active');
+}
+
+function hideNumpad() {
+  document.getElementById('numpad-overlay').classList.remove('active');
+  numpadCallback = null;
+  numpadCode = '';
+}
+
+function updateNumpadDisplay() {
+  const display = document.getElementById('numpad-input');
+  const filled = numpadCode.split('').map(() => '●').join('');
+  const empty = '_'.repeat(4 - numpadCode.length);
+  display.textContent = filled + empty;
+}
+
+function numpadPressDigit(digit) {
+  if (numpadCode.length >= 4) return;
+  numpadCode += digit;
+  updateNumpadDisplay();
+  document.getElementById('numpad-error').textContent = '';
+  if (numpadCode.length === 4) {
+    numpadSubmit();
+  }
+}
+
+function numpadBackspace() {
+  if (numpadCode.length === 0) return;
+  numpadCode = numpadCode.slice(0, -1);
+  updateNumpadDisplay();
+  document.getElementById('numpad-error').textContent = '';
+}
+
+function numpadSubmit() {
+  if (numpadCode.length < 4) {
+    document.getElementById('numpad-error').textContent = 'Enter all 4 digits.';
+    return;
+  }
+  const code = numpadCode;
+  hideNumpad();
+  if (numpadCallback) {
+    const cb = numpadCallback;
+    numpadCallback = null;
+    cb(code);
+  }
+}
+
+function setupNumpad() {
+  const overlay = document.getElementById('numpad-overlay');
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) hideNumpad();
+  });
+
+  document.querySelectorAll('.numpad-btn[data-digit]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      numpadPressDigit(btn.getAttribute('data-digit'));
+    });
+    btn.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      numpadPressDigit(btn.getAttribute('data-digit'));
+    }, { passive: false });
+  });
+
+  document.getElementById('numpad-btn-clear').addEventListener('click', numpadBackspace);
+  document.getElementById('numpad-btn-clear').addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    numpadBackspace();
+  }, { passive: false });
+
+  document.getElementById('numpad-btn-enter').addEventListener('click', numpadSubmit);
+  document.getElementById('numpad-btn-enter').addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    numpadSubmit();
+  }, { passive: false });
+
+  document.getElementById('numpad-btn-cancel').addEventListener('click', hideNumpad);
+  document.getElementById('numpad-btn-cancel').addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    hideNumpad();
+  }, { passive: false });
+}
+
 // ======================== TITLE SCREEN ========================
 
 function showTitleScreen() {
@@ -2082,6 +2192,7 @@ function restartGame() {
 function init() {
   showTitleScreen();
   setupMobileControls();
+  setupNumpad();
 
   // Title screen buttons
   document.getElementById('btn-new-game').addEventListener('click', function() {
