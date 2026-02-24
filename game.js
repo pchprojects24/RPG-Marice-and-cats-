@@ -609,15 +609,13 @@ function handleInteraction(obj) {
     case 'sofa_blanket':
       if (gameState.flags.sofa_searched || gameState.flags.has_basement_key) {
         startDialogue('sofa_blanket_empty', null, null);
-      } else if (gameState.flags.alice_fed) {
+      } else {
         gameState.flags.sofa_searched = true;
         gameState.flags.has_basement_key = true;
         startDialogue('sofa_blanket', null, function() {
           addItem('basement_key');
           showToast('Got Basement Key!');
         });
-      } else {
-        startDialogue('sofa_blanket_empty', null, null);
       }
       break;
 
