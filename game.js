@@ -370,6 +370,21 @@ function handleInteraction(obj) {
   switch (obj.type) {
 
     // ---- CUPBOARDS ----
+    case 'fridge':
+      startDialogue('fridge', null, null);
+      break;
+    case 'stove':
+      startDialogue('stove', null, null);
+      break;
+    case 'kitchen_sink':
+      startDialogue('kitchen_sink', null, null);
+      break;
+    case 'coffee_station':
+      startDialogue('coffee_station', null, null);
+      break;
+    case 'dining_table':
+      startDialogue('dining_table', null, null);
+      break;
     case 'cupboard_empty':
       startDialogue('cupboard_empty', null, null);
       break;
@@ -482,6 +497,20 @@ function handleInteraction(obj) {
     // ---- SLIDING DOOR ----
     case 'sliding_door':
       startDialogue('sliding_door', null, null);
+      break;
+
+    // ---- LIVING ROOM ----
+    case 'tv':
+      startDialogue('tv', null, null);
+      break;
+    case 'floor_lamp':
+      startDialogue('floor_lamp', null, null);
+      break;
+    case 'coffee_table':
+      startDialogue('coffee_table', null, null);
+      break;
+    case 'bookshelf':
+      startDialogue('bookshelf', null, null);
       break;
 
     // ---- FUTON ----
@@ -645,32 +674,158 @@ const SPRITES = {
 
   // Sofa
   sofa: function(x, y) {
-    // Base frame
-    ctx.fillStyle = '#3e2b22';
-    ctx.fillRect(x + 1, y + 10, 22, 10);
-    // Seat + back cushions
-    ctx.fillStyle = '#b07b5b';
-    ctx.fillRect(x + 2, y + 8, 20, 12);
-    ctx.fillStyle = '#c68f6b';
-    ctx.fillRect(x + 3, y + 10, 18, 8);
-    ctx.fillStyle = '#8a5f46';
-    ctx.fillRect(x + 2, y + 4, 20, 6);
-    // Armrests
-    ctx.fillStyle = '#6d4835';
-    ctx.fillRect(x + 1, y + 6, 4, 14);
-    ctx.fillRect(x + 19, y + 6, 4, 14);
-    // Stitch lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    // Shadow base
+    ctx.fillStyle = '#251912';
+    ctx.fillRect(x + 2, y + 19, 20, 4);
+    // Frame
+    ctx.fillStyle = '#3b2a21';
+    ctx.fillRect(x + 1, y + 7, 22, 14);
+    // Back cushion
+    ctx.fillStyle = '#c48f6b';
+    ctx.fillRect(x + 3, y + 5, 18, 8);
+    ctx.fillStyle = '#ad7957';
+    ctx.fillRect(x + 3, y + 6, 18, 6);
+    // Seat cushions
+    ctx.fillStyle = '#d19c79';
+    ctx.fillRect(x + 3, y + 12, 18, 8);
+    ctx.fillStyle = '#c18a6a';
+    ctx.fillRect(x + 3, y + 13, 18, 3);
+    // Divider seam + stitch
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
     ctx.beginPath();
-    ctx.moveTo(x + 4, y + 12);
-    ctx.lineTo(x + 20, y + 12);
-    ctx.moveTo(x + 4, y + 15);
-    ctx.lineTo(x + 20, y + 15);
+    ctx.moveTo(x + 13, y + 12);
+    ctx.lineTo(x + 13, y + 20);
+    ctx.moveTo(x + 5, y + 16);
+    ctx.lineTo(x + 19, y + 16);
     ctx.stroke();
+    // Armrests
+    ctx.fillStyle = '#8b5f45';
+    ctx.fillRect(x + 1, y + 8, 5, 12);
+    ctx.fillRect(x + 18, y + 8, 5, 12);
+    ctx.fillStyle = '#744c38';
+    ctx.fillRect(x + 2, y + 9, 3, 10);
+    ctx.fillRect(x + 19, y + 9, 3, 10);
+    // Cushy highlight
+    ctx.fillStyle = 'rgba(255, 230, 210, 0.25)';
+    ctx.fillRect(x + 4, y + 6, 16, 2);
+    ctx.fillRect(x + 4, y + 14, 16, 1);
     // Legs
     ctx.fillStyle = '#2a1812';
-    ctx.fillRect(x + 4, y + 20, 4, 3);
-    ctx.fillRect(x + 16, y + 20, 4, 3);
+    ctx.fillRect(x + 5, y + 21, 3, 3);
+    ctx.fillRect(x + 16, y + 21, 3, 3);
+  },
+
+  fridge: function(x, y) {
+    ctx.fillStyle = '#d8e2ec';
+    ctx.fillRect(x + 2, y + 1, 20, 22);
+    ctx.fillStyle = '#b7c7d6';
+    ctx.fillRect(x + 2, y + 11, 20, 12);
+    ctx.fillStyle = '#7a8a9a';
+    ctx.fillRect(x + 17, y + 4, 2, 7);
+    ctx.fillRect(x + 17, y + 14, 2, 7);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(x + 3, y + 3, 7, 1);
+  },
+
+  stove: function(x, y) {
+    ctx.fillStyle = '#5d5d5d';
+    ctx.fillRect(x + 2, y + 2, 20, 20);
+    ctx.fillStyle = '#777';
+    ctx.fillRect(x + 3, y + 3, 18, 8);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x + 6, y + 12, 12, 8);
+    ctx.fillStyle = '#ffb347';
+    ctx.fillRect(x + 6, y + 13, 12, 2);
+    ctx.fillStyle = '#88c0ff';
+    ctx.fillRect(x + 6, y + 16, 12, 2);
+    // Burners
+    ctx.fillStyle = '#2e2e2e';
+    ctx.fillRect(x + 5, y + 4, 4, 4);
+    ctx.fillRect(x + 15, y + 4, 4, 4);
+    ctx.fillRect(x + 5, y + 8, 4, 4);
+    ctx.fillRect(x + 15, y + 8, 4, 4);
+  },
+
+  kitchenSink: function(x, y) {
+    ctx.fillStyle = '#c49b72';
+    ctx.fillRect(x + 1, y + 1, 22, 22);
+    ctx.fillStyle = '#e7d8c4';
+    ctx.fillRect(x + 3, y + 3, 18, 16);
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(x + 6, y + 6, 12, 10);
+    ctx.fillStyle = '#8a8a8a';
+    ctx.fillRect(x + 11, y + 2, 3, 6);
+  },
+
+  coffeeStation: function(x, y) {
+    ctx.fillStyle = '#4a3728';
+    ctx.fillRect(x + 3, y + 10, 18, 10);
+    ctx.fillStyle = '#2f241b';
+    ctx.fillRect(x + 5, y + 6, 14, 8);
+    ctx.fillStyle = '#8b5e3c';
+    ctx.fillRect(x + 6, y + 7, 4, 6);
+    ctx.fillStyle = '#d1b38a';
+    ctx.fillRect(x + 12, y + 8, 6, 4);
+    // Cup
+    ctx.fillStyle = '#f5f1e8';
+    ctx.fillRect(x + 8, y + 16, 6, 4);
+    ctx.fillStyle = '#9e8362';
+    ctx.fillRect(x + 9, y + 17, 4, 2);
+  },
+
+  diningTable: function(x, y) {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(x + 1, y + 6, 22, 12);
+    ctx.fillStyle = '#a06f3e';
+    ctx.fillRect(x + 3, y + 8, 18, 8);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fillRect(x + 4, y + 9, 16, 2);
+    // Placemats
+    ctx.fillStyle = '#d7c4a1';
+    ctx.fillRect(x + 4, y + 12, 6, 3);
+    ctx.fillRect(x + 14, y + 12, 6, 3);
+  },
+
+  coffeeTable: function(x, y) {
+    ctx.fillStyle = '#6f4c32';
+    ctx.fillRect(x + 3, y + 10, 18, 6);
+    ctx.fillStyle = '#8a6645';
+    ctx.fillRect(x + 4, y + 11, 16, 3);
+    ctx.fillStyle = '#3b281c';
+    ctx.fillRect(x + 6, y + 15, 12, 2);
+  },
+
+  floorLamp: function(x, y) {
+    ctx.fillStyle = '#d7c4a1';
+    ctx.fillRect(x + 9, y + 2, 6, 6);
+    ctx.fillRect(x + 10, y + 8, 4, 12);
+    ctx.fillStyle = '#3b2a21';
+    ctx.fillRect(x + 11, y + 20, 2, 3);
+    ctx.fillRect(x + 7, y + 22, 10, 1);
+  },
+
+  tv: function(x, y) {
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x + 2, y + 2, 20, 14);
+    ctx.fillStyle = '#2d8cff';
+    ctx.fillRect(x + 4, y + 4, 16, 10);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x + 10, y + 16, 4, 4);
+  },
+
+  bookshelf: function(x, y) {
+    ctx.fillStyle = '#8b5a2b';
+    ctx.fillRect(x + 2, y + 2, 20, 20);
+    ctx.fillStyle = '#6d4220';
+    ctx.fillRect(x + 3, y + 5, 18, 2);
+    ctx.fillRect(x + 3, y + 11, 18, 2);
+    ctx.fillRect(x + 3, y + 17, 18, 2);
+    ctx.fillStyle = '#d97f6f';
+    ctx.fillRect(x + 4, y + 7, 4, 6);
+    ctx.fillStyle = '#6fc0d9';
+    ctx.fillRect(x + 10, y + 7, 4, 10);
+    ctx.fillStyle = '#f2d46f';
+    ctx.fillRect(x + 16, y + 7, 3, 8);
   },
 
   // Door (basement)
@@ -939,6 +1094,21 @@ function drawInteractables(floor) {
             obj.type === 'cupboard_feast' ? 'feast' : null
         );
         break;
+      case 'fridge':
+        SPRITES.fridge(x, y);
+        break;
+      case 'stove':
+        SPRITES.stove(x, y);
+        break;
+      case 'kitchen_sink':
+        SPRITES.kitchenSink(x, y);
+        break;
+      case 'coffee_station':
+        SPRITES.coffeeStation(x, y);
+        break;
+      case 'dining_table':
+        SPRITES.diningTable(x, y);
+        break;
       case 'cat_alice':
         SPRITES.catTree(x, y);
         SPRITES.cat(x, y - 4, '#f5a623', '#ff8'); // orange tabby
@@ -979,6 +1149,18 @@ function drawInteractables(floor) {
         break;
       case 'sliding_door':
         SPRITES.slidingDoor(x, y);
+        break;
+      case 'tv':
+        SPRITES.tv(x, y);
+        break;
+      case 'floor_lamp':
+        SPRITES.floorLamp(x, y);
+        break;
+      case 'coffee_table':
+        SPRITES.coffeeTable(x, y);
+        break;
+      case 'bookshelf':
+        SPRITES.bookshelf(x, y);
         break;
       case 'futon':
         SPRITES.futon(x, y);

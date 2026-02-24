@@ -105,6 +105,26 @@ const DIALOGUE = {
   // OBJECT INTERACTIONS
   // ============================
 
+  fridge: [
+    { speaker: 'Marice', text: "The fridge is stocked — tuna cans, cream, and a questionable number of Purrpops." }
+  ],
+
+  stove: [
+    { speaker: 'Marice', text: "The stovetop is still warm. Salmon night was a hit." }
+  ],
+
+  kitchen_sink: [
+    { speaker: 'Marice', text: "Dishes soaking. Cat bowls get priority in this house." }
+  ],
+
+  coffee_station: [
+    { speaker: 'Marice', text: "Fresh brew on standby. Herding three cats requires caffeine." }
+  ],
+
+  dining_table: [
+    { speaker: 'Marice', text: "Table's set and ready — just keep the cats off the centerpiece." }
+  ],
+
   cupboard_empty: [
     { speaker: 'Marice', text: "Nothing in here but some old mugs and a suspicious amount of cat hair." }
   ],
@@ -143,6 +163,22 @@ const DIALOGUE = {
 
   sliding_door: [
     { speaker: 'Marice', text: "The backyard looks so peaceful. But I need to find my cats first!" }
+  ],
+
+  tv: [
+    { speaker: 'Marice', text: "Paused on a loop of bird videos. Quality enrichment programming." }
+  ],
+
+  floor_lamp: [
+    { speaker: 'Marice', text: "Soft light, cozy vibe. Perfect for an evening of cat cuddles." }
+  ],
+
+  coffee_table: [
+    { speaker: 'Marice', text: "Tiny paw prints in the dust. Evidence of unauthorized zoomies." }
+  ],
+
+  bookshelf: [
+    { speaker: 'Marice', text: "A whole shelf of cat behavior books. The girls clearly haven't read them." }
   ],
 
   futon: [

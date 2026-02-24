@@ -75,21 +75,21 @@ const mainFloorGrid = [
   // Row 0: top wall
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   // Row 1: kitchen top wall + dining room top wall
-  [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,6,6,6,6,6,6,6,1,0,0,0,0,0,0,0,0,0,0,1],
   // Row 2: kitchen cupboard wall
-  [1,4,4,4,4,0,0,0,1,0,0,0,0,0,0,0,0,0,2,1],
+  [1,4,4,4,4,6,6,4,1,0,0,0,4,0,0,0,0,0,2,1],
   // Row 3: kitchen floor + dining room
-  [1,0,0,0,0,0,0,0,1,0,0,0,0,0,4,0,0,0,0,1],
+  [1,4,0,0,0,4,4,0,1,2,2,0,0,0,4,0,0,0,0,1],
   // Row 4: kitchen floor + dining passage
-  [1,0,0,0,0,0,6,6,1,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,6,6,6,1,2,2,0,0,0,0,0,0,0,0,1],
   // Row 5: kitchen/living divider wall with opening
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1],
   // Row 6: living room area + basement door
-  [1,0,0,2,0,0,0,0,0,0,5,5,0,0,0,0,0,0,1,1],
+  [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,4,0,0,1,1],
   // Row 7: living room - sofa area
-  [1,0,0,2,0,0,0,0,0,0,5,5,0,0,0,0,0,0,4,1],
+  [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,0,0,0,4,1],
   // Row 8: living room
-  [1,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+  [1,0,4,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
   // Row 9: living room / half-bath divider
   [1,1,1,3,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 10: half-bath
@@ -105,17 +105,31 @@ const mainFloorGrid = [
 ];
 
 const mainFloorInteractables = [
+  // Kitchen appliances
+  { row: 3, col: 1, type: 'fridge', label: 'Fridge', sprite: 'fridge' },
   // Kitchen cupboards (row 2, cols 1-4)
   { row: 2, col: 1, type: 'cupboard_empty', label: 'Cupboard', sprite: 'cupboard' },
   { row: 2, col: 2, type: 'cupboard_purrpops', label: 'Cupboard', sprite: 'cupboard_treat' },
   { row: 2, col: 3, type: 'cupboard_empty', label: 'Cupboard', sprite: 'cupboard' },
   { row: 2, col: 4, type: 'cupboard_feast', label: 'Cupboard', sprite: 'cupboard_food' },
+  { row: 3, col: 5, type: 'stove', label: 'Stove', sprite: 'stove' },
+  { row: 3, col: 6, type: 'kitchen_sink', label: 'Sink', sprite: 'sink' },
+  { row: 2, col: 7, type: 'coffee_station', label: 'Coffee Station', sprite: 'coffee' },
 
   // Alice on cat tree in dining room (near sliding door)
   { row: 3, col: 14, type: 'cat_alice', label: 'Alice', sprite: 'cat_alice' },
 
+  // Dining room table
+  { row: 2, col: 12, type: 'dining_table', label: 'Dining Table', sprite: 'dining' },
+
   // Sliding door (decorative, right side of dining room)
   { row: 5, col: 18, type: 'sliding_door', label: 'Sliding Door', sprite: 'sliding_door' },
+
+  // Living room decor
+  { row: 6, col: 6, type: 'floor_lamp', label: 'Floor Lamp', sprite: 'lamp' },
+  { row: 7, col: 6, type: 'coffee_table', label: 'Coffee Table', sprite: 'coffee_table' },
+  { row: 6, col: 15, type: 'tv', label: 'TV Console', sprite: 'tv' },
+  { row: 8, col: 2, type: 'bookshelf', label: 'Bookshelf', sprite: 'bookshelf' },
 
   // Sofa with blanket (living room) - hides basement key
   { row: 8, col: 5, type: 'sofa_blanket', label: 'Sofa', sprite: 'sofa' },
@@ -281,8 +295,8 @@ const FLOORS = {
 // Room label data for rendering room names on the map
 const ROOM_LABELS = {
   main: [
-    { text: 'Kitchen', row: 1, col: 2 },
-    { text: 'Dining Room', row: 1, col: 12 },
+    { text: 'Kitchen', row: 2, col: 2 },
+    { text: 'Dining Room', row: 2, col: 12 },
     { text: 'Living Room', row: 8, col: 10 },
     { text: 'Half-Bath', row: 10, col: 2 },
   ],

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
+  <defs>
+    <linearGradient id="bed" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#e7d3b5"/>
+      <stop offset="60%" stop-color="#c5976c"/>
+      <stop offset="100%" stop-color="#9b6a43"/>
+    </linearGradient>
+    <linearGradient id="blanket" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#9b90d1"/>
+      <stop offset="60%" stop-color="#7b6ab1"/>
+      <stop offset="100%" stop-color="#514184"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="200" rx="16" fill="url(#bed)" stroke="#4a3728" stroke-width="6"/>
+  <rect x="14" y="18" width="292" height="48" rx="12" fill="#f5f1e8" stroke="#d3c4ac" stroke-width="4"/>
+  <rect x="0" y="90" width="320" height="110" fill="url(#blanket)" opacity="0.9"/>
+  <g transform="translate(48 54)">
+    <g id="marice">
+      <polygon points="28,8 16,20 40,20" fill="#5c3317"/>
+      <polygon points="68,8 56,20 80,20" fill="#5c3317"/>
+      <circle cx="48" cy="34" r="28" fill="#ffe0bd" stroke="#5c3317" stroke-width="3"/>
+      <rect x="32" y="32" width="8" height="8" rx="2" fill="#2e2e2e"/>
+      <rect x="54" y="32" width="8" height="8" rx="2" fill="#2e2e2e"/>
+      <rect x="45" y="44" width="6" height="4" rx="2" fill="#ff9ecf"/>
+    </g>
+    <g id="alice" transform="translate(72 6)">
+      <polygon points="22,4 10,18 32,18" fill="#f7b45a"/>
+      <polygon points="62,4 50,18 72,18" fill="#f7b45a"/>
+      <circle cx="42" cy="26" r="24" fill="#f5a623" stroke="#c8791c" stroke-width="3"/>
+      <rect x="30" y="24" width="7" height="7" rx="2" fill="#2e2e2e"/>
+      <rect x="47" y="24" width="7" height="7" rx="2" fill="#2e2e2e"/>
+      <rect x="38" y="34" width="8" height="4" rx="2" fill="#ffdd9c"/>
+    </g>
+    <g id="olive" transform="translate(144 10)">
+      <polygon points="18,2 8,14 28,14" fill="#8f8f8f"/>
+      <polygon points="54,2 44,14 64,14" fill="#8f8f8f"/>
+      <circle cx="36" cy="22" r="22" fill="#9e9e9e" stroke="#6d6d6d" stroke-width="3"/>
+      <rect x="26" y="20" width="6" height="6" rx="2" fill="#2e2e2e"/>
+      <rect x="40" y="20" width="6" height="6" rx="2" fill="#2e2e2e"/>
+      <rect x="33" y="28" width="6" height="3" rx="2" fill="#dcdcdc"/>
+    </g>
+    <g id="beatrice" transform="translate(204 4)">
+      <polygon points="20,6 10,18 28,18" fill="#1f1f1f"/>
+      <polygon points="56,6 46,18 64,18" fill="#1f1f1f"/>
+      <circle cx="38" cy="28" r="24" fill="#2a2a2a" stroke="#0f0f0f" stroke-width="3"/>
+      <rect x="28" y="26" width="6" height="6" rx="2" fill="#ffd1e8"/>
+      <rect x="42" y="26" width="6" height="6" rx="2" fill="#ffd1e8"/>
+      <rect x="34" y="35" width="8" height="3" rx="2" fill="#ff9ecf"/>
+    </g>
+  </g>
+</svg>
