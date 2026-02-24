@@ -219,7 +219,7 @@ html, body {
 
 #dialogue-box {
   width: 100%;
-  max-width: 460px;
+  max-width: 500px;
   background: #2a1f14;
   border: 3px solid #6b4226;
   border-radius: 12px;
@@ -230,14 +230,82 @@ html, body {
   gap: 12px;
 }
 
-#dialogue-portrait {
-  width: 120px;
-  height: 120px;
+/* Dual portrait row */
+#dialogue-portraits {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 24px;
+  width: 100%;
+}
+
+.portrait-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.portrait-frame img {
+  width: 110px;
+  height: 110px;
   border: 3px solid #8B6914;
   border-radius: 8px;
   image-rendering: pixelated;
   background: #1a1a2e;
   object-fit: contain;
+  transition: border-color 0.2s;
+}
+
+.portrait-frame .portrait-name {
+  font-size: 11px;
+  font-weight: bold;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+
+/* Highlight the active speaker's portrait */
+.portrait-frame.speaking img {
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+.portrait-frame.speaking .portrait-name {
+  color: #ffd700;
+}
+
+/* Dim the non-speaking portrait slightly */
+.portrait-frame.listening {
+  opacity: 0.6;
+  transform: scale(0.95);
+}
+
+/* Marice-specific speaker highlight (pink) */
+.portrait-frame.speaking-marice img {
+  border-color: #ff9ecf;
+  box-shadow: 0 0 12px rgba(255, 158, 207, 0.4);
+}
+
+.portrait-frame.speaking-marice .portrait-name {
+  color: #ff9ecf;
+}
+
+/* Hide portraits area when no cat (solo Marice monologue on objects) */
+#dialogue-portraits.solo-marice #portrait-frame-cat {
+  display: none;
+}
+
+#dialogue-portraits.solo-marice #portrait-frame-marice img {
+  width: 120px;
+  height: 120px;
+}
+
+/* Hide portraits entirely when no cat and no conversation */
+#dialogue-portraits.no-portraits {
+  display: none;
 }
 
 #dialogue-speaker {
@@ -426,7 +494,16 @@ html, body {
     font-size: 12px;
   }
 
-  #dialogue-portrait {
+  .portrait-frame img {
+    width: 80px;
+    height: 80px;
+  }
+
+  #dialogue-portraits {
+    gap: 14px;
+  }
+
+  #dialogue-portraits.solo-marice #portrait-frame-marice img {
     width: 96px;
     height: 96px;
   }

@@ -84,7 +84,11 @@ let dialogueCat = null; // which cat's portrait to show
 let dialogueCallback = null; // called when dialogue ends
 
 const dialogueOverlay = document.getElementById('dialogue-overlay');
-const dialoguePortrait = document.getElementById('dialogue-portrait');
+const dialoguePortraitsRow = document.getElementById('dialogue-portraits');
+const portraitFrameMarice = document.getElementById('portrait-frame-marice');
+const portraitFrameCat = document.getElementById('portrait-frame-cat');
+const portraitImgCat = document.getElementById('dialogue-portrait-cat');
+const portraitNameCat = document.getElementById('portrait-name-cat');
 const dialogueSpeaker = document.getElementById('dialogue-speaker');
 const dialogueText = document.getElementById('dialogue-text');
 
@@ -98,6 +102,21 @@ function startDialogue(dialogueKey, catName, callback) {
   dialogueCallback = callback || null;
   dialogueActive = true;
 
+  // Set up portrait layout based on whether a cat is involved
+  dialoguePortraitsRow.classList.remove('solo-marice', 'no-portraits');
+  if (dialogueCat && portraits[dialogueCat]) {
+    // Cat conversation — show both Marice and cat portraits
+    portraitImgCat.src = portraits[dialogueCat].src;
+    portraitNameCat.textContent = catName.charAt(0).toUpperCase() + catName.slice(1);
+    portraitFrameCat.style.display = '';
+    portraitFrameMarice.style.display = '';
+  } else {
+    // Solo Marice monologue (inspecting objects) — show only Marice
+    dialoguePortraitsRow.classList.add('solo-marice');
+    portraitFrameMarice.style.display = '';
+    portraitFrameCat.style.display = 'none';
+  }
+
   showDialogueMessage();
   dialogueOverlay.classList.add('active');
 }
@@ -106,12 +125,18 @@ function showDialogueMessage() {
   const msg = dialogueQueue[dialogueIndex];
   if (!msg) return;
 
-  // Always show the cat portrait (not Marice)
-  if (dialogueCat && portraits[dialogueCat]) {
-    dialoguePortrait.src = portraits[dialogueCat].src;
-    dialoguePortrait.style.display = 'block';
+  // Update speaker highlight on portraits
+  portraitFrameMarice.classList.remove('speaking', 'speaking-marice', 'listening');
+  portraitFrameCat.classList.remove('speaking', 'speaking-marice', 'listening');
+
+  if (msg.speaker === 'Marice') {
+    // Marice is speaking
+    portraitFrameMarice.classList.add('speaking-marice');
+    if (dialogueCat) portraitFrameCat.classList.add('listening');
   } else {
-    dialoguePortrait.style.display = 'none';
+    // Cat is speaking
+    portraitFrameCat.classList.add('speaking');
+    portraitFrameMarice.classList.add('listening');
   }
 
   dialogueSpeaker.textContent = msg.speaker;
