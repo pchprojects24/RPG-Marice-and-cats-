@@ -137,8 +137,6 @@ const mainFloorInteractables = [
   { row: 7, col: 6, type: 'coffee_table', label: 'Coffee Table', sprite: 'coffee_table' },
   { row: 6, col: 15, type: 'tv', label: 'TV Console', sprite: 'tv' },
   { row: 8, col: 2, type: 'bookshelf', label: 'Bookshelf', sprite: 'bookshelf' },
-  { row: 6, col: 13, type: 'game_console', label: 'Game Console', sprite: 'console' },
-  { row: 8, col: 15, type: 'side_table', label: 'Side Table', sprite: 'side_table' },
   { row: 8, col: 16, type: 'reading_chair', label: 'Reading Chair', sprite: 'chair' },
 
   // Sofa with blanket (living room) - hides basement key
@@ -148,13 +146,6 @@ const mainFloorInteractables = [
   { row: 7, col: 18, type: 'basement_door', label: 'Basement Door', sprite: 'door_locked' },
 
   // Half-bath additional items
-  { row: 10, col: 3, type: 'bathroom_mirror', label: 'Mirror', sprite: 'mirror' },
-  { row: 12, col: 2, type: 'towel_rack', label: 'Towel Rack', sprite: 'towels' },
-
-  // Living room additional decor
-  { row: 10, col: 8, type: 'rug', label: 'Area Rug', sprite: 'rug' },
-  { row: 11, col: 16, type: 'wall_art', label: 'Wall Art', sprite: 'art' },
-  { row: 13, col: 10, type: 'coat_rack', label: 'Coat Rack', sprite: 'coat_rack' },
 ];
 
 // Stairs position for main floor

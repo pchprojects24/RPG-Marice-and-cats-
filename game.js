@@ -1054,6 +1054,87 @@ const SPRITES = {
     ctx.fillRect(x + 16, y + 21, 3, 3);
   },
 
+  // Wide 3-seat sofa (spans 3 tiles = 72px wide)
+  sofaWide: function(x, y) {
+    const W = TILE_SIZE * 3;
+    // Shadow base
+    ctx.fillStyle = '#251912';
+    ctx.fillRect(x + 2, y + 19, W - 4, 4);
+    // Main frame
+    ctx.fillStyle = '#3b2a21';
+    ctx.fillRect(x + 1, y + 7, W - 2, 14);
+    // Back cushion
+    ctx.fillStyle = '#c48f6b';
+    ctx.fillRect(x + 3, y + 5, W - 6, 8);
+    ctx.fillStyle = '#ad7957';
+    ctx.fillRect(x + 3, y + 6, W - 6, 6);
+    // Seat cushions (3 cushions)
+    ctx.fillStyle = '#d19c79';
+    ctx.fillRect(x + 3, y + 12, W - 6, 8);
+    ctx.fillStyle = '#c18a6a';
+    ctx.fillRect(x + 3, y + 13, W - 6, 3);
+    // Cushion dividers (two vertical seams separating the 3 seat cushions)
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + TILE_SIZE, y + 12);    // y+12 = seat cushion top
+    ctx.lineTo(x + TILE_SIZE, y + 20);
+    ctx.moveTo(x + TILE_SIZE * 2, y + 12);
+    ctx.lineTo(x + TILE_SIZE * 2, y + 20);
+    ctx.moveTo(x + 5, y + 16);            // y+16 = horizontal stitch midline
+    ctx.lineTo(x + W - 5, y + 16);
+    ctx.stroke();
+    // Armrests
+    ctx.fillStyle = '#8b5f45';
+    ctx.fillRect(x + 1, y + 8, 5, 12);
+    ctx.fillRect(x + W - 6, y + 8, 5, 12);
+    ctx.fillStyle = '#744c38';
+    ctx.fillRect(x + 2, y + 9, 3, 10);
+    ctx.fillRect(x + W - 5, y + 9, 3, 10);
+    // Cushy highlight
+    ctx.fillStyle = 'rgba(255,230,210,0.25)';
+    ctx.fillRect(x + 4, y + 6, W - 8, 2);
+    ctx.fillRect(x + 4, y + 14, W - 8, 1);
+    // Legs
+    ctx.fillStyle = '#2a1812';
+    ctx.fillRect(x + 5, y + 21, 3, 3);
+    ctx.fillRect(x + W - 8, y + 21, 3, 3);
+  },
+
+  // Armchair / reading chair
+  armchair: function(x, y) {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(x + 3, y + 20, 18, 3);
+    // Main frame
+    ctx.fillStyle = '#5a3a28';
+    ctx.fillRect(x + 2, y + 7, 20, 14);
+    // Back cushion
+    ctx.fillStyle = '#b87d5a';
+    ctx.fillRect(x + 4, y + 4, 16, 10);
+    ctx.fillStyle = '#a06a48';
+    ctx.fillRect(x + 4, y + 5, 16, 8);
+    // Seat cushion
+    ctx.fillStyle = '#c88c68';
+    ctx.fillRect(x + 4, y + 13, 16, 7);
+    ctx.fillStyle = '#b07858';
+    ctx.fillRect(x + 4, y + 14, 16, 3);
+    // Armrests
+    ctx.fillStyle = '#7a4f35';
+    ctx.fillRect(x + 2, y + 8, 4, 11);
+    ctx.fillRect(x + 18, y + 8, 4, 11);
+    ctx.fillStyle = '#6a3f25';
+    ctx.fillRect(x + 3, y + 9, 2, 9);
+    ctx.fillRect(x + 19, y + 9, 2, 9);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,220,190,0.2)';
+    ctx.fillRect(x + 5, y + 5, 14, 2);
+    // Legs
+    ctx.fillStyle = '#2a1812';
+    ctx.fillRect(x + 5, y + 21, 3, 2);
+    ctx.fillRect(x + 16, y + 21, 3, 2);
+  },
+
   fridge: function(x, y) {
     ctx.fillStyle = '#d8e2ec';
     ctx.fillRect(x + 2, y + 1, 20, 22);
@@ -1470,9 +1551,11 @@ function drawInteractables(floor) {
         SPRITES.cat(x + 2, y + 6, '#2a2a2a', '#ffb6c1'); // black cat, positioned on bed
         break;
       case 'sofa_blanket':
-        SPRITES.sofa(x, y);
+        // Draw wide 3-seat sofa: interactive tile is the rightmost cushion (col 5),
+        // so offset left by 2 tiles so the sofa spans cols 3-4-5.
+        SPRITES.sofaWide(x - 2 * TILE_SIZE, y);
         if (!gameState.flags.sofa_searched) {
-          // Blanket on sofa
+          // Blanket on sofa (right cushion, at the interactive tile position)
           ctx.fillStyle = '#f4d05e';
           ctx.fillRect(x + 5, y + 8, 14, 9);
           ctx.strokeStyle = 'rgba(255,255,255,0.85)';
@@ -1529,7 +1612,7 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#8b6914', '#daa520');
         break;
       case 'reading_chair':
-        SPRITES.genericItem(x, y, '#8b4513', '#d2691e');
+        SPRITES.armchair(x, y);
         break;
       case 'bathroom_mirror':
         SPRITES.genericItem(x, y, '#add8e6', '#87ceeb');
