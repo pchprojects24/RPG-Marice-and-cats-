@@ -183,5 +183,213 @@ const DIALOGUE = {
 
   futon: [
     { speaker: 'Marice', text: "A comfy futon. I can see cat claw marks all over it. Classic." }
+  ],
+
+  // ============================
+  // NEW INTERACTABLES - MAIN FLOOR
+  // ============================
+
+  microwave: [
+    { speaker: 'Marice', text: "Microwave leftovers for speed or stove for quality? The eternal struggle." }
+  ],
+
+  trash_can: [
+    { speaker: 'Marice', text: "Taking out the trash. The cats are NOT helping with this chore." }
+  ],
+
+  spice_rack: [
+    { speaker: 'Marice', text: "Organized alphabetically. Gotta keep the kitchen game strong." }
+  ],
+
+  china_cabinet: [
+    { speaker: 'Marice', text: "Fancy dishes behind glass. The cats are banned from this area." }
+  ],
+
+  plant: [
+    { speaker: 'Marice', text: "A nice potted plant. So far the cats haven't knocked it over. So far." }
+  ],
+
+  game_console: [
+    { speaker: 'Marice', text: "Game console with all the cozy indie titles. Perfect for cat time." }
+  ],
+
+  side_table: [
+    { speaker: 'Marice', text: "Side table with a reading lamp. Good vibes only." }
+  ],
+
+  reading_chair: [
+    { speaker: 'Marice', text: "A cozy reading chair. Alice claims it during the day." }
+  ],
+
+  bathroom_mirror: [
+    { speaker: 'Marice', text: "Mirror's a bit foggy. Someone took a steamy shower recently." }
+  ],
+
+  towel_rack: [
+    { speaker: 'Marice', text: "Fresh towels hanging neatly. Cat-approved softness." }
+  ],
+
+  rug: [
+    { speaker: 'Marice', text: "Soft area rug. Perfect for cats to zoom across at 3 AM." }
+  ],
+
+  wall_art: [
+    { speaker: 'Marice', text: "Art on the wall. It's tastefully abstract." }
+  ],
+
+  coat_rack: [
+    { speaker: 'Marice', text: "Coats and scarves hanging here. Ready for any weather." }
+  ],
+
+  // ============================
+  // NEW INTERACTABLES - BASEMENT
+  // ============================
+
+  weights: [
+    { speaker: 'Marice', text: "Free weights. I should use these more... after finding all the cats." }
+  ],
+
+  exercise_bike: [
+    { speaker: 'Marice', text: "Stationary bike. Olive uses this area as her fortress of solitude." }
+  ],
+
+  yoga_mat: [
+    { speaker: 'Marice', text: "Yoga mat rolled up neatly. Namaste, but first, cat snuggles." }
+  ],
+
+  storage_box: [
+    { speaker: 'Marice', text: "Storage boxes full of seasonal decorations and memories." }
+  ],
+
+  washer: [
+    { speaker: 'Marice', text: "Washing machine. Always running in a house with three cats." }
+  ],
+
+  dryer: [
+    { speaker: 'Marice', text: "The dryer. Warm clothes = instant cat magnet." }
+  ],
+
+  laundry_basket_storage: [
+    { speaker: 'Marice', text: "Empty laundry basket. Already used the other one for the stairs." }
+  ],
+
+  cleaning_supplies: [
+    { speaker: 'Marice', text: "Cleaning supplies. Cat hair removal is a full-time job." }
+  ],
+
+  pool_table: [
+    { speaker: 'Marice', text: "Pool table for game nights. The cats think the balls are toys." }
+  ],
+
+  mini_fridge: [
+    { speaker: 'Marice', text: "Mini fridge stocked with drinks and extra cat treats. Priorities." }
+  ],
+
+  gaming_setup: [
+    { speaker: 'Marice', text: "Gaming PC setup. RGB lights everywhere. Olive loves watching the colors." }
+  ],
+
+  bath_mat: [
+    { speaker: 'Marice', text: "Fluffy bath mat. Non-slip and cat-approved." }
+  ],
+
+  bathroom_cabinet: [
+    { speaker: 'Marice', text: "Bathroom cabinet with towels and toiletries. All organized." }
+  ],
+
+  tool_bench: [
+    { speaker: 'Marice', text: "Tool bench with various DIY supplies. For those home improvement days." }
+  ],
+
+  water_heater: [
+    { speaker: 'Marice', text: "Water heater humming quietly. Keeping things warm and cozy." }
+  ],
+
+  bookshelf_basement: [
+    { speaker: 'Marice', text: "Bookshelf with old paperbacks and magazines. Basement reading material." }
+  ],
+
+  // ============================
+  // NEW INTERACTABLES - UPSTAIRS
+  // ============================
+
+  nightstand: [
+    { speaker: 'Marice', text: "Nightstand with a lamp and some reading material. Bedtime essentials." }
+  ],
+
+  dresser: [
+    { speaker: 'Marice', text: "Dresser with neatly folded clothes. Cats love napping on top of this." }
+  ],
+
+  jewelry_box: [
+    { speaker: 'Marice', text: "Jewelry box with treasured pieces. Kept secure from curious paws." }
+  ],
+
+  wardrobe: [
+    { speaker: 'Marice', text: "Large wardrobe. Sometimes a cat sneaks in and takes a nap." }
+  ],
+
+  bedside_lamp: [
+    { speaker: 'Marice', text: "Bedside lamp with soft lighting. Perfect for reading before sleep." }
+  ],
+
+  guest_dresser: [
+    { speaker: 'Marice', text: "Guest room dresser. Beatrice has claimed the top as her throne." }
+  ],
+
+  reading_nook: [
+    { speaker: 'Marice', text: "A cozy reading nook by the window. Best spot in the house." }
+  ],
+
+  filing_cabinet: [
+    { speaker: 'Marice', text: "Filing cabinet full of important documents. Organized and secure." }
+  ],
+
+  office_chair: [
+    { speaker: 'Marice', text: "Ergonomic office chair. Olive steals this when I'm not looking." }
+  ],
+
+  printer: [
+    { speaker: 'Marice', text: "Printer ready for action. Paper jam? Not today!" }
+  ],
+
+  bookcase: [
+    { speaker: 'Marice', text: "Bookcase filled with favorites. Every book tells a story." }
+  ],
+
+  bathroom_scale: [
+    { speaker: 'Marice', text: "Bathroom scale. The cats weigh themselves sometimes. It's adorable." }
+  ],
+
+  medicine_cabinet: [
+    { speaker: 'Marice', text: "Medicine cabinet with first aid supplies. Safety first!" }
+  ],
+
+  towel_warmer: [
+    { speaker: 'Marice', text: "Heated towel rack. Luxury living with warm towels after a shower." }
+  ],
+
+  hallway_table: [
+    { speaker: 'Marice', text: "Console table with a decorative bowl for keys. Everything in its place." }
+  ],
+
+  plant_hallway: [
+    { speaker: 'Marice', text: "Another potted plant. This house is basically a greenhouse now." }
+  ],
+
+  family_photos: [
+    { speaker: 'Marice', text: "Family photos on the wall. Me and my three girls through the years." }
+  ],
+
+  coat_hooks: [
+    { speaker: 'Marice', text: "Coat hooks for jackets and bags. Simple and functional." }
+  ],
+
+  ceiling_fan: [
+    { speaker: 'Marice', text: "Ceiling fan spinning slowly. Keeps the air circulating nicely." }
+  ],
+
+  linen_closet: [
+    { speaker: 'Marice', text: "Linen closet with extra sheets and blankets. Always prepared for guests." }
   ]
 };

@@ -517,6 +517,157 @@ function handleInteraction(obj) {
     case 'futon':
       startDialogue('futon', null, null);
       break;
+
+    // ---- NEW MAIN FLOOR INTERACTABLES ----
+    case 'microwave':
+      startDialogue('microwave', null, null);
+      break;
+    case 'trash_can':
+      startDialogue('trash_can', null, null);
+      break;
+    case 'spice_rack':
+      startDialogue('spice_rack', null, null);
+      break;
+    case 'china_cabinet':
+      startDialogue('china_cabinet', null, null);
+      break;
+    case 'plant':
+      startDialogue('plant', null, null);
+      break;
+    case 'game_console':
+      startDialogue('game_console', null, null);
+      break;
+    case 'side_table':
+      startDialogue('side_table', null, null);
+      break;
+    case 'reading_chair':
+      startDialogue('reading_chair', null, null);
+      break;
+    case 'bathroom_mirror':
+      startDialogue('bathroom_mirror', null, null);
+      break;
+    case 'towel_rack':
+      startDialogue('towel_rack', null, null);
+      break;
+    case 'rug':
+      startDialogue('rug', null, null);
+      break;
+    case 'wall_art':
+      startDialogue('wall_art', null, null);
+      break;
+    case 'coat_rack':
+      startDialogue('coat_rack', null, null);
+      break;
+
+    // ---- NEW BASEMENT INTERACTABLES ----
+    case 'weights':
+      startDialogue('weights', null, null);
+      break;
+    case 'exercise_bike':
+      startDialogue('exercise_bike', null, null);
+      break;
+    case 'yoga_mat':
+      startDialogue('yoga_mat', null, null);
+      break;
+    case 'storage_box':
+      startDialogue('storage_box', null, null);
+      break;
+    case 'washer':
+      startDialogue('washer', null, null);
+      break;
+    case 'dryer':
+      startDialogue('dryer', null, null);
+      break;
+    case 'laundry_basket_storage':
+      startDialogue('laundry_basket_storage', null, null);
+      break;
+    case 'cleaning_supplies':
+      startDialogue('cleaning_supplies', null, null);
+      break;
+    case 'pool_table':
+      startDialogue('pool_table', null, null);
+      break;
+    case 'mini_fridge':
+      startDialogue('mini_fridge', null, null);
+      break;
+    case 'gaming_setup':
+      startDialogue('gaming_setup', null, null);
+      break;
+    case 'bath_mat':
+      startDialogue('bath_mat', null, null);
+      break;
+    case 'bathroom_cabinet':
+      startDialogue('bathroom_cabinet', null, null);
+      break;
+    case 'tool_bench':
+      startDialogue('tool_bench', null, null);
+      break;
+    case 'water_heater':
+      startDialogue('water_heater', null, null);
+      break;
+    case 'bookshelf_basement':
+      startDialogue('bookshelf_basement', null, null);
+      break;
+
+    // ---- NEW UPSTAIRS INTERACTABLES ----
+    case 'nightstand':
+      startDialogue('nightstand', null, null);
+      break;
+    case 'dresser':
+    case 'guest_dresser':
+      startDialogue('dresser', null, null);
+      break;
+    case 'jewelry_box':
+      startDialogue('jewelry_box', null, null);
+      break;
+    case 'wardrobe':
+      startDialogue('wardrobe', null, null);
+      break;
+    case 'bedside_lamp':
+      startDialogue('bedside_lamp', null, null);
+      break;
+    case 'reading_nook':
+      startDialogue('reading_nook', null, null);
+      break;
+    case 'filing_cabinet':
+      startDialogue('filing_cabinet', null, null);
+      break;
+    case 'office_chair':
+      startDialogue('office_chair', null, null);
+      break;
+    case 'printer':
+      startDialogue('printer', null, null);
+      break;
+    case 'bookcase':
+      startDialogue('bookcase', null, null);
+      break;
+    case 'bathroom_scale':
+      startDialogue('bathroom_scale', null, null);
+      break;
+    case 'medicine_cabinet':
+      startDialogue('medicine_cabinet', null, null);
+      break;
+    case 'towel_warmer':
+      startDialogue('towel_warmer', null, null);
+      break;
+    case 'hallway_table':
+      startDialogue('hallway_table', null, null);
+      break;
+    case 'plant_hallway':
+      startDialogue('plant_hallway', null, null);
+      break;
+    case 'family_photos':
+      startDialogue('family_photos', null, null);
+      break;
+    case 'coat_hooks':
+      startDialogue('coat_hooks', null, null);
+      break;
+    case 'ceiling_fan':
+      startDialogue('ceiling_fan', null, null);
+      break;
+    case 'linen_closet':
+      startDialogue('linen_closet', null, null);
+      break;
   }
 }
 
@@ -1002,6 +1153,14 @@ const SPRITES = {
     // Showerhead
     ctx.fillStyle = '#999';
     ctx.fillRect(x + 10, y + 1, 4, 3);
+  },
+
+  // Generic item renderer (small box with color)
+  genericItem: function(x, y, color1, color2) {
+    ctx.fillStyle = color1;
+    ctx.fillRect(x + 4, y + 4, 16, 16);
+    ctx.fillStyle = color2;
+    ctx.fillRect(x + 6, y + 6, 12, 12);
   }
 };
 
@@ -1160,10 +1319,157 @@ function drawInteractables(floor) {
         SPRITES.coffeeTable(x, y);
         break;
       case 'bookshelf':
+      case 'bookshelf_basement':
         SPRITES.bookshelf(x, y);
         break;
       case 'futon':
         SPRITES.futon(x, y);
+        break;
+
+      // New items with simple generic rendering
+      case 'microwave':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#444');
+        break;
+      case 'trash_can':
+        SPRITES.genericItem(x, y, '#666', '#444');
+        break;
+      case 'spice_rack':
+        SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
+        break;
+      case 'china_cabinet':
+        SPRITES.genericItem(x, y, '#8b7355', '#d4a574');
+        break;
+      case 'plant':
+      case 'plant_hallway':
+        SPRITES.genericItem(x, y, '#228b22', '#90ee90');
+        break;
+      case 'game_console':
+        SPRITES.genericItem(x, y, '#000', '#4169e1');
+        break;
+      case 'side_table':
+        SPRITES.genericItem(x, y, '#8b6914', '#daa520');
+        break;
+      case 'reading_chair':
+        SPRITES.genericItem(x, y, '#8b4513', '#d2691e');
+        break;
+      case 'bathroom_mirror':
+        SPRITES.genericItem(x, y, '#add8e6', '#87ceeb');
+        break;
+      case 'towel_rack':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#fff');
+        break;
+      case 'rug':
+        SPRITES.genericItem(x, y, '#8b0000', '#dc143c');
+        break;
+      case 'wall_art':
+        SPRITES.genericItem(x, y, '#ffd700', '#ffb347');
+        break;
+      case 'coat_rack':
+        SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+
+      // Basement items
+      case 'weights':
+        SPRITES.genericItem(x, y, '#708090', '#2f4f4f');
+        break;
+      case 'exercise_bike':
+        SPRITES.genericItem(x, y, '#ff4500', '#000');
+        break;
+      case 'yoga_mat':
+        SPRITES.genericItem(x, y, '#9370db', '#8a2be2');
+        break;
+      case 'storage_box':
+        SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
+        break;
+      case 'washer':
+        SPRITES.genericItem(x, y, '#f0f0f0', '#4682b4');
+        break;
+      case 'dryer':
+        SPRITES.genericItem(x, y, '#f0f0f0', '#ff6347');
+        break;
+      case 'laundry_basket_storage':
+        SPRITES.genericItem(x, y, '#deb887', '#d2691e');
+        break;
+      case 'cleaning_supplies':
+        SPRITES.genericItem(x, y, '#ffff00', '#32cd32');
+        break;
+      case 'pool_table':
+        SPRITES.genericItem(x, y, '#228b22', '#8b4513');
+        break;
+      case 'mini_fridge':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#000');
+        break;
+      case 'gaming_setup':
+        SPRITES.genericItem(x, y, '#000', '#ff00ff');
+        break;
+      case 'bath_mat':
+        SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
+        break;
+      case 'bathroom_cabinet':
+        SPRITES.genericItem(x, y, '#fff', '#d3d3d3');
+        break;
+      case 'tool_bench':
+        SPRITES.genericItem(x, y, '#8b4513', '#696969');
+        break;
+      case 'water_heater':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#ff4500');
+        break;
+
+      // Upstairs items
+      case 'nightstand':
+        SPRITES.genericItem(x, y, '#8b6914', '#cd853f');
+        break;
+      case 'dresser':
+      case 'guest_dresser':
+        SPRITES.genericItem(x, y, '#8b4513', '#a0522d');
+        break;
+      case 'jewelry_box':
+        SPRITES.genericItem(x, y, '#ffd700', '#daa520');
+        break;
+      case 'wardrobe':
+        SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+      case 'bedside_lamp':
+        SPRITES.genericItem(x, y, '#ffffe0', '#ffd700');
+        break;
+      case 'reading_nook':
+        SPRITES.genericItem(x, y, '#8b7355', '#d2b48c');
+        break;
+      case 'filing_cabinet':
+        SPRITES.genericItem(x, y, '#708090', '#2f4f4f');
+        break;
+      case 'office_chair':
+        SPRITES.genericItem(x, y, '#000', '#4169e1');
+        break;
+      case 'printer':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#000');
+        break;
+      case 'bookcase':
+        SPRITES.genericItem(x, y, '#8b4513', '#cd853f');
+        break;
+      case 'bathroom_scale':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#696969');
+        break;
+      case 'medicine_cabinet':
+        SPRITES.genericItem(x, y, '#fff', '#add8e6');
+        break;
+      case 'towel_warmer':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#ffa500');
+        break;
+      case 'hallway_table':
+        SPRITES.genericItem(x, y, '#8b6914', '#daa520');
+        break;
+      case 'family_photos':
+        SPRITES.genericItem(x, y, '#000', '#ffd700');
+        break;
+      case 'coat_hooks':
+        SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+      case 'ceiling_fan':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#696969');
+        break;
+      case 'linen_closet':
+        SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
         break;
     }
   }

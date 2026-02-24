@@ -317,50 +317,117 @@ html, body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #1a1a2e;
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d1b3d 50%, #1a1a2e 100%);
   z-index: 200;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 20px;
+  animation: bgPulse 8s ease-in-out infinite;
+}
+
+@keyframes bgPulse {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 #title-screen h1 {
-  font-size: 28px;
+  font-size: 42px;
   color: #ffd700;
   text-align: center;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  text-shadow:
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.5),
+    2px 2px 4px rgba(0,0,0,0.8);
+  animation: titleGlow 2s ease-in-out infinite alternate;
+  letter-spacing: 2px;
+}
+
+@keyframes titleGlow {
+  from { text-shadow:
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.5),
+    2px 2px 4px rgba(0,0,0,0.8); }
+  to { text-shadow:
+    0 0 20px rgba(255, 215, 0, 1),
+    0 0 30px rgba(255, 215, 0, 0.7),
+    2px 2px 6px rgba(0,0,0,0.8); }
 }
 
 #title-screen h2 {
-  font-size: 16px;
-  color: #d4b896;
+  font-size: 20px;
+  color: #ff9ecf;
   font-weight: normal;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+  animation: subtitleFloat 3s ease-in-out infinite;
+}
+
+@keyframes subtitleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 #title-screen .subtitle {
-  font-size: 13px;
-  color: #888;
+  font-size: 14px;
+  color: #b8a890;
   text-align: center;
-  line-height: 1.6;
+  line-height: 1.8;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  max-width: 400px;
+  padding: 0 20px;
 }
 
 .title-btn {
-  padding: 12px 36px;
-  background: #2a1f14;
-  border: 2px solid #6b4226;
-  border-radius: 8px;
+  padding: 14px 42px;
+  background: linear-gradient(180deg, #3a2f1f 0%, #2a1f14 100%);
+  border: 3px solid #8B6914;
+  border-radius: 12px;
   color: #ffd700;
-  font-size: 16px;
+  font-size: 18px;
   font-family: 'Courier New', monospace;
   font-weight: bold;
   cursor: pointer;
   margin-top: 10px;
+  box-shadow:
+    0 4px 8px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  transition: all 0.3s ease;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.title-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.title-btn:hover::before {
+  left: 100%;
 }
 
 .title-btn:hover {
-  background: #3a2f1f;
+  background: linear-gradient(180deg, #4a3f2f 0%, #3a2f1f 100%);
+  border-color: #ffd700;
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 12px rgba(0,0,0,0.5),
+    0 0 15px rgba(255,215,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.title-btn:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
 /* ======================== Ending Overlay ======================== */
