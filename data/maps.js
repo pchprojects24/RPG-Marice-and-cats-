@@ -116,20 +116,30 @@ const mainFloorInteractables = [
   { row: 3, col: 6, type: 'kitchen_sink', label: 'Sink', sprite: 'sink' },
   { row: 2, col: 7, type: 'coffee_station', label: 'Coffee Station', sprite: 'coffee' },
 
+  // Additional kitchen items
+  { row: 4, col: 1, type: 'microwave', label: 'Microwave', sprite: 'microwave' },
+  { row: 4, col: 3, type: 'trash_can', label: 'Trash Can', sprite: 'trash' },
+  { row: 4, col: 7, type: 'spice_rack', label: 'Spice Rack', sprite: 'spice' },
+
   // Alice on cat tree in dining room (near sliding door)
   { row: 3, col: 14, type: 'cat_alice', label: 'Alice', sprite: 'cat_alice' },
 
-  // Dining room table
+  // Dining room table and chairs
   { row: 2, col: 12, type: 'dining_table', label: 'Dining Table', sprite: 'dining' },
+  { row: 4, col: 14, type: 'china_cabinet', label: 'China Cabinet', sprite: 'cabinet' },
+  { row: 4, col: 16, type: 'plant', label: 'Potted Plant', sprite: 'plant' },
 
   // Sliding door (decorative, right side of dining room)
   { row: 5, col: 18, type: 'sliding_door', label: 'Sliding Door', sprite: 'sliding_door' },
 
-  // Living room decor
+  // Living room decor - more detailed
   { row: 6, col: 6, type: 'floor_lamp', label: 'Floor Lamp', sprite: 'lamp' },
   { row: 7, col: 6, type: 'coffee_table', label: 'Coffee Table', sprite: 'coffee_table' },
   { row: 6, col: 15, type: 'tv', label: 'TV Console', sprite: 'tv' },
   { row: 8, col: 2, type: 'bookshelf', label: 'Bookshelf', sprite: 'bookshelf' },
+  { row: 6, col: 13, type: 'game_console', label: 'Game Console', sprite: 'console' },
+  { row: 8, col: 15, type: 'side_table', label: 'Side Table', sprite: 'side_table' },
+  { row: 8, col: 16, type: 'reading_chair', label: 'Reading Chair', sprite: 'chair' },
 
   // Sofa with blanket (living room) - hides basement key
   { row: 8, col: 5, type: 'sofa_blanket', label: 'Sofa', sprite: 'sofa' },
@@ -137,8 +147,14 @@ const mainFloorInteractables = [
   // Basement door (right side, off kitchen area)
   { row: 7, col: 18, type: 'basement_door', label: 'Basement Door', sprite: 'door_locked' },
 
-  // Stairs (decorative labels, actual transition handled by stepping on them)
-  // Stair landing has laundry pile blocking upstairs access
+  // Half-bath additional items
+  { row: 10, col: 3, type: 'bathroom_mirror', label: 'Mirror', sprite: 'mirror' },
+  { row: 12, col: 2, type: 'towel_rack', label: 'Towel Rack', sprite: 'towels' },
+
+  // Living room additional decor
+  { row: 10, col: 8, type: 'rug', label: 'Area Rug', sprite: 'rug' },
+  { row: 11, col: 16, type: 'wall_art', label: 'Wall Art', sprite: 'art' },
+  { row: 13, col: 10, type: 'coat_rack', label: 'Coat Rack', sprite: 'coat_rack' },
 ];
 
 // Stairs position for main floor
@@ -198,7 +214,33 @@ const basementInteractables = [
   // Olive under treadmill in rec room
   { row: 6, col: 12, type: 'cat_olive', label: 'Olive', sprite: 'cat_olive' },
   // Futon in rec room (decorative)
-  { row: 3, col: 14, type: 'futon', label: 'Futon', sprite: 'futon' }
+  { row: 3, col: 14, type: 'futon', label: 'Futon', sprite: 'futon' },
+
+  // Gym equipment in rec room
+  { row: 3, col: 16, type: 'weights', label: 'Weight Set', sprite: 'weights' },
+  { row: 4, col: 12, type: 'exercise_bike', label: 'Exercise Bike', sprite: 'bike' },
+  { row: 5, col: 14, type: 'yoga_mat', label: 'Yoga Mat', sprite: 'yoga' },
+
+  // Storage/Laundry area
+  { row: 3, col: 3, type: 'storage_box', label: 'Storage Box', sprite: 'box' },
+  { row: 4, col: 5, type: 'washer', label: 'Washing Machine', sprite: 'washer' },
+  { row: 4, col: 6, type: 'dryer', label: 'Dryer', sprite: 'dryer' },
+  { row: 5, col: 3, type: 'laundry_basket_storage', label: 'Laundry Basket', sprite: 'basket' },
+  { row: 8, col: 5, type: 'cleaning_supplies', label: 'Cleaning Supplies', sprite: 'clean' },
+
+  // Rec room entertainment
+  { row: 7, col: 12, type: 'pool_table', label: 'Pool Table', sprite: 'pool' },
+  { row: 8, col: 16, type: 'mini_fridge', label: 'Mini Fridge', sprite: 'mini_fridge' },
+  { row: 9, col: 13, type: 'gaming_setup', label: 'Gaming Setup', sprite: 'gaming' },
+
+  // Washroom items
+  { row: 8, col: 3, type: 'bath_mat', label: 'Bath Mat', sprite: 'mat' },
+  { row: 10, col: 3, type: 'bathroom_cabinet', label: 'Bathroom Cabinet', sprite: 'cabinet' },
+
+  // Misc basement items
+  { row: 12, col: 4, type: 'tool_bench', label: 'Tool Bench', sprite: 'tools' },
+  { row: 13, col: 7, type: 'water_heater', label: 'Water Heater', sprite: 'heater' },
+  { row: 10, col: 15, type: 'bookshelf_basement', label: 'Bookshelf', sprite: 'bookshelf' },
 ];
 
 const basementStairs = {
@@ -252,7 +294,39 @@ const upstairsGrid = [
 
 const upstairsInteractables = [
   // Beatrice on bed in guest bedroom
-  { row: 2, col: 15, type: 'cat_beatrice', label: 'Beatrice', sprite: 'cat_beatrice' }
+  { row: 2, col: 15, type: 'cat_beatrice', label: 'Beatrice', sprite: 'cat_beatrice' },
+
+  // Main bedroom items
+  { row: 3, col: 2, type: 'nightstand', label: 'Nightstand', sprite: 'nightstand' },
+  { row: 3, col: 4, type: 'dresser', label: 'Dresser', sprite: 'dresser' },
+  { row: 4, col: 3, type: 'jewelry_box', label: 'Jewelry Box', sprite: 'jewelry' },
+  { row: 1, col: 6, type: 'wardrobe', label: 'Wardrobe', sprite: 'wardrobe' },
+
+  // Guest bedroom items
+  { row: 1, col: 14, type: 'bedside_lamp', label: 'Bedside Lamp', sprite: 'lamp' },
+  { row: 3, col: 17, type: 'guest_dresser', label: 'Dresser', sprite: 'dresser' },
+  { row: 4, col: 15, type: 'reading_nook', label: 'Reading Nook', sprite: 'nook' },
+
+  // Office items
+  { row: 7, col: 2, type: 'filing_cabinet', label: 'Filing Cabinet', sprite: 'files' },
+  { row: 10, col: 2, type: 'office_chair', label: 'Office Chair', sprite: 'chair' },
+  { row: 7, col: 4, type: 'printer', label: 'Printer', sprite: 'printer' },
+  { row: 11, col: 3, type: 'bookcase', label: 'Bookcase', sprite: 'bookcase' },
+
+  // Washroom items
+  { row: 9, col: 15, type: 'bathroom_scale', label: 'Scale', sprite: 'scale' },
+  { row: 9, col: 17, type: 'medicine_cabinet', label: 'Medicine Cabinet', sprite: 'medicine' },
+  { row: 10, col: 16, type: 'towel_warmer', label: 'Towel Warmer', sprite: 'warmer' },
+
+  // Hallway items
+  { row: 7, col: 7, type: 'hallway_table', label: 'Console Table', sprite: 'table' },
+  { row: 7, col: 10, type: 'plant_hallway', label: 'Potted Plant', sprite: 'plant' },
+  { row: 9, col: 9, type: 'family_photos', label: 'Family Photos', sprite: 'photos' },
+  { row: 11, col: 11, type: 'coat_hooks', label: 'Coat Hooks', sprite: 'hooks' },
+
+  // Additional decor
+  { row: 1, col: 8, type: 'ceiling_fan', label: 'Ceiling Fan', sprite: 'fan' },
+  { row: 4, col: 11, type: 'linen_closet', label: 'Linen Closet', sprite: 'closet' },
 ];
 
 const upstairsStairs = {

@@ -166,12 +166,136 @@ function showToast(text, duration) {
   }, duration);
 }
 
+// ======================== PARTICLE SYSTEM ========================
+
+let particles = [];
+
+class Particle {
+  constructor(x, y, color, text) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = -Math.random() * 3 - 1;
+    this.life = 60;
+    this.maxLife = 60;
+    this.color = color;
+    this.text = text;
+    this.size = text ? 12 : 4;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.1; // gravity
+    this.life--;
+  }
+
+  draw() {
+    const alpha = this.life / this.maxLife;
+    ctx.globalAlpha = alpha;
+
+    if (this.text) {
+      ctx.fillStyle = this.color;
+      ctx.font = 'bold ' + this.size + 'px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.text, this.x, this.y);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+}
+
+function spawnParticles(x, y, count, color) {
+  const particleEffects = document.getElementById('particle-effects');
+  if (!particleEffects || !particleEffects.checked) return;
+
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, color));
+  }
+}
+
+function spawnTextParticle(x, y, text, color) {
+  const particleEffects = document.getElementById('particle-effects');
+  if (!particleEffects || !particleEffects.checked) return;
+
+  particles.push(new Particle(x, y, color, text));
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    if (particles[i].isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function drawParticles() {
+  for (const particle of particles) {
+    particle.draw();
+  }
+}
+
+// ======================== QUEST TRACKING ========================
+
+function updateQuestCounter() {
+  const counter = document.getElementById('quest-counter');
+  const fed = [
+    gameState.flags.alice_fed,
+    gameState.flags.olive_fed,
+    gameState.flags.beatrice_fed
+  ].filter(Boolean).length;
+  counter.textContent = `Objectives: ${fed}/3 cats fed`;
+}
+
+function updateQuestList() {
+  const quests = document.querySelectorAll('.quest-item');
+
+  // Alice quest
+  const aliceStatus = quests[0].querySelector('.quest-status');
+  if (gameState.flags.alice_fed) {
+    aliceStatus.textContent = '✅';
+    aliceStatus.classList.remove('pending');
+    aliceStatus.classList.add('complete');
+  }
+
+  // Olive quest
+  const oliveStatus = quests[1].querySelector('.quest-status');
+  if (gameState.flags.olive_fed) {
+    oliveStatus.textContent = '✅';
+    oliveStatus.classList.remove('pending');
+    oliveStatus.classList.add('complete');
+  }
+
+  // Beatrice quest
+  const beatriceStatus = quests[2].querySelector('.quest-status');
+  if (gameState.flags.beatrice_fed) {
+    beatriceStatus.textContent = '✅';
+    beatriceStatus.classList.remove('pending');
+    beatriceStatus.classList.add('complete');
+  }
+}
+
 // ======================== INVENTORY ========================
 
 function addItem(itemId) {
   gameState.inventory.push(itemId);
   renderInventory();
   saveGame();
+
+  // Spawn particles at player location
+  const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+  const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+  spawnParticles(px, py, 8, '#ffd700');
+  spawnTextParticle(px, py - 20, '+', '#ffd700');
 }
 
 function hasItem(itemId) {
@@ -185,6 +309,18 @@ function removeItem(itemId) {
     renderInventory();
     saveGame();
   }
+}
+
+// Update quest tracking when cats are fed
+function markCatFed(catName) {
+  updateQuestCounter();
+  updateQuestList();
+
+  // Spawn heart particles at player location
+  const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+  const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+  spawnParticles(px, py, 12, '#ff69b4');
+  spawnTextParticle(px, py - 25, '❤️', '#ff1493');
 }
 
 const ITEM_DISPLAY = {
@@ -416,6 +552,7 @@ function handleInteraction(obj) {
         gameState.flags.alice_fed = true;
         startDialogue('alice_after', 'alice', function() {
           showToast('Alice hints about the sofa!');
+          markCatFed('alice');
           saveGame();
         });
       } else {
@@ -468,6 +605,7 @@ function handleInteraction(obj) {
           addItem('laundry_basket');
           gameState.flags.has_laundry_basket = true;
           showToast('Got Laundry Basket!');
+          markCatFed('olive');
           saveGame();
         });
       } else {
@@ -486,6 +624,7 @@ function handleInteraction(obj) {
         gameState.flags.beatrice_fed = true;
         gameState.flags.game_complete = true;
         startDialogue('beatrice_after', 'beatrice', function() {
+          markCatFed('beatrice');
           saveGame();
           showEnding();
         });
@@ -516,6 +655,157 @@ function handleInteraction(obj) {
     // ---- FUTON ----
     case 'futon':
       startDialogue('futon', null, null);
+      break;
+
+    // ---- NEW MAIN FLOOR INTERACTABLES ----
+    case 'microwave':
+      startDialogue('microwave', null, null);
+      break;
+    case 'trash_can':
+      startDialogue('trash_can', null, null);
+      break;
+    case 'spice_rack':
+      startDialogue('spice_rack', null, null);
+      break;
+    case 'china_cabinet':
+      startDialogue('china_cabinet', null, null);
+      break;
+    case 'plant':
+      startDialogue('plant', null, null);
+      break;
+    case 'game_console':
+      startDialogue('game_console', null, null);
+      break;
+    case 'side_table':
+      startDialogue('side_table', null, null);
+      break;
+    case 'reading_chair':
+      startDialogue('reading_chair', null, null);
+      break;
+    case 'bathroom_mirror':
+      startDialogue('bathroom_mirror', null, null);
+      break;
+    case 'towel_rack':
+      startDialogue('towel_rack', null, null);
+      break;
+    case 'rug':
+      startDialogue('rug', null, null);
+      break;
+    case 'wall_art':
+      startDialogue('wall_art', null, null);
+      break;
+    case 'coat_rack':
+      startDialogue('coat_rack', null, null);
+      break;
+
+    // ---- NEW BASEMENT INTERACTABLES ----
+    case 'weights':
+      startDialogue('weights', null, null);
+      break;
+    case 'exercise_bike':
+      startDialogue('exercise_bike', null, null);
+      break;
+    case 'yoga_mat':
+      startDialogue('yoga_mat', null, null);
+      break;
+    case 'storage_box':
+      startDialogue('storage_box', null, null);
+      break;
+    case 'washer':
+      startDialogue('washer', null, null);
+      break;
+    case 'dryer':
+      startDialogue('dryer', null, null);
+      break;
+    case 'laundry_basket_storage':
+      startDialogue('laundry_basket_storage', null, null);
+      break;
+    case 'cleaning_supplies':
+      startDialogue('cleaning_supplies', null, null);
+      break;
+    case 'pool_table':
+      startDialogue('pool_table', null, null);
+      break;
+    case 'mini_fridge':
+      startDialogue('mini_fridge', null, null);
+      break;
+    case 'gaming_setup':
+      startDialogue('gaming_setup', null, null);
+      break;
+    case 'bath_mat':
+      startDialogue('bath_mat', null, null);
+      break;
+    case 'bathroom_cabinet':
+      startDialogue('bathroom_cabinet', null, null);
+      break;
+    case 'tool_bench':
+      startDialogue('tool_bench', null, null);
+      break;
+    case 'water_heater':
+      startDialogue('water_heater', null, null);
+      break;
+    case 'bookshelf_basement':
+      startDialogue('bookshelf_basement', null, null);
+      break;
+
+    // ---- NEW UPSTAIRS INTERACTABLES ----
+    case 'nightstand':
+      startDialogue('nightstand', null, null);
+      break;
+    case 'dresser':
+    case 'guest_dresser':
+      startDialogue('dresser', null, null);
+      break;
+    case 'jewelry_box':
+      startDialogue('jewelry_box', null, null);
+      break;
+    case 'wardrobe':
+      startDialogue('wardrobe', null, null);
+      break;
+    case 'bedside_lamp':
+      startDialogue('bedside_lamp', null, null);
+      break;
+    case 'reading_nook':
+      startDialogue('reading_nook', null, null);
+      break;
+    case 'filing_cabinet':
+      startDialogue('filing_cabinet', null, null);
+      break;
+    case 'office_chair':
+      startDialogue('office_chair', null, null);
+      break;
+    case 'printer':
+      startDialogue('printer', null, null);
+      break;
+    case 'bookcase':
+      startDialogue('bookcase', null, null);
+      break;
+    case 'bathroom_scale':
+      startDialogue('bathroom_scale', null, null);
+      break;
+    case 'medicine_cabinet':
+      startDialogue('medicine_cabinet', null, null);
+      break;
+    case 'towel_warmer':
+      startDialogue('towel_warmer', null, null);
+      break;
+    case 'hallway_table':
+      startDialogue('hallway_table', null, null);
+      break;
+    case 'plant_hallway':
+      startDialogue('plant_hallway', null, null);
+      break;
+    case 'family_photos':
+      startDialogue('family_photos', null, null);
+      break;
+    case 'coat_hooks':
+      startDialogue('coat_hooks', null, null);
+      break;
+    case 'ceiling_fan':
+      startDialogue('ceiling_fan', null, null);
+      break;
+    case 'linen_closet':
+      startDialogue('linen_closet', null, null);
       break;
   }
 }
@@ -1002,6 +1292,14 @@ const SPRITES = {
     // Showerhead
     ctx.fillStyle = '#999';
     ctx.fillRect(x + 10, y + 1, 4, 3);
+  },
+
+  // Generic item renderer (small box with color)
+  genericItem: function(x, y, color1, color2) {
+    ctx.fillStyle = color1;
+    ctx.fillRect(x + 4, y + 4, 16, 16);
+    ctx.fillStyle = color2;
+    ctx.fillRect(x + 6, y + 6, 12, 12);
   }
 };
 
@@ -1160,10 +1458,157 @@ function drawInteractables(floor) {
         SPRITES.coffeeTable(x, y);
         break;
       case 'bookshelf':
+      case 'bookshelf_basement':
         SPRITES.bookshelf(x, y);
         break;
       case 'futon':
         SPRITES.futon(x, y);
+        break;
+
+      // New items with simple generic rendering
+      case 'microwave':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#444');
+        break;
+      case 'trash_can':
+        SPRITES.genericItem(x, y, '#666', '#444');
+        break;
+      case 'spice_rack':
+        SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
+        break;
+      case 'china_cabinet':
+        SPRITES.genericItem(x, y, '#8b7355', '#d4a574');
+        break;
+      case 'plant':
+      case 'plant_hallway':
+        SPRITES.genericItem(x, y, '#228b22', '#90ee90');
+        break;
+      case 'game_console':
+        SPRITES.genericItem(x, y, '#000', '#4169e1');
+        break;
+      case 'side_table':
+        SPRITES.genericItem(x, y, '#8b6914', '#daa520');
+        break;
+      case 'reading_chair':
+        SPRITES.genericItem(x, y, '#8b4513', '#d2691e');
+        break;
+      case 'bathroom_mirror':
+        SPRITES.genericItem(x, y, '#add8e6', '#87ceeb');
+        break;
+      case 'towel_rack':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#fff');
+        break;
+      case 'rug':
+        SPRITES.genericItem(x, y, '#8b0000', '#dc143c');
+        break;
+      case 'wall_art':
+        SPRITES.genericItem(x, y, '#ffd700', '#ffb347');
+        break;
+      case 'coat_rack':
+        SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+
+      // Basement items
+      case 'weights':
+        SPRITES.genericItem(x, y, '#708090', '#2f4f4f');
+        break;
+      case 'exercise_bike':
+        SPRITES.genericItem(x, y, '#ff4500', '#000');
+        break;
+      case 'yoga_mat':
+        SPRITES.genericItem(x, y, '#9370db', '#8a2be2');
+        break;
+      case 'storage_box':
+        SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
+        break;
+      case 'washer':
+        SPRITES.genericItem(x, y, '#f0f0f0', '#4682b4');
+        break;
+      case 'dryer':
+        SPRITES.genericItem(x, y, '#f0f0f0', '#ff6347');
+        break;
+      case 'laundry_basket_storage':
+        SPRITES.genericItem(x, y, '#deb887', '#d2691e');
+        break;
+      case 'cleaning_supplies':
+        SPRITES.genericItem(x, y, '#ffff00', '#32cd32');
+        break;
+      case 'pool_table':
+        SPRITES.genericItem(x, y, '#228b22', '#8b4513');
+        break;
+      case 'mini_fridge':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#000');
+        break;
+      case 'gaming_setup':
+        SPRITES.genericItem(x, y, '#000', '#ff00ff');
+        break;
+      case 'bath_mat':
+        SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
+        break;
+      case 'bathroom_cabinet':
+        SPRITES.genericItem(x, y, '#fff', '#d3d3d3');
+        break;
+      case 'tool_bench':
+        SPRITES.genericItem(x, y, '#8b4513', '#696969');
+        break;
+      case 'water_heater':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#ff4500');
+        break;
+
+      // Upstairs items
+      case 'nightstand':
+        SPRITES.genericItem(x, y, '#8b6914', '#cd853f');
+        break;
+      case 'dresser':
+      case 'guest_dresser':
+        SPRITES.genericItem(x, y, '#8b4513', '#a0522d');
+        break;
+      case 'jewelry_box':
+        SPRITES.genericItem(x, y, '#ffd700', '#daa520');
+        break;
+      case 'wardrobe':
+        SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+      case 'bedside_lamp':
+        SPRITES.genericItem(x, y, '#ffffe0', '#ffd700');
+        break;
+      case 'reading_nook':
+        SPRITES.genericItem(x, y, '#8b7355', '#d2b48c');
+        break;
+      case 'filing_cabinet':
+        SPRITES.genericItem(x, y, '#708090', '#2f4f4f');
+        break;
+      case 'office_chair':
+        SPRITES.genericItem(x, y, '#000', '#4169e1');
+        break;
+      case 'printer':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#000');
+        break;
+      case 'bookcase':
+        SPRITES.genericItem(x, y, '#8b4513', '#cd853f');
+        break;
+      case 'bathroom_scale':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#696969');
+        break;
+      case 'medicine_cabinet':
+        SPRITES.genericItem(x, y, '#fff', '#add8e6');
+        break;
+      case 'towel_warmer':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#ffa500');
+        break;
+      case 'hallway_table':
+        SPRITES.genericItem(x, y, '#8b6914', '#daa520');
+        break;
+      case 'family_photos':
+        SPRITES.genericItem(x, y, '#000', '#ffd700');
+        break;
+      case 'coat_hooks':
+        SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+      case 'ceiling_fan':
+        SPRITES.genericItem(x, y, '#c0c0c0', '#696969');
+        break;
+      case 'linen_closet':
+        SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
         break;
     }
   }
@@ -1228,6 +1673,9 @@ function render() {
   // Draw player
   drawPlayer();
 
+  // Draw particles on top
+  drawParticles();
+
   // Draw facing indicator (small arrow)
   if (!gameState.moving && !dialogueActive) {
     const facing = getFacingTile();
@@ -1247,6 +1695,16 @@ function render() {
       ctx.fillRect(facing.col * TILE_SIZE, facing.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
   }
+
+  // Draw subtle vignette effect
+  const gradient = ctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
+  );
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 }
 
 // ======================== GAME LOOP ========================
@@ -1263,6 +1721,7 @@ function gameLoop() {
   }
 
   updateMovement();
+  updateParticles();
   updateInteractPrompt();
   render();
   requestAnimationFrame(gameLoop);
@@ -1412,12 +1871,16 @@ function startNewGame() {
   };
   renderInventory();
   updateFloorLabel();
+  updateQuestCounter();
+  updateQuestList();
   hideTitleScreen();
 }
 
 function continueGame() {
   renderInventory();
   updateFloorLabel();
+  updateQuestCounter();
+  updateQuestList();
   hideTitleScreen();
 }
 
@@ -1465,6 +1928,55 @@ function init() {
   // Dialogue overlay click to advance
   dialogueOverlay.addEventListener('click', function() {
     advanceDialogue();
+  });
+
+  // Quest panel toggle
+  const questPanel = document.getElementById('quest-panel');
+  const btnToggleQuest = document.getElementById('btn-toggle-quest');
+  const btnCloseQuest = document.getElementById('btn-close-quest');
+
+  btnToggleQuest.addEventListener('click', function() {
+    questPanel.classList.toggle('active');
+    // Close settings if open
+    document.getElementById('settings-panel').classList.remove('active');
+  });
+
+  btnCloseQuest.addEventListener('click', function() {
+    questPanel.classList.remove('active');
+  });
+
+  // Settings panel toggle
+  const settingsPanel = document.getElementById('settings-panel');
+  const btnToggleSettings = document.getElementById('btn-toggle-settings');
+  const btnCloseSettings = document.getElementById('btn-close-settings');
+
+  btnToggleSettings.addEventListener('click', function() {
+    settingsPanel.classList.toggle('active');
+    // Close quest if open
+    questPanel.classList.remove('active');
+  });
+
+  btnCloseSettings.addEventListener('click', function() {
+    settingsPanel.classList.remove('active');
+  });
+
+  // Settings volume sliders
+  const sfxVolume = document.getElementById('sfx-volume');
+  const sfxValue = document.getElementById('sfx-value');
+  const musicVolume = document.getElementById('music-volume');
+  const musicValue = document.getElementById('music-value');
+
+  sfxVolume.addEventListener('input', function() {
+    sfxValue.textContent = this.value + '%';
+  });
+
+  musicVolume.addEventListener('input', function() {
+    musicValue.textContent = this.value + '%';
+  });
+
+  document.getElementById('btn-save-settings').addEventListener('click', function() {
+    showToast('Settings saved!', 1500);
+    settingsPanel.classList.remove('active');
   });
 
   // Start game loop
