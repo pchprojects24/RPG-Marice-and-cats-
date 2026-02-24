@@ -166,6 +166,84 @@ function showToast(text, duration) {
   }, duration);
 }
 
+// ======================== PARTICLE SYSTEM ========================
+
+let particles = [];
+
+class Particle {
+  constructor(x, y, color, text) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = -Math.random() * 3 - 1;
+    this.life = 60;
+    this.maxLife = 60;
+    this.color = color;
+    this.text = text;
+    this.size = text ? 12 : 4;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.1; // gravity
+    this.life--;
+  }
+
+  draw() {
+    const alpha = this.life / this.maxLife;
+    ctx.globalAlpha = alpha;
+
+    if (this.text) {
+      ctx.fillStyle = this.color;
+      ctx.font = 'bold ' + this.size + 'px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.text, this.x, this.y);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+}
+
+function spawnParticles(x, y, count, color) {
+  const particleEffects = document.getElementById('particle-effects');
+  if (!particleEffects || !particleEffects.checked) return;
+
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, color));
+  }
+}
+
+function spawnTextParticle(x, y, text, color) {
+  const particleEffects = document.getElementById('particle-effects');
+  if (!particleEffects || !particleEffects.checked) return;
+
+  particles.push(new Particle(x, y, color, text));
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    if (particles[i].isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function drawParticles() {
+  for (const particle of particles) {
+    particle.draw();
+  }
+}
+
 // ======================== QUEST TRACKING ========================
 
 function updateQuestCounter() {
@@ -212,6 +290,12 @@ function addItem(itemId) {
   gameState.inventory.push(itemId);
   renderInventory();
   saveGame();
+
+  // Spawn particles at player location
+  const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+  const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+  spawnParticles(px, py, 8, '#ffd700');
+  spawnTextParticle(px, py - 20, '+', '#ffd700');
 }
 
 function hasItem(itemId) {
@@ -231,6 +315,12 @@ function removeItem(itemId) {
 function markCatFed(catName) {
   updateQuestCounter();
   updateQuestList();
+
+  // Spawn heart particles at player location
+  const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+  const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+  spawnParticles(px, py, 12, '#ff69b4');
+  spawnTextParticle(px, py - 25, '❤️', '#ff1493');
 }
 
 const ITEM_DISPLAY = {
@@ -1583,6 +1673,9 @@ function render() {
   // Draw player
   drawPlayer();
 
+  // Draw particles on top
+  drawParticles();
+
   // Draw facing indicator (small arrow)
   if (!gameState.moving && !dialogueActive) {
     const facing = getFacingTile();
@@ -1602,6 +1695,16 @@ function render() {
       ctx.fillRect(facing.col * TILE_SIZE, facing.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
   }
+
+  // Draw subtle vignette effect
+  const gradient = ctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
+  );
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 }
 
 // ======================== GAME LOOP ========================
@@ -1618,6 +1721,7 @@ function gameLoop() {
   }
 
   updateMovement();
+  updateParticles();
   updateInteractPrompt();
   render();
   requestAnimationFrame(gameLoop);
