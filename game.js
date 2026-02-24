@@ -1906,21 +1906,8 @@ function gameLoop() {
 // ======================== INPUT HANDLING ========================
 
 document.addEventListener('keydown', function(e) {
-  // Numpad keyboard input
+  // Block game input while code entry overlay is open
   if (document.getElementById('numpad-overlay').classList.contains('active')) {
-    if (e.key >= '0' && e.key <= '9') {
-      e.preventDefault();
-      numpadPressDigit(e.key);
-    } else if (e.code === 'Backspace') {
-      e.preventDefault();
-      numpadBackspace();
-    } else if (e.code === 'Enter') {
-      e.preventDefault();
-      numpadSubmit();
-    } else if (e.code === 'Escape') {
-      e.preventDefault();
-      hideNumpad();
-    }
     return;
   }
 
@@ -2040,52 +2027,28 @@ function clearSave() {
 // ======================== NUMPAD ========================
 
 let numpadCallback = null;
-let numpadCode = '';
 
 function showNumpad(onSubmit) {
   numpadCallback = onSubmit;
-  numpadCode = '';
-  updateNumpadDisplay();
+  const input = document.getElementById('numpad-input');
+  input.value = '';
   document.getElementById('numpad-error').textContent = '';
   document.getElementById('numpad-overlay').classList.add('active');
+  setTimeout(function() { input.focus(); }, 50);
 }
 
 function hideNumpad() {
   document.getElementById('numpad-overlay').classList.remove('active');
   numpadCallback = null;
-  numpadCode = '';
-}
-
-function updateNumpadDisplay() {
-  const display = document.getElementById('numpad-input');
-  const filled = numpadCode.split('').map(() => '●').join('');
-  const empty = '_'.repeat(4 - numpadCode.length);
-  display.textContent = filled + empty;
-}
-
-function numpadPressDigit(digit) {
-  if (numpadCode.length >= 4) return;
-  numpadCode += digit;
-  updateNumpadDisplay();
-  document.getElementById('numpad-error').textContent = '';
-  if (numpadCode.length === 4) {
-    numpadSubmit();
-  }
-}
-
-function numpadBackspace() {
-  if (numpadCode.length === 0) return;
-  numpadCode = numpadCode.slice(0, -1);
-  updateNumpadDisplay();
-  document.getElementById('numpad-error').textContent = '';
+  document.getElementById('numpad-input').value = '';
 }
 
 function numpadSubmit() {
-  if (numpadCode.length < 4) {
+  const code = document.getElementById('numpad-input').value.trim();
+  if (code.length < 4) {
     document.getElementById('numpad-error').textContent = 'Enter all 4 digits.';
     return;
   }
-  const code = numpadCode;
   hideNumpad();
   if (numpadCallback) {
     const cb = numpadCallback;
@@ -2096,38 +2059,32 @@ function numpadSubmit() {
 
 function setupNumpad() {
   const overlay = document.getElementById('numpad-overlay');
+  const input = document.getElementById('numpad-input');
 
   overlay.addEventListener('click', function(e) {
     if (e.target === overlay) hideNumpad();
   });
 
-  document.querySelectorAll('.numpad-btn[data-digit]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      numpadPressDigit(btn.getAttribute('data-digit'));
-    });
-    btn.addEventListener('touchstart', function(e) {
-      e.preventDefault();
-      numpadPressDigit(btn.getAttribute('data-digit'));
-    }, { passive: false });
+  input.addEventListener('input', function() {
+    input.value = input.value.replace(/[^0-9]/g, '');
+    document.getElementById('numpad-error').textContent = '';
+    if (input.value.length === 4) {
+      numpadSubmit();
+    }
   });
 
-  document.getElementById('numpad-btn-clear').addEventListener('click', numpadBackspace);
-  document.getElementById('numpad-btn-clear').addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    numpadBackspace();
-  }, { passive: false });
+  input.addEventListener('keydown', function(e) {
+    if (e.code === 'Enter') {
+      e.preventDefault();
+      numpadSubmit();
+    } else if (e.code === 'Escape') {
+      e.preventDefault();
+      hideNumpad();
+    }
+  });
 
   document.getElementById('numpad-btn-enter').addEventListener('click', numpadSubmit);
-  document.getElementById('numpad-btn-enter').addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    numpadSubmit();
-  }, { passive: false });
-
   document.getElementById('numpad-btn-cancel').addEventListener('click', hideNumpad);
-  document.getElementById('numpad-btn-cancel').addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    hideNumpad();
-  }, { passive: false });
 }
 
 // ======================== TITLE SCREEN ========================

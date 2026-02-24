@@ -109,26 +109,13 @@
       <button id="btn-continue" class="title-btn">Continue</button>
     </div>
 
-    <!-- Numpad Overlay (telephone-style code entry) -->
+    <!-- Code Entry Overlay -->
     <div id="numpad-overlay">
       <div id="numpad-box">
         <div id="numpad-title">🔐 Enter Door Code</div>
-        <div id="numpad-display"><span id="numpad-input">____</span></div>
+        <input id="numpad-input" type="text" inputmode="numeric" maxlength="4" placeholder="____" autocomplete="off" aria-label="Door code">
         <div id="numpad-error"></div>
-        <div id="numpad-grid">
-          <button class="numpad-btn" data-digit="1">1</button>
-          <button class="numpad-btn" data-digit="2">2</button>
-          <button class="numpad-btn" data-digit="3">3</button>
-          <button class="numpad-btn" data-digit="4">4</button>
-          <button class="numpad-btn" data-digit="5">5</button>
-          <button class="numpad-btn" data-digit="6">6</button>
-          <button class="numpad-btn" data-digit="7">7</button>
-          <button class="numpad-btn" data-digit="8">8</button>
-          <button class="numpad-btn" data-digit="9">9</button>
-          <button class="numpad-btn numpad-clear" id="numpad-btn-clear">⌫</button>
-          <button class="numpad-btn" data-digit="0">0</button>
-          <button class="numpad-btn numpad-enter" id="numpad-btn-enter">✔</button>
-        </div>
+        <button id="numpad-btn-enter" class="numpad-enter-btn">Submit</button>
         <button id="numpad-btn-cancel" class="numpad-cancel-btn">Cancel</button>
       </div>
     </div>
