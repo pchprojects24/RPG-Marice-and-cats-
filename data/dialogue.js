@@ -399,7 +399,7 @@ const DIALOGUE = {
 
   outside_riddle_board: [
     { speaker: 'Marice', text: "A note on the board reads:" },
-    { speaker: 'Marice', text: "\"There are three cats and one of you. Find the three cats so together you'll be four.\"" },
+    { speaker: 'Marice', text: "\"There are three cats and one of you, find the three cats and then there will be four of you.\"" },
     { speaker: 'Marice', text: "The code is in the riddle. Four digits." }
   ],
 
