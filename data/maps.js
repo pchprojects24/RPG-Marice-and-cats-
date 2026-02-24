@@ -144,12 +144,12 @@ const mainFloorGrid = [
   [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,0,0,0,4,1],
   // Row 8: living room
   [1,0,4,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
-  // Row 9: living room / half-bath divider
-  [1,1,1,3,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 9: living room / half-bath divider (door moved to east wall)
+  [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 10: half-bath
   [1,2,0,0,0,1,0,0,0,0,0,0,2,2,0,0,0,0,0,1],
-  // Row 11: half-bath
-  [1,2,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 11: half-bath (door on east wall)
+  [1,2,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 12: half-bath bottom + living room
   [1,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 13: bottom area
