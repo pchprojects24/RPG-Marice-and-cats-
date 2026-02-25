@@ -408,13 +408,13 @@ const DIALOGUE = {
 
   outside_riddle_board: [
     { speaker: 'Marice', text: "A plaque by the door reads:" },
-    { speaker: 'Marice', text: "\"Three cats + one Marice = four cozy souls indoors.\"" },
-    { speaker: 'Marice', text: "The code is in the riddle. Four digits." }
+    { speaker: 'Marice', text: "\"There are three cats and one of you. Find the three cats then there'll be four of you.\"" },
+    { speaker: 'Marice', text: "\"That's how you get 3134.\"" }
   ],
 
   front_door_locked: [
     { speaker: 'Marice', text: "The front door is locked with a number pad." },
-    { speaker: 'Marice', text: "It wants a four-digit code — that line about three cats and me must be the key." },
+    { speaker: 'Marice', text: "It wants a four-digit code — there are three cats and one of you; find the three cats then there'll be four of you. That's how you get 3134." },
     { speaker: 'Marice', text: "Hint to self: the code is hidden in the riddle." }
   ],
 
