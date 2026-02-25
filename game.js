@@ -1811,18 +1811,39 @@ const SPRITES = {
 
   // Door (basement)
   door: function(x, y, locked) {
-    ctx.fillStyle = locked ? '#8B4513' : '#4a7c59';
+    // Door frame
+    ctx.fillStyle = '#e0d5c5';
+    ctx.fillRect(x + 2, y, 20, TILE_SIZE);
+    // Door body
+    ctx.fillStyle = locked ? '#6b3a1f' : '#4a7c59';
     ctx.fillRect(x + 4, y + 1, 16, 22);
-    ctx.fillStyle = locked ? '#654321' : '#3a6c49';
-    ctx.fillRect(x + 6, y + 3, 12, 18);
-    // Handle
-    ctx.fillStyle = locked ? '#888' : '#ffd700';
-    ctx.fillRect(x + 15, y + 10, 2, 4);
+    // Panel detail (upper and lower panels)
+    ctx.fillStyle = locked ? '#5a2f18' : '#3a6c49';
+    ctx.fillRect(x + 6, y + 3, 12, 7);
+    ctx.fillRect(x + 6, y + 13, 12, 8);
+    // Panel inset shadows
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(x + 7, y + 4, 10, 5);
+    ctx.fillRect(x + 7, y + 14, 10, 6);
+    // Small window at top of door
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(x + 8, y + 2, 8, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(x + 8, y + 2, 3, 2);
+    // Door handle
+    ctx.fillStyle = locked ? '#b8860b' : '#ffd700';
+    ctx.fillRect(x + 15, y + 12, 3, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(x + 15, y + 12, 1, 1);
     // Lock indicator
     if (locked) {
       ctx.fillStyle = '#ff4444';
-      ctx.fillRect(x + 10, y + 8, 4, 4);
+      ctx.fillRect(x + 15, y + 15, 2, 2);
     }
+    // Frame shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(x + 3, y, 1, TILE_SIZE);
+    ctx.fillRect(x + 20, y, 1, TILE_SIZE);
   },
 
   // Sliding door
@@ -2190,11 +2211,328 @@ const SPRITES = {
   }
 };
 
+// ============ OUTSIDE TILE RENDERING ============
+
+// Deterministic hash for tile-position-based consistent pseudo-randomness
+function tileSeed(r, c, s) {
+  var n = r * 73 + c * 137 + (s || 0) * 53 + 7;
+  n = ((n + 0x6D2B79F5) | 0);
+  n = Math.imul(n ^ (n >>> 15), n | 1);
+  n ^= n + Math.imul(n ^ (n >>> 7), n | 61);
+  return ((n ^ (n >>> 14)) >>> 0) / 4294967296;
+}
+
+// Dispatch outside tile rendering
+function drawOutsideTile(tile, x, y, row, col) {
+  if (tile === T.COUNTER) {
+    drawLawnTile(x, y, row, col);
+  } else if (tile === T.WALL) {
+    drawFacadeTile(x, y, row, col);
+  } else if (tile === T.FLOOR) {
+    drawConcreteTile(x, y, row, col);
+  } else if (tile === T.DOOR) {
+    drawFacadeTile(x, y, row, col);
+  } else if (tile === T.INTERACT) {
+    if (row >= 12) {
+      drawAsphaltTile(x, y, row, col);
+    } else {
+      drawPorchTile(x, y, row, col);
+    }
+  } else {
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.03)';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+}
+
+// Grass lawn tile with variation, blades, and flowers
+function drawLawnTile(x, y, row, col) {
+  var v1 = tileSeed(row, col, 0);
+  var v2 = tileSeed(row, col, 1);
+  var r = 55 + Math.floor(v1 * 22);
+  var g = 125 + Math.floor(v2 * 35);
+  var b = 42 + Math.floor(v1 * 18);
+  ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Darker patches
+  for (var i = 0; i < 4; i++) {
+    var px = Math.floor(tileSeed(row, col, i + 10) * 18);
+    var py = Math.floor(tileSeed(row, col, i + 20) * 18);
+    ctx.fillStyle = 'rgba(30, 85, 30, 0.2)';
+    ctx.fillRect(x + px, y + py, 4, 3);
+  }
+  // Lighter highlights
+  for (var j = 0; j < 3; j++) {
+    var hx = Math.floor(tileSeed(row, col, j + 40) * 20);
+    var hy = Math.floor(tileSeed(row, col, j + 50) * 20);
+    ctx.fillStyle = 'rgba(110, 190, 70, 0.2)';
+    ctx.fillRect(x + hx, y + hy, 3, 2);
+  }
+  // Grass blades
+  ctx.fillStyle = 'rgba(35, 100, 35, 0.3)';
+  for (var k = 0; k < 5; k++) {
+    var bx = Math.floor(tileSeed(row, col, k + 60) * 21);
+    var by = Math.floor(tileSeed(row, col, k + 70) * 14);
+    ctx.fillRect(x + bx, y + by, 1, 3 + Math.floor(tileSeed(row, col, k + 80) * 4));
+  }
+  // Occasional small flower
+  if (v1 > 0.82) {
+    var colors = ['#fff44f', '#ff69b4', '#fff', '#e040fb'];
+    var ci = Math.floor(v2 * colors.length);
+    ctx.fillStyle = colors[ci];
+    var fx = 6 + Math.floor(v1 * 10);
+    var fy = 5 + Math.floor(tileSeed(row, col, 5) * 12);
+    ctx.fillRect(x + fx, y + fy, 2, 2);
+    ctx.fillStyle = '#2e7d32';
+    ctx.fillRect(x + fx, y + fy + 2, 1, 3);
+  }
+}
+
+// House facade tile — roof, siding, windows
+function drawFacadeTile(x, y, row, col) {
+  if (row === 0) {
+    // Roof shingles
+    ctx.fillStyle = '#5a3520';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    for (var sr = 0; sr < TILE_SIZE; sr += 6) {
+      var sOff = (sr % 12 < 6) ? 0 : 4;
+      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+      ctx.fillRect(x, y + sr + 5, TILE_SIZE, 1);
+      for (var sc = sOff; sc < TILE_SIZE; sc += 8) {
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.fillRect(x + sc, y + sr, 1, 6);
+      }
+    }
+    // Eave trim at bottom
+    ctx.fillStyle = '#4a2512';
+    ctx.fillRect(x, y + TILE_SIZE - 3, TILE_SIZE, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(x, y + TILE_SIZE - 3, TILE_SIZE, 1);
+  } else if (row === 1 || row === 2) {
+    // Siding
+    ctx.fillStyle = '#c9b08a';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    for (var sl = 3; sl < TILE_SIZE; sl += 5) {
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(x, y + sl, TILE_SIZE, 1);
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(x, y + sl + 1, TILE_SIZE, 1);
+    }
+    // Windows on row 1
+    if (row === 1 && (col === 6 || col === 7 || col === 12 || col === 13)) {
+      // Window frame
+      ctx.fillStyle = '#e0d8cc';
+      ctx.fillRect(x + 3, y + 3, 18, 18);
+      // Glass
+      ctx.fillStyle = '#87CEEB';
+      ctx.fillRect(x + 5, y + 5, 14, 14);
+      // Cross divider
+      ctx.fillStyle = '#e0d8cc';
+      ctx.fillRect(x + 11, y + 5, 2, 14);
+      ctx.fillRect(x + 5, y + 11, 14, 2);
+      // Glass reflection
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(x + 6, y + 6, 4, 4);
+      // Shutters
+      ctx.fillStyle = '#3d5c3a';
+      ctx.fillRect(x, y + 3, 3, 18);
+      ctx.fillRect(x + 21, y + 3, 3, 18);
+    }
+    // Foundation strip at bottom of row 2
+    if (row === 2) {
+      ctx.fillStyle = '#8a7a6a';
+      ctx.fillRect(x, y + TILE_SIZE - 4, TILE_SIZE, 4);
+    }
+  } else if (row === 3) {
+    // Porch level
+    ctx.fillStyle = '#c9b896';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+    if (col === 4 || col === 15) {
+      // Porch columns
+      ctx.fillStyle = '#ece4d4';
+      ctx.fillRect(x + 7, y, 10, TILE_SIZE);
+      ctx.fillStyle = 'rgba(0,0,0,0.06)';
+      ctx.fillRect(x + 7, y, 1, TILE_SIZE);
+      ctx.fillRect(x + 16, y, 1, TILE_SIZE);
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(x + 10, y, 3, TILE_SIZE);
+      // Column cap and base
+      ctx.fillStyle = '#d5cbb8';
+      ctx.fillRect(x + 6, y, 12, 3);
+      ctx.fillRect(x + 6, y + TILE_SIZE - 3, 12, 3);
+    } else {
+      // Siding at porch level
+      for (var pl = 3; pl < TILE_SIZE; pl += 5) {
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        ctx.fillRect(x, y + pl, TILE_SIZE, 1);
+      }
+    }
+  }
+}
+
+// Concrete walkway tile
+function drawConcreteTile(x, y, row, col) {
+  ctx.fillStyle = '#c4baa6';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  var wv = tileSeed(row, col, 0);
+  ctx.fillStyle = 'rgba(0,0,0,' + (0.02 + wv * 0.03) + ')';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Score lines
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  ctx.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+  ctx.fillRect(x + TILE_SIZE - 1, y, 1, TILE_SIZE);
+  // Edge highlights
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(x, y, TILE_SIZE, 1);
+  ctx.fillRect(x, y, 1, TILE_SIZE);
+  // Subtle crack
+  if (wv > 0.7) {
+    ctx.fillStyle = 'rgba(0,0,0,0.06)';
+    ctx.fillRect(x + Math.floor(wv * 14) + 4, y + 4, 1, TILE_SIZE - 8);
+  }
+}
+
+// Porch floor tile (wooden deck)
+function drawPorchTile(x, y, row, col) {
+  ctx.fillStyle = '#c4a87c';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Wood grain lines
+  for (var pl = 0; pl < TILE_SIZE; pl += 6) {
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fillRect(x, y + pl, TILE_SIZE, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fillRect(x, y + pl + 1, TILE_SIZE, 1);
+  }
+  // Vertical plank divider
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillRect(x + 11, y, 1, TILE_SIZE);
+}
+
+// Asphalt street tile with lane markings
+function drawAsphaltTile(x, y, row, col) {
+  ctx.fillStyle = '#3d3d3d';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Asphalt texture
+  for (var i = 0; i < 5; i++) {
+    var gx = Math.floor(tileSeed(row, col, i + 10) * 20);
+    var gy = Math.floor(tileSeed(row, col, i + 20) * 20);
+    ctx.fillStyle = tileSeed(row, col, i + 5) > 0.5 ? 'rgba(55,55,55,0.4)' : 'rgba(30,30,30,0.3)';
+    ctx.fillRect(x + gx, y + gy, 2, 2);
+  }
+  // Yellow center dashed line on row 13
+  if (row === 13) {
+    if (col % 3 !== 0) {
+      ctx.fillStyle = '#e8b830';
+      ctx.fillRect(x, y + 10, TILE_SIZE, 3);
+      ctx.fillStyle = '#c89820';
+      ctx.fillRect(x, y + 12, TILE_SIZE, 1);
+    }
+  }
+  // Curb at top of street (row 12)
+  if (row === 12) {
+    ctx.fillStyle = '#8a8a8a';
+    ctx.fillRect(x, y, TILE_SIZE, 3);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(x, y, TILE_SIZE, 1);
+  }
+}
+
+// Outside overlay — roof gable, chimney, porch beam, curb
+function drawOutsideOverlay() {
+  if (gameState.currentFloor !== 'outside') return;
+  var houseL = 4 * TILE_SIZE;
+  var houseR = 16 * TILE_SIZE;
+  var houseW = houseR - houseL;
+  var houseCenter = houseL + houseW / 2;
+
+  // Triangular roof gable
+  ctx.fillStyle = '#4d2815';
+  ctx.beginPath();
+  ctx.moveTo(houseL - 4, TILE_SIZE);
+  ctx.lineTo(houseCenter, -4);
+  ctx.lineTo(houseR + 4, TILE_SIZE);
+  ctx.closePath();
+  ctx.fill();
+
+  // Roof edge outline
+  ctx.strokeStyle = '#3a1808';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(houseL - 4, TILE_SIZE);
+  ctx.lineTo(houseCenter, -4);
+  ctx.lineTo(houseR + 4, TILE_SIZE);
+  ctx.stroke();
+  ctx.lineWidth = 1;
+
+  // Eave overhang shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.fillRect(houseL - 4, TILE_SIZE, houseW + 8, 3);
+
+  // Chimney
+  var chimX = houseR - 2.5 * TILE_SIZE;
+  ctx.fillStyle = '#7a4a2e';
+  ctx.fillRect(chimX, -2, 14, 16);
+  ctx.fillStyle = '#8b5a3e';
+  ctx.fillRect(chimX - 1, -2, 16, 3);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(chimX, 13, 14, 1);
+
+  // House number on facade (row 2, left of door)
+  ctx.fillStyle = '#f5f0e0';
+  ctx.font = 'bold 7px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('742', houseL + 16, 2 * TILE_SIZE + 14);
+  ctx.textAlign = 'left';
+
+  // Porch overhang beam
+  ctx.fillStyle = '#8b6f50';
+  ctx.fillRect(houseL, 3 * TILE_SIZE - 2, houseW, 3);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(houseL, 3 * TILE_SIZE - 2, houseW, 1);
+
+  // Porch shadow on porch floor
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillRect(houseL, 3 * TILE_SIZE, houseW, TILE_SIZE);
+
+  // Porch steps (row 4, between porch and walkway)
+  var stepsX = 8 * TILE_SIZE;
+  var stepsY = 4 * TILE_SIZE;
+  ctx.fillStyle = '#b0a490';
+  ctx.fillRect(stepsX, stepsY, 3 * TILE_SIZE, 4);
+  ctx.fillStyle = '#a09480';
+  ctx.fillRect(stepsX, stepsY + 4, 3 * TILE_SIZE, 4);
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.fillRect(stepsX, stepsY + 7, 3 * TILE_SIZE, 1);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(stepsX, stepsY, 3 * TILE_SIZE, 1);
+
+  // Sidewalk curb (between sidewalk and street)
+  ctx.fillStyle = '#999';
+  ctx.fillRect(0, 12 * TILE_SIZE - 2, CANVAS_W, 3);
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(0, 12 * TILE_SIZE - 2, CANVAS_W, 1);
+
+  // Walkway edge detail (subtle border between concrete and lawn)
+  ctx.fillStyle = 'rgba(100,90,80,0.15)';
+  for (var wr = 5; wr <= 10; wr++) {
+    ctx.fillRect(9 * TILE_SIZE - 1, wr * TILE_SIZE, 1, TILE_SIZE);
+    ctx.fillRect(11 * TILE_SIZE, wr * TILE_SIZE, 1, TILE_SIZE);
+  }
+}
+
 function drawTile(floor, row, col) {
   const tile = floor.grid[row][col];
   const x = col * TILE_SIZE;
   const y = row * TILE_SIZE;
   const palette = floor.palette;
+
+  // Outside floor uses custom detailed rendering
+  if (gameState.currentFloor === 'outside') {
+    drawOutsideTile(tile, x, y, row, col);
+    return;
+  }
 
   // Base tile color
   ctx.fillStyle = palette[tile] || palette[T.FLOOR];
@@ -2652,7 +2990,10 @@ var FLOOR_AMBIENT = {
 
 // Light source definitions per floor: {row, col, radius, color, flicker}
 var FLOOR_LIGHTS = {
-  outside: [],
+  outside: [
+    { row: 3, col: 11, radius: 48, color: '255,240,180', flicker: true },
+    { row: 3, col: 7, radius: 36, color: '255,240,180', flicker: false },
+  ],
   main: [
     { row: 6, col: 6, radius: 72, color: '255,240,200', flicker: true },  // floor lamp
     { row: 6, col: 15, radius: 60, color: '100,160,255', flicker: true }, // TV
@@ -2785,6 +3126,9 @@ function render() {
 
   // Draw room labels
   drawRoomLabels(gameState.currentFloor);
+
+  // Draw outside overlay (roof, chimney, porch beam, curb)
+  drawOutsideOverlay();
 
   // Draw interactables
   drawInteractables(floor);

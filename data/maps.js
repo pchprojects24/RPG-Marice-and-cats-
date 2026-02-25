@@ -64,13 +64,13 @@ const TILE_COLORS = {
   },
   // Outside / front entry
   outside: {
-    [T.FLOOR]: '#cfc7b5',    // sidewalk
-    [T.WALL]: '#d8c3a5',     // house facade
-    [T.FURNITURE]: '#6f6f6f',
-    [T.DOOR]: '#7a4b2f',     // front door
-    [T.INTERACT]: '#3f434a', // street
+    [T.FLOOR]: '#c4baa6',    // concrete walkway
+    [T.WALL]: '#c9b08a',     // house siding
+    [T.FURNITURE]: '#5a4a3a',
+    [T.DOOR]: '#6b3a1f',     // front door wood
+    [T.INTERACT]: '#3d3d3d', // street asphalt
     [T.STAIRS]: '#a0522d',
-    [T.COUNTER]: '#74b66a'   // lawn
+    [T.COUNTER]: '#4a8c3f'   // lawn green
   }
 };
 
@@ -416,7 +416,8 @@ const ROOM_LABELS = {
     { text: 'Washroom', row: 8, col: 15 },
   ],
   outside: [
-    { text: 'Front Entry', row: 11, col: 8 },
+    { text: 'Front Yard', row: 7, col: 3 },
     { text: 'Porch', row: 3, col: 8 },
+    { text: 'Street', row: 13, col: 8 },
   ]
 };
