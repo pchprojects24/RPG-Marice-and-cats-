@@ -174,7 +174,7 @@ function sfxInteract() {
 
 function sfxItemPickup() {
   // Rising arpeggio
-  [0, 0.08, 0.16].forEach(function(delay, i) {
+  [0, 0.08, 0.16].forEach(function (delay, i) {
     var osc = audioCtx.createOscillator();
     var gain = audioCtx.createGain();
     osc.type = 'square';
@@ -236,7 +236,7 @@ function sfxCatMeow() {
 function sfxCatFed() {
   // Happy jingle
   var notes = [523, 659, 784, 1047];
-  notes.forEach(function(freq, i) {
+  notes.forEach(function (freq, i) {
     var delay = i * 0.1;
     var osc = audioCtx.createOscillator();
     var gain = audioCtx.createGain();
@@ -345,7 +345,7 @@ function playMusicNote(data) {
   osc.stop(audioCtx.currentTime + dur);
 
   musicNoteIndex++;
-  musicLoopTimer = setTimeout(function() {
+  musicLoopTimer = setTimeout(function () {
     playMusicNote(data);
   }, data.tempo);
 }
@@ -454,7 +454,7 @@ function startTypewriter(text) {
   dialogueText.textContent = '';
   dialogueAdvance.style.visibility = 'hidden';
 
-  typewriterTimer = setInterval(function() {
+  typewriterTimer = setInterval(function () {
     typewriterIndex++;
     dialogueText.textContent = typewriterText.substring(0, typewriterIndex);
     // Play tick sound for visible characters (not spaces)
@@ -579,7 +579,9 @@ class Particle {
       ctx.textAlign = 'left';
     } else {
       ctx.fillStyle = this.color;
-      ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     ctx.globalAlpha = 1;
@@ -746,7 +748,7 @@ function changeFloor(newFloor) {
   label.textContent = floorNames[newFloor] || newFloor;
   overlay.classList.add('active');
 
-  setTimeout(function() {
+  setTimeout(function () {
     // Switch floor while screen is black
     gameState.currentFloor = newFloor;
     var floor = FLOORS[newFloor];
@@ -758,7 +760,7 @@ function changeFloor(newFloor) {
     startMusic(newFloor);
 
     // Fade back in
-    setTimeout(function() {
+    setTimeout(function () {
       overlay.classList.remove('active');
     }, 400);
   }, 350);
@@ -778,7 +780,7 @@ function changeFloorTo(newFloor, row, col, facing) {
   label.textContent = floorNames[newFloor] || newFloor;
   overlay.classList.add('active');
 
-  setTimeout(function() {
+  setTimeout(function () {
     gameState.currentFloor = newFloor;
     gameState.player.row = row;
     gameState.player.col = col;
@@ -787,7 +789,7 @@ function changeFloorTo(newFloor, row, col, facing) {
     saveGame();
     startMusic(newFloor);
 
-    setTimeout(function() {
+    setTimeout(function () {
       overlay.classList.remove('active');
     }, 400);
   }, 350);
@@ -828,6 +830,14 @@ function getInteractableAt(row, col) {
   const floor = getCurrentFloor();
   for (const obj of floor.interactables) {
     if (obj.row === row && obj.col === col) return obj;
+  }
+  return null;
+}
+
+function getCatPosition(catName) {
+  const floor = getCurrentFloor();
+  for (const obj of floor.interactables) {
+    if (obj.type === 'cat_' + catName) return obj;
   }
   return null;
 }
@@ -876,7 +886,7 @@ function handleStairTransition(row, col) {
           // Player walked into the laundry pile while carrying the basket — clear it
           removeItem('laundry_basket');
           gameState.flags.laundry_cleared = true;
-          startDialogue('laundry_pile_clear', null, function() {
+          startDialogue('laundry_pile_clear', null, function () {
             triggerScreenShake(4, 12);
             showToast('Stairway cleared!');
             saveGameImmediate();
@@ -957,8 +967,8 @@ function handleInteraction(obj) {
         changeFloor('main');
         break;
       }
-      startDialogue('front_door_locked', null, function() {
-        showNumpad(function(code) {
+      startDialogue('front_door_locked', null, function () {
+        showNumpad(function (code) {
           if (code === '3134') {
             gameState.flags.front_door_unlocked = true;
             triggerScreenShake(4, 12);
@@ -996,7 +1006,7 @@ function handleInteraction(obj) {
       } else if (hasItem('purrpops')) {
         startDialogue('cupboard_empty', null, null);
       } else {
-        startDialogue('cupboard_purrpops', null, function() {
+        startDialogue('cupboard_purrpops', null, function () {
           addItem('purrpops');
           showToast('Got Purrpops!');
         });
@@ -1008,7 +1018,7 @@ function handleInteraction(obj) {
       if (gameState.flags.beatrice_fed || hasItem('feast_plate')) {
         startDialogue('cupboard_empty', null, null);
       } else {
-        startDialogue('cupboard_feast', null, function() {
+        startDialogue('cupboard_feast', null, function () {
           addItem('feast_plate');
           showToast('Got Shrimp & Salmon Feast plate!');
         });
@@ -1026,7 +1036,7 @@ function handleInteraction(obj) {
         // Give purrpops to Alice
         removeItem('purrpops');
         gameState.flags.alice_fed = true;
-        startDialogue('alice_after', 'alice', function() {
+        startDialogue('alice_after', 'alice', function () {
           showToast('Alice hints about the sofa!');
           markCatFed('alice');
           saveGameImmediate();
@@ -1043,7 +1053,7 @@ function handleInteraction(obj) {
       } else {
         gameState.flags.sofa_searched = true;
         gameState.flags.has_basement_key = true;
-        startDialogue('sofa_blanket', null, function() {
+        startDialogue('sofa_blanket', null, function () {
           addItem('basement_key');
           showToast('Got Basement Key!');
         });
@@ -1057,7 +1067,7 @@ function handleInteraction(obj) {
       } else if (hasItem('basement_key')) {
         removeItem('basement_key');
         gameState.flags.basement_unlocked = true;
-        startDialogue('basement_door_unlock', null, function() {
+        startDialogue('basement_door_unlock', null, function () {
           triggerScreenShake(5, 15);
           playSfx('door_unlock');
           showToast('Basement unlocked!');
@@ -1077,7 +1087,7 @@ function handleInteraction(obj) {
       } else if (hasItem('purrpops')) {
         removeItem('purrpops');
         gameState.flags.olive_fed = true;
-        startDialogue('olive_after', 'olive', function() {
+        startDialogue('olive_after', 'olive', function () {
           addItem('laundry_basket');
           gameState.flags.has_laundry_basket = true;
           showToast('Got Laundry Basket!');
@@ -1099,7 +1109,7 @@ function handleInteraction(obj) {
         removeItem('feast_plate');
         gameState.flags.beatrice_fed = true;
         gameState.flags.game_complete = true;
-        startDialogue('beatrice_after', 'beatrice', function() {
+        startDialogue('beatrice_after', 'beatrice', function () {
           markCatFed('beatrice');
           saveGameImmediate();
           showEnding();
@@ -1294,7 +1304,7 @@ function handleInteraction(obj) {
         var toyNames = { jingle_ball: 'Jingle Ball', feather_wand: 'Feather Wand', laser_pointer: 'Laser Pointer' };
         var toyName = toyNames[obj.toyId] || 'Cat Toy';
         var total = gameState.flags.cat_toys_found.length;
-        startDialogue('cat_toy_' + obj.toyId, null, function() {
+        startDialogue('cat_toy_' + obj.toyId, null, function () {
           showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
           triggerScreenShake(3, 10);
           var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
@@ -1346,7 +1356,7 @@ function checkLaundryInteraction() {
     if (hasItem('laundry_basket')) {
       removeItem('laundry_basket');
       gameState.flags.laundry_cleared = true;
-      startDialogue('laundry_pile_clear', null, function() {
+      startDialogue('laundry_pile_clear', null, function () {
         showToast('Stairway cleared!');
         saveGame();
       });
@@ -1396,7 +1406,7 @@ function updateInteractPrompt() {
 // Sprite drawing functions (simple pixel art using canvas primitives)
 const SPRITES = {
   // Player (Marice) - animated character
-  player: function(x, y, facing, isMoving) {
+  player: function (x, y, facing, isMoving) {
     // Walking bob offset
     var bobY = 0;
     if (isMoving) {
@@ -1450,7 +1460,7 @@ const SPRITES = {
   },
 
   // Cat sprite (generic, colored per cat) — with idle animations
-  cat: function(x, y, color, accentColor) {
+  cat: function (x, y, color, accentColor) {
     // Idle animation state
     var blinkCycle = animTimer % 180; // blink every ~3 seconds at 60fps
     var isBlinking = blinkCycle > 170;
@@ -1542,7 +1552,7 @@ const SPRITES = {
   },
 
   // Cupboard
-  cupboard: function(x, y, variant) {
+  cupboard: function (x, y, variant) {
     ctx.fillStyle = '#9b7a55';
     ctx.fillRect(x + 1, y + 1, 22, 22);
     ctx.fillStyle = '#7c5b36';
@@ -1573,7 +1583,7 @@ const SPRITES = {
   },
 
   // Sofa
-  sofa: function(x, y) {
+  sofa: function (x, y) {
     // Shadow base
     ctx.fillStyle = '#251912';
     ctx.fillRect(x + 2, y + 19, 20, 4);
@@ -1616,7 +1626,7 @@ const SPRITES = {
   },
 
   // Wide 3-seat sofa (spans 3 tiles = 72px wide)
-  sofaWide: function(x, y) {
+  sofaWide: function (x, y) {
     const W = TILE_SIZE * 3;
     // Shadow base
     ctx.fillStyle = '#251912';
@@ -1663,7 +1673,7 @@ const SPRITES = {
   },
 
   // Armchair / reading chair
-  armchair: function(x, y) {
+  armchair: function (x, y) {
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.fillRect(x + 3, y + 20, 18, 3);
@@ -1696,7 +1706,7 @@ const SPRITES = {
     ctx.fillRect(x + 16, y + 21, 3, 2);
   },
 
-  fridge: function(x, y) {
+  fridge: function (x, y) {
     ctx.fillStyle = '#d8e2ec';
     ctx.fillRect(x + 2, y + 1, 20, 22);
     ctx.fillStyle = '#b7c7d6';
@@ -1708,7 +1718,7 @@ const SPRITES = {
     ctx.fillRect(x + 3, y + 3, 7, 1);
   },
 
-  stove: function(x, y) {
+  stove: function (x, y) {
     ctx.fillStyle = '#5d5d5d';
     ctx.fillRect(x + 2, y + 2, 20, 20);
     ctx.fillStyle = '#777';
@@ -1727,7 +1737,7 @@ const SPRITES = {
     ctx.fillRect(x + 15, y + 8, 4, 4);
   },
 
-  kitchenSink: function(x, y) {
+  kitchenSink: function (x, y) {
     ctx.fillStyle = '#c49b72';
     ctx.fillRect(x + 1, y + 1, 22, 22);
     ctx.fillStyle = '#e7d8c4';
@@ -1738,7 +1748,7 @@ const SPRITES = {
     ctx.fillRect(x + 11, y + 2, 3, 6);
   },
 
-  coffeeStation: function(x, y) {
+  coffeeStation: function (x, y) {
     ctx.fillStyle = '#4a3728';
     ctx.fillRect(x + 3, y + 10, 18, 10);
     ctx.fillStyle = '#2f241b';
@@ -1754,7 +1764,7 @@ const SPRITES = {
     ctx.fillRect(x + 9, y + 17, 4, 2);
   },
 
-  diningTable: function(x, y) {
+  diningTable: function (x, y) {
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(x + 1, y + 6, 22, 12);
     ctx.fillStyle = '#a06f3e';
@@ -1767,7 +1777,7 @@ const SPRITES = {
     ctx.fillRect(x + 14, y + 12, 6, 3);
   },
 
-  coffeeTable: function(x, y) {
+  coffeeTable: function (x, y) {
     ctx.fillStyle = '#6f4c32';
     ctx.fillRect(x + 3, y + 10, 18, 6);
     ctx.fillStyle = '#8a6645';
@@ -1776,7 +1786,7 @@ const SPRITES = {
     ctx.fillRect(x + 6, y + 15, 12, 2);
   },
 
-  floorLamp: function(x, y) {
+  floorLamp: function (x, y) {
     ctx.fillStyle = '#d7c4a1';
     ctx.fillRect(x + 9, y + 2, 6, 6);
     ctx.fillRect(x + 10, y + 8, 4, 12);
@@ -1785,7 +1795,7 @@ const SPRITES = {
     ctx.fillRect(x + 7, y + 22, 10, 1);
   },
 
-  tv: function(x, y) {
+  tv: function (x, y) {
     ctx.fillStyle = '#111';
     ctx.fillRect(x + 2, y + 2, 20, 14);
     ctx.fillStyle = '#2d8cff';
@@ -1794,7 +1804,7 @@ const SPRITES = {
     ctx.fillRect(x + 10, y + 16, 4, 4);
   },
 
-  bookshelf: function(x, y) {
+  bookshelf: function (x, y) {
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(x + 2, y + 2, 20, 20);
     ctx.fillStyle = '#6d4220';
@@ -1810,7 +1820,7 @@ const SPRITES = {
   },
 
   // Door (basement)
-  door: function(x, y, locked) {
+  door: function (x, y, locked) {
     // Door frame
     ctx.fillStyle = '#e0d5c5';
     ctx.fillRect(x + 2, y, 20, TILE_SIZE);
@@ -1847,7 +1857,7 @@ const SPRITES = {
   },
 
   // Sliding door
-  slidingDoor: function(x, y) {
+  slidingDoor: function (x, y) {
     ctx.fillStyle = '#87CEEB';
     ctx.fillRect(x + 2, y + 2, 20, 20);
     ctx.strokeStyle = '#5a5a5a';
@@ -1857,7 +1867,7 @@ const SPRITES = {
   },
 
   // Stairs
-  stairs: function(x, y, hasLaundry) {
+  stairs: function (x, y, hasLaundry) {
     // Side rails for depth
     ctx.fillStyle = '#5a3316';
     ctx.fillRect(x + 1, y + 2, 2, TILE_SIZE - 4);
@@ -1907,7 +1917,7 @@ const SPRITES = {
   },
 
   // Treadmill (for Olive)
-  treadmill: function(x, y) {
+  treadmill: function (x, y) {
     ctx.fillStyle = '#555';
     ctx.fillRect(x + 2, y + 10, 20, 8);
     ctx.fillStyle = '#777';
@@ -1920,7 +1930,7 @@ const SPRITES = {
   },
 
   // Futon
-  futon: function(x, y) {
+  futon: function (x, y) {
     ctx.fillStyle = '#4a6741';
     ctx.fillRect(x + 1, y + 6, 22, 14);
     ctx.fillStyle = '#5a7751';
@@ -1928,7 +1938,7 @@ const SPRITES = {
   },
 
   // Furniture (generic blocked)
-  furniture: function(x, y) {
+  furniture: function (x, y) {
     ctx.fillStyle = '#8B6914';
     ctx.fillRect(x + 3, y + 3, 18, 18);
     ctx.fillStyle = '#7a5c10';
@@ -1936,7 +1946,7 @@ const SPRITES = {
   },
 
   // Cat tree (for Alice's position indicator)
-  catTree: function(x, y) {
+  catTree: function (x, y) {
     // Post
     ctx.fillStyle = '#8B7355';
     ctx.fillRect(x + 10, y + 8, 4, 14);
@@ -1949,7 +1959,7 @@ const SPRITES = {
   },
 
   // Bed
-  bed: function(x, y, withBlanket) {
+  bed: function (x, y, withBlanket) {
     ctx.fillStyle = '#8B6914';
     ctx.fillRect(x + 1, y + 2, 22, 20);
     ctx.fillStyle = '#f5f5dc';
@@ -1964,7 +1974,7 @@ const SPRITES = {
   },
 
   // Toilet
-  toilet: function(x, y) {
+  toilet: function (x, y) {
     ctx.fillStyle = '#fff';
     ctx.fillRect(x + 6, y + 6, 12, 14);
     ctx.fillStyle = '#eee';
@@ -1972,7 +1982,7 @@ const SPRITES = {
   },
 
   // Sink
-  sink: function(x, y) {
+  sink: function (x, y) {
     ctx.fillStyle = '#ddd';
     ctx.fillRect(x + 4, y + 8, 16, 10);
     ctx.fillStyle = '#87CEEB';
@@ -1983,7 +1993,7 @@ const SPRITES = {
   },
 
   // Desk
-  desk: function(x, y) {
+  desk: function (x, y) {
     ctx.fillStyle = '#8B7355';
     ctx.fillRect(x + 2, y + 6, 20, 14);
     ctx.fillStyle = '#7a6345';
@@ -1996,7 +2006,7 @@ const SPRITES = {
   },
 
   // Shower/Tub
-  shower: function(x, y) {
+  shower: function (x, y) {
     ctx.fillStyle = '#ddd';
     ctx.fillRect(x + 2, y + 2, 20, 20);
     ctx.fillStyle = '#87CEEB';
@@ -2007,7 +2017,7 @@ const SPRITES = {
   },
 
   // Microwave
-  microwave: function(x, y) {
+  microwave: function (x, y) {
     ctx.fillStyle = '#c0c0c0';
     ctx.fillRect(x + 2, y + 6, 20, 14);
     ctx.fillStyle = '#333';
@@ -2021,7 +2031,7 @@ const SPRITES = {
   },
 
   // Trash can
-  trashCan: function(x, y) {
+  trashCan: function (x, y) {
     ctx.fillStyle = '#555';
     ctx.fillRect(x + 6, y + 6, 12, 14);
     ctx.fillStyle = '#666';
@@ -2036,7 +2046,7 @@ const SPRITES = {
   },
 
   // Potted plant
-  plant: function(x, y) {
+  plant: function (x, y) {
     ctx.fillStyle = '#8b4513';
     ctx.fillRect(x + 7, y + 14, 10, 8);
     ctx.fillStyle = '#a0522d';
@@ -2052,7 +2062,7 @@ const SPRITES = {
   },
 
   // Washer
-  washer: function(x, y) {
+  washer: function (x, y) {
     ctx.fillStyle = '#e8e8e8';
     ctx.fillRect(x + 2, y + 2, 20, 20);
     ctx.fillStyle = '#d0d0d0';
@@ -2071,7 +2081,7 @@ const SPRITES = {
   },
 
   // Dryer
-  dryer: function(x, y) {
+  dryer: function (x, y) {
     ctx.fillStyle = '#e8e8e8';
     ctx.fillRect(x + 2, y + 2, 20, 20);
     ctx.fillStyle = '#d0d0d0';
@@ -2089,7 +2099,7 @@ const SPRITES = {
   },
 
   // Pool table
-  poolTable: function(x, y) {
+  poolTable: function (x, y) {
     ctx.fillStyle = '#5c3317';
     ctx.fillRect(x + 3, y + 19, 3, 4);
     ctx.fillRect(x + 18, y + 19, 3, 4);
@@ -2111,7 +2121,7 @@ const SPRITES = {
   },
 
   // Gaming setup
-  gamingSetup: function(x, y) {
+  gamingSetup: function (x, y) {
     ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(x + 2, y + 12, 20, 10);
     ctx.fillStyle = '#111';
@@ -2129,7 +2139,7 @@ const SPRITES = {
   },
 
   // Exercise bike
-  exerciseBike: function(x, y) {
+  exerciseBike: function (x, y) {
     ctx.fillStyle = '#333';
     ctx.fillRect(x + 4, y + 18, 16, 4);
     ctx.fillStyle = '#ff4500';
@@ -2145,7 +2155,7 @@ const SPRITES = {
   },
 
   // Weights / dumbbells
-  weights: function(x, y) {
+  weights: function (x, y) {
     ctx.fillStyle = '#555';
     ctx.fillRect(x + 3, y + 4, 2, 18);
     ctx.fillRect(x + 19, y + 4, 2, 18);
@@ -2163,7 +2173,7 @@ const SPRITES = {
   },
 
   // Riddle / notice board
-  riddleBoard: function(x, y) {
+  riddleBoard: function (x, y) {
     ctx.fillStyle = '#5c3317';
     ctx.fillRect(x + 10, y + 12, 4, 10);
     ctx.fillStyle = '#c79c4c';
@@ -2179,7 +2189,7 @@ const SPRITES = {
   },
 
   // Mirror
-  mirror: function(x, y) {
+  mirror: function (x, y) {
     ctx.fillStyle = '#c0c0c0';
     ctx.fillRect(x + 5, y + 2, 14, 18);
     ctx.fillStyle = '#add8e6';
@@ -2189,7 +2199,7 @@ const SPRITES = {
   },
 
   // Wall art / painting
-  wallArt: function(x, y) {
+  wallArt: function (x, y) {
     ctx.fillStyle = '#8b6914';
     ctx.fillRect(x + 4, y + 3, 16, 14);
     ctx.fillStyle = '#2a1f14';
@@ -2203,7 +2213,7 @@ const SPRITES = {
   },
 
   // Generic item renderer (fallback)
-  genericItem: function(x, y, color1, color2) {
+  genericItem: function (x, y, color1, color2) {
     ctx.fillStyle = color1;
     ctx.fillRect(x + 4, y + 4, 16, 16);
     ctx.fillStyle = color2;
@@ -3044,6 +3054,52 @@ function drawLighting(floor) {
     }
     ctx.globalCompositeOperation = 'source-over';
   }
+
+  // 3. Dynamic Basement Flashlight overlay
+  if (floorId === 'basement') {
+    // Fill screen with deep darkness
+    ctx.fillStyle = 'rgba(5, 5, 10, 0.94)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Cut out a circle around the player
+    ctx.globalCompositeOperation = 'destination-out';
+    const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+    const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+    const pRadius = 75 + Math.sin(lightFlickerTime * 0.08) * 3; // slight breathing effect
+
+    const pGrad = ctx.createRadialGradient(px, py, 0, px, py, pRadius);
+    pGrad.addColorStop(0, 'rgba(0,0,0,1)');
+    pGrad.addColorStop(0.6, 'rgba(0,0,0,0.8)');
+    pGrad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = pGrad;
+    ctx.fillRect(px - pRadius, py - pRadius, pRadius * 2, pRadius * 2);
+
+    // Also cut out a small circle around Olive so she glows slightly in the dark
+    const olivePos = getCatPosition('olive');
+    if (olivePos) {
+      const ox = olivePos.col * TILE_SIZE + TILE_SIZE / 2;
+      const oy = olivePos.row * TILE_SIZE + TILE_SIZE / 2;
+      const oGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, 24);
+      oGrad.addColorStop(0, 'rgba(0,0,0,0.6)');
+      oGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = oGrad;
+      ctx.fillRect(ox - 24, oy - 24, 48, 48);
+    }
+
+    // Reset composite operation
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Add a slight colored rim light around the flash light area for premium look
+    ctx.globalCompositeOperation = 'lighter';
+    const rimGrad = ctx.createRadialGradient(px, py, pRadius * 0.7, px, py, pRadius);
+    rimGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    rimGrad.addColorStop(0.8, 'rgba(40, 60, 100, 0.15)');
+    rimGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rimGrad;
+    ctx.fillRect(px - pRadius, py - pRadius, pRadius * 2, pRadius * 2);
+    ctx.globalCompositeOperation = 'source-over';
+  }
 }
 
 // ======================== MINIMAP ========================
@@ -3091,7 +3147,7 @@ function drawMinimap() {
     var obj = floor.interactables[i];
     if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
       var catColor = obj.type === 'cat_alice' ? '#cfb68b' :
-                     obj.type === 'cat_olive' ? '#9ea6b3' : '#21211f';
+        obj.type === 'cat_olive' ? '#9ea6b3' : '#21211f';
       ctx.fillStyle = catColor;
       ctx.fillRect(offsetX + obj.col * dotSize, offsetY + obj.row * dotSize, dotSize, dotSize);
     }
@@ -3203,7 +3259,7 @@ function gameLoop() {
 
 // ======================== INPUT HANDLING ========================
 
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
   // Block game input while code entry overlay is open
   if (document.getElementById('numpad-overlay').classList.contains('active')) {
     return;
@@ -3225,12 +3281,12 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-document.addEventListener('keyup', function(e) {
+document.addEventListener('keyup', function (e) {
   keysDown[e.code] = false;
 });
 
-window.addEventListener('blur', function() {
-  Object.keys(keysDown).forEach(function(key) { keysDown[key] = false; });
+window.addEventListener('blur', function () {
+  Object.keys(keysDown).forEach(function (key) { keysDown[key] = false; });
 });
 
 // Mobile D-Pad
@@ -3251,7 +3307,7 @@ function setupMobileControls() {
     function startMove(e) {
       e.preventDefault();
       tryMove(dir);
-      interval = setInterval(function() { tryMove(dir); }, 150);
+      interval = setInterval(function () { tryMove(dir); }, 150);
     }
 
     function stopMove(e) {
@@ -3323,7 +3379,7 @@ function showSaveIndicator() {
   if (!el) return;
   el.classList.add('visible');
   if (saveIndicatorTimer) clearTimeout(saveIndicatorTimer);
-  saveIndicatorTimer = setTimeout(function() {
+  saveIndicatorTimer = setTimeout(function () {
     el.classList.remove('visible');
   }, 1200);
 }
@@ -3348,7 +3404,7 @@ function loadGame() {
 }
 
 function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { }
 }
 
 // ======================== NUMPAD ========================
@@ -3361,7 +3417,7 @@ function showNumpad(onSubmit) {
   input.value = '';
   document.getElementById('numpad-error').textContent = '';
   document.getElementById('numpad-overlay').classList.add('active');
-  setTimeout(function() { input.focus(); }, 50);
+  setTimeout(function () { input.focus(); }, 50);
 }
 
 function hideNumpad() {
@@ -3387,11 +3443,11 @@ function setupNumpad() {
   const overlay = document.getElementById('numpad-overlay');
   const input = document.getElementById('numpad-input');
 
-  overlay.addEventListener('click', function(e) {
+  overlay.addEventListener('click', function (e) {
     if (e.target === overlay) hideNumpad();
   });
 
-  input.addEventListener('input', function() {
+  input.addEventListener('input', function () {
     input.value = input.value.replace(/[^0-9]/g, '');
     document.getElementById('numpad-error').textContent = '';
     if (input.value.length > 0) {
@@ -3402,7 +3458,7 @@ function setupNumpad() {
     }
   });
 
-  input.addEventListener('keydown', function(e) {
+  input.addEventListener('keydown', function (e) {
     if (e.code === 'Enter') {
       e.preventDefault();
       numpadSubmit();
@@ -3437,7 +3493,7 @@ function startNewGame() {
   gameState.moveProgress = 0;
   gameState.moveFrom = null;
   gameState.moveTo = null;
-  Object.keys(keysDown).forEach(function(key) { keysDown[key] = false; });
+  Object.keys(keysDown).forEach(function (key) { keysDown[key] = false; });
   hideNumpad();
   hideDialogue();
   document.getElementById('quest-panel').classList.remove('active');
@@ -3471,7 +3527,7 @@ function startNewGame() {
   if (hint) hint.classList.remove('hidden');
 
   // Show intro dialogue after a short delay
-  setTimeout(function() {
+  setTimeout(function () {
     startDialogue('intro', null, null);
   }, 500);
 }
@@ -3523,14 +3579,14 @@ function init() {
   setupNumpad();
 
   // Title screen buttons
-  document.getElementById('btn-new-game').addEventListener('click', function() {
+  document.getElementById('btn-new-game').addEventListener('click', function () {
     startNewGame();
   });
 
   const continueBtn = document.getElementById('btn-continue');
   if (loadGame()) {
     continueBtn.style.display = 'inline-block';
-    continueBtn.addEventListener('click', function() {
+    continueBtn.addEventListener('click', function () {
       continueGame();
     });
   } else {
@@ -3538,12 +3594,12 @@ function init() {
   }
 
   // Ending screen restart
-  document.getElementById('btn-restart').addEventListener('click', function() {
+  document.getElementById('btn-restart').addEventListener('click', function () {
     restartGame();
   });
 
   // Dialogue overlay click to advance
-  dialogueOverlay.addEventListener('click', function() {
+  dialogueOverlay.addEventListener('click', function () {
     advanceDialogue();
   });
 
@@ -3552,13 +3608,13 @@ function init() {
   const btnToggleQuest = document.getElementById('btn-toggle-quest');
   const btnCloseQuest = document.getElementById('btn-close-quest');
 
-  btnToggleQuest.addEventListener('click', function() {
+  btnToggleQuest.addEventListener('click', function () {
     questPanel.classList.toggle('active');
     // Close settings if open
     document.getElementById('settings-panel').classList.remove('active');
   });
 
-  btnCloseQuest.addEventListener('click', function() {
+  btnCloseQuest.addEventListener('click', function () {
     questPanel.classList.remove('active');
   });
 
@@ -3567,13 +3623,13 @@ function init() {
   const btnToggleSettings = document.getElementById('btn-toggle-settings');
   const btnCloseSettings = document.getElementById('btn-close-settings');
 
-  btnToggleSettings.addEventListener('click', function() {
+  btnToggleSettings.addEventListener('click', function () {
     settingsPanel.classList.toggle('active');
     // Close quest if open
     questPanel.classList.remove('active');
   });
 
-  btnCloseSettings.addEventListener('click', function() {
+  btnCloseSettings.addEventListener('click', function () {
     settingsPanel.classList.remove('active');
   });
 
@@ -3583,17 +3639,17 @@ function init() {
   const musicVolume = document.getElementById('music-volume');
   const musicValue = document.getElementById('music-value');
 
-  sfxVolume.addEventListener('input', function() {
+  sfxVolume.addEventListener('input', function () {
     sfxValue.textContent = this.value + '%';
     updateAudioVolumes();
   });
 
-  musicVolume.addEventListener('input', function() {
+  musicVolume.addEventListener('input', function () {
     musicValue.textContent = this.value + '%';
     updateAudioVolumes();
   });
 
-  document.getElementById('btn-save-settings').addEventListener('click', function() {
+  document.getElementById('btn-save-settings').addEventListener('click', function () {
     showToast('Settings saved!', 1500);
     settingsPanel.classList.remove('active');
   });
