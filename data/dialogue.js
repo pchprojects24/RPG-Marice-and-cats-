@@ -413,7 +413,7 @@ const DIALOGUE = {
 
   front_door_locked: [
     { speaker: 'Marice', text: "The front door is locked with a number pad." },
-    { speaker: 'Marice', text: "It wants a four-digit code — there are three cats and one of you; find the three cats then there'll be four of you. That's how you get 3134." },
+    { speaker: 'Marice', text: "It wants a four-digit code — there are three cats and one of you; find the three cats then there'll be four of you." },
     { speaker: 'Marice', text: "Hint to self: the code is hidden in the riddle." }
   ],
 
