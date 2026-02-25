@@ -73,6 +73,43 @@ html, body {
   opacity: 1;
 }
 
+/* ======================== Floor Transition Overlay ======================== */
+#transition-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#transition-overlay.active {
+  opacity: 1;
+}
+
+#transition-label {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffd700;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease 0.15s, transform 0.25s ease 0.15s;
+}
+
+#transition-overlay.active #transition-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ======================== Canvas ======================== */
 #game-canvas {
   display: block;
@@ -285,6 +322,7 @@ html, body {
   color: #888;
   margin-top: 4px;
   animation: blink 1.2s infinite;
+  visibility: hidden;
 }
 
 @keyframes blink {

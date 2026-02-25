@@ -57,6 +57,40 @@ let gameState = {
 // Movement speed (pixels per frame at 60fps)
 const MOVE_SPEED = 3; // tiles take ~8 frames = ~133ms
 
+// Walk animation frame counter
+let walkFrame = 0;
+let walkFrameTimer = 0;
+const WALK_FRAME_INTERVAL = 8; // swap legs every 8 frames
+
+// Screen shake state
+let shakeIntensity = 0;
+let shakeDuration = 0;
+let shakeTimer = 0;
+
+function triggerScreenShake(intensity, duration) {
+  var shakeCheckbox = document.getElementById('screen-shake');
+  if (!shakeCheckbox || !shakeCheckbox.checked) return;
+  shakeIntensity = intensity;
+  shakeDuration = duration;
+  shakeTimer = duration;
+}
+
+function updateScreenShake() {
+  if (shakeTimer > 0) {
+    shakeTimer--;
+  }
+}
+
+function getShakeOffset() {
+  if (shakeTimer <= 0) return { x: 0, y: 0 };
+  var progress = shakeTimer / shakeDuration;
+  var currentIntensity = shakeIntensity * progress; // dampen over time
+  return {
+    x: (Math.random() - 0.5) * 2 * currentIntensity,
+    y: (Math.random() - 0.5) * 2 * currentIntensity
+  };
+}
+
 // ======================== PORTRAIT CACHE ========================
 
 const portraits = {};
@@ -84,12 +118,20 @@ let dialogueIndex = 0;
 let dialogueCat = null; // which cat's portrait to show
 let dialogueCallback = null; // called when dialogue ends
 
+// Typewriter effect state
+let typewriterText = '';
+let typewriterIndex = 0;
+let typewriterTimer = null;
+let typewriterDone = false;
+const TYPEWRITER_SPEED = 30; // ms per character
+
 const dialogueOverlay = document.getElementById('dialogue-overlay');
 const dialoguePortraits = document.getElementById('dialogue-portraits');
 const dialoguePortraitCat = document.getElementById('dialogue-portrait-cat');
 const dialoguePortraitMarice = document.getElementById('dialogue-portrait-marice');
 const dialogueSpeaker = document.getElementById('dialogue-speaker');
 const dialogueText = document.getElementById('dialogue-text');
+const dialogueAdvance = document.getElementById('dialogue-advance');
 
 function startDialogue(dialogueKey, catName, callback) {
   const messages = DIALOGUE[dialogueKey];
@@ -127,11 +169,44 @@ function showDialogueMessage() {
     dialogueSpeaker.style.color = '#ffd700';
   }
 
-  dialogueText.textContent = msg.text;
+  // Start typewriter effect
+  startTypewriter(msg.text);
+}
+
+function startTypewriter(text) {
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterText = text;
+  typewriterIndex = 0;
+  typewriterDone = false;
+  dialogueText.textContent = '';
+  dialogueAdvance.style.visibility = 'hidden';
+
+  typewriterTimer = setInterval(function() {
+    typewriterIndex++;
+    dialogueText.textContent = typewriterText.substring(0, typewriterIndex);
+    if (typewriterIndex >= typewriterText.length) {
+      finishTypewriter();
+    }
+  }, TYPEWRITER_SPEED);
+}
+
+function finishTypewriter() {
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterTimer = null;
+  typewriterIndex = typewriterText.length;
+  dialogueText.textContent = typewriterText;
+  typewriterDone = true;
+  dialogueAdvance.style.visibility = 'visible';
 }
 
 function advanceDialogue() {
   if (!dialogueActive) return;
+
+  // If typewriter is still running, complete it instantly
+  if (!typewriterDone) {
+    finishTypewriter();
+    return;
+  }
 
   dialogueIndex++;
   if (dialogueIndex >= dialogueQueue.length) {
@@ -144,6 +219,11 @@ function advanceDialogue() {
 function closeDialogue() {
   dialogueActive = false;
   dialogueOverlay.classList.remove('active');
+
+  // Clean up typewriter
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterTimer = null;
+  typewriterDone = false;
 
   if (dialogueCallback) {
     const cb = dialogueCallback;
@@ -297,6 +377,9 @@ function addItem(itemId) {
   const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
   spawnParticles(px, py, 8, '#ffd700');
   spawnTextParticle(px, py - 20, '+', '#ffd700');
+
+  // Light screen shake on item pickup
+  triggerScreenShake(3, 10);
 }
 
 function hasItem(itemId) {
@@ -322,6 +405,9 @@ function markCatFed(catName) {
   const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
   spawnParticles(px, py, 12, '#ff69b4');
   spawnTextParticle(px, py - 25, '❤️', '#ff1493');
+
+  // Strong screen shake for cat fed celebration
+  triggerScreenShake(5, 15);
 }
 
 const ITEM_DISPLAY = {
@@ -350,13 +436,61 @@ function getCurrentFloor() {
 }
 
 function changeFloor(newFloor) {
-  gameState.currentFloor = newFloor;
-  const floor = FLOORS[newFloor];
-  gameState.player.row = floor.start.row;
-  gameState.player.col = floor.start.col;
-  gameState.player.facing = 'down';
-  updateFloorLabel();
-  saveGame();
+  var overlay = document.getElementById('transition-overlay');
+  var label = document.getElementById('transition-label');
+  var floorNames = {
+    outside: 'Front Yard',
+    main: 'Main Floor',
+    basement: 'Basement',
+    upstairs: 'Upstairs'
+  };
+
+  label.textContent = floorNames[newFloor] || newFloor;
+  overlay.classList.add('active');
+
+  setTimeout(function() {
+    // Switch floor while screen is black
+    gameState.currentFloor = newFloor;
+    var floor = FLOORS[newFloor];
+    gameState.player.row = floor.start.row;
+    gameState.player.col = floor.start.col;
+    gameState.player.facing = 'down';
+    updateFloorLabel();
+    saveGame();
+
+    // Fade back in
+    setTimeout(function() {
+      overlay.classList.remove('active');
+    }, 400);
+  }, 350);
+}
+
+// Change floor with custom spawn position (used by stair returns)
+function changeFloorTo(newFloor, row, col, facing) {
+  var overlay = document.getElementById('transition-overlay');
+  var label = document.getElementById('transition-label');
+  var floorNames = {
+    outside: 'Front Yard',
+    main: 'Main Floor',
+    basement: 'Basement',
+    upstairs: 'Upstairs'
+  };
+
+  label.textContent = floorNames[newFloor] || newFloor;
+  overlay.classList.add('active');
+
+  setTimeout(function() {
+    gameState.currentFloor = newFloor;
+    gameState.player.row = row;
+    gameState.player.col = col;
+    gameState.player.facing = facing || 'down';
+    updateFloorLabel();
+    saveGame();
+
+    setTimeout(function() {
+      overlay.classList.remove('active');
+    }, 400);
+  }, 350);
 }
 
 function updateFloorLabel() {
@@ -441,6 +575,7 @@ function handleStairTransition(row, col) {
           removeItem('laundry_basket');
           gameState.flags.laundry_cleared = true;
           startDialogue('laundry_pile_clear', null, function() {
+            triggerScreenShake(4, 12);
             showToast('Stairway cleared!');
             saveGame();
             changeFloor('upstairs');
@@ -457,24 +592,14 @@ function handleStairTransition(row, col) {
     const s = FLOORS.basement.stairs.toMain;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       // Return to main floor, place near basement door
-      gameState.currentFloor = 'main';
-      gameState.player.row = 7;
-      gameState.player.col = 17;
-      gameState.player.facing = 'left';
-      updateFloorLabel();
-      saveGame();
+      changeFloorTo('main', 7, 17, 'left');
       return true;
     }
   } else if (floorId === 'upstairs') {
     const s = FLOORS.upstairs.stairs.toMain;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       // Return to main floor, place near central stairs
-      gameState.currentFloor = 'main';
-      gameState.player.row = 8;
-      gameState.player.col = 10;
-      gameState.player.facing = 'down';
-      updateFloorLabel();
-      saveGame();
+      changeFloorTo('main', 8, 10, 'down');
       return true;
     }
   }
@@ -533,6 +658,7 @@ function handleInteraction(obj) {
         showNumpad(function(code) {
           if (code === '3134') {
             gameState.flags.front_door_unlocked = true;
+            triggerScreenShake(4, 12);
             showToast('Front door unlocked!');
             changeFloor('main');
           } else {
@@ -627,6 +753,7 @@ function handleInteraction(obj) {
         removeItem('basement_key');
         gameState.flags.basement_unlocked = true;
         startDialogue('basement_door_unlock', null, function() {
+          triggerScreenShake(5, 15);
           showToast('Basement unlocked!');
           changeFloor('basement');
         });
@@ -916,35 +1043,58 @@ function updateInteractPrompt() {
 
 // Sprite drawing functions (simple pixel art using canvas primitives)
 const SPRITES = {
-  // Player (Marice) - simple character
-  player: function(x, y, facing) {
+  // Player (Marice) - animated character
+  player: function(x, y, facing, isMoving) {
+    // Walking bob offset
+    var bobY = 0;
+    if (isMoving) {
+      bobY = (walkFrame % 2 === 0) ? -1 : 1;
+    }
+    var by = y + bobY;
+
     // Body
     ctx.fillStyle = '#ff9ecf'; // pink
-    ctx.fillRect(x + 6, y + 4, 12, 14);
+    ctx.fillRect(x + 6, by + 4, 12, 14);
     // Head
     ctx.fillStyle = '#ffe0bd';
-    ctx.fillRect(x + 7, y + 1, 10, 8);
+    ctx.fillRect(x + 7, by + 1, 10, 8);
     // Hair
     ctx.fillStyle = '#5c3317';
-    ctx.fillRect(x + 6, y, 12, 4);
+    ctx.fillRect(x + 6, by, 12, 4);
     // Eyes (based on facing)
     ctx.fillStyle = '#333';
     if (facing === 'down') {
-      ctx.fillRect(x + 9, y + 4, 2, 2);
-      ctx.fillRect(x + 13, y + 4, 2, 2);
+      ctx.fillRect(x + 9, by + 4, 2, 2);
+      ctx.fillRect(x + 13, by + 4, 2, 2);
     } else if (facing === 'up') {
       // Back of head, show hair
       ctx.fillStyle = '#5c3317';
-      ctx.fillRect(x + 7, y + 1, 10, 7);
+      ctx.fillRect(x + 7, by + 1, 10, 7);
     } else if (facing === 'left') {
-      ctx.fillRect(x + 8, y + 4, 2, 2);
+      ctx.fillRect(x + 8, by + 4, 2, 2);
     } else {
-      ctx.fillRect(x + 14, y + 4, 2, 2);
+      ctx.fillRect(x + 14, by + 4, 2, 2);
     }
-    // Feet
+
+    // Feet — animated walk cycle
     ctx.fillStyle = '#6b4226';
-    ctx.fillRect(x + 7, y + 18, 4, 3);
-    ctx.fillRect(x + 13, y + 18, 4, 3);
+    if (isMoving) {
+      if (facing === 'left' || facing === 'right') {
+        // Side view: stride forward/back
+        var stride = (walkFrame % 2 === 0) ? -2 : 2;
+        ctx.fillRect(x + 8 + stride, y + 18, 4, 3);
+        ctx.fillRect(x + 12 - stride, y + 18, 4, 3);
+      } else {
+        // Front/back view: feet apart then together
+        var spread = (walkFrame % 2 === 0) ? 2 : 0;
+        ctx.fillRect(x + 7 - spread, y + 18, 4, 3);
+        ctx.fillRect(x + 13 + spread, y + 18, 4, 3);
+      }
+    } else {
+      // Standing still — feet centered
+      ctx.fillRect(x + 7, y + 18, 4, 3);
+      ctx.fillRect(x + 13, y + 18, 4, 3);
+    }
   },
 
   // Cat sprite (generic, colored per cat)
@@ -1803,12 +1953,20 @@ function drawPlayer() {
     const t = gameState.moveProgress / TILE_SIZE;
     px = fromX + (toX - fromX) * t;
     py = fromY + (toY - fromY) * t;
+
+    // Advance walk animation frame
+    walkFrameTimer++;
+    if (walkFrameTimer >= WALK_FRAME_INTERVAL) {
+      walkFrameTimer = 0;
+      walkFrame++;
+    }
   } else {
     px = p.col * TILE_SIZE;
     py = p.row * TILE_SIZE;
+    walkFrameTimer = 0;
   }
 
-  SPRITES.player(px, py, p.facing);
+  SPRITES.player(px, py, p.facing, gameState.moving);
 }
 
 function drawRoomLabels(floorId) {
@@ -1833,6 +1991,11 @@ function render() {
 
   // Clear
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Apply screen shake offset
+  var shake = getShakeOffset();
+  ctx.save();
+  ctx.translate(shake.x, shake.y);
 
   // Draw tiles
   for (let r = 0; r < MAP_ROWS; r++) {
@@ -1873,7 +2036,10 @@ function render() {
     }
   }
 
-  // Draw subtle vignette effect
+  // Restore from screen shake before vignette
+  ctx.restore();
+
+  // Draw subtle vignette effect (not affected by shake)
   const gradient = ctx.createRadialGradient(
     CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
     CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
@@ -1899,6 +2065,7 @@ function gameLoop() {
 
   updateMovement();
   updateParticles();
+  updateScreenShake();
   updateInteractPrompt();
   render();
   requestAnimationFrame(gameLoop);
