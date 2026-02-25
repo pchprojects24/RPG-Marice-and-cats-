@@ -45,7 +45,8 @@ let gameState = {
     laundry_cleared: false,
     sofa_searched: false,
     game_complete: false,
-    front_door_unlocked: false
+    front_door_unlocked: false,
+    cat_toys_found: []   // array of toy IDs collected
   },
   // Smooth movement animation
   moving: false,
@@ -56,6 +57,307 @@ let gameState = {
 
 // Movement speed (pixels per frame at 60fps)
 const MOVE_SPEED = 3; // tiles take ~8 frames = ~133ms
+
+// Walk animation frame counter
+let walkFrame = 0;
+let walkFrameTimer = 0;
+const WALK_FRAME_INTERVAL = 8; // swap legs every 8 frames
+
+// Global animation timer (for cat idle animations, light flicker, etc.)
+let animTimer = 0;
+
+// Screen shake state
+let shakeIntensity = 0;
+let shakeDuration = 0;
+let shakeTimer = 0;
+
+function triggerScreenShake(intensity, duration) {
+  var shakeCheckbox = document.getElementById('screen-shake');
+  if (!shakeCheckbox || !shakeCheckbox.checked) return;
+  shakeIntensity = intensity;
+  shakeDuration = duration;
+  shakeTimer = duration;
+}
+
+function updateScreenShake() {
+  if (shakeTimer > 0) {
+    shakeTimer--;
+  }
+}
+
+function getShakeOffset() {
+  if (shakeTimer <= 0) return { x: 0, y: 0 };
+  var progress = shakeTimer / shakeDuration;
+  var currentIntensity = shakeIntensity * progress; // dampen over time
+  return {
+    x: (Math.random() - 0.5) * 2 * currentIntensity,
+    y: (Math.random() - 0.5) * 2 * currentIntensity
+  };
+}
+
+// ======================== AUDIO SYSTEM (Web Audio API) ========================
+
+let audioCtx = null;
+let musicGainNode = null;
+let sfxGainNode = null;
+let currentMusic = null;
+let musicPlaying = false;
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGainNode = audioCtx.createGain();
+    musicGainNode.connect(audioCtx.destination);
+    sfxGainNode = audioCtx.createGain();
+    sfxGainNode.connect(audioCtx.destination);
+    updateAudioVolumes();
+  } catch (e) {
+    // Web Audio not supported
+  }
+}
+
+function updateAudioVolumes() {
+  if (!audioCtx) return;
+  var sfxSlider = document.getElementById('sfx-volume');
+  var musicSlider = document.getElementById('music-volume');
+  var sfxVol = sfxSlider ? parseInt(sfxSlider.value) / 100 : 0.7;
+  var musicVol = musicSlider ? parseInt(musicSlider.value) / 100 : 0.5;
+  sfxGainNode.gain.setValueAtTime(sfxVol, audioCtx.currentTime);
+  musicGainNode.gain.setValueAtTime(musicVol * 0.3, audioCtx.currentTime); // music quieter
+}
+
+// --- SFX: procedural chiptune sounds ---
+
+function playSfx(type) {
+  if (!audioCtx) return;
+  updateAudioVolumes();
+  switch (type) {
+    case 'footstep': sfxFootstep(); break;
+    case 'interact': sfxInteract(); break;
+    case 'item_pickup': sfxItemPickup(); break;
+    case 'door_unlock': sfxDoorUnlock(); break;
+    case 'cat_meow': sfxCatMeow(); break;
+    case 'cat_fed': sfxCatFed(); break;
+    case 'numpad_beep': sfxNumpadBeep(); break;
+    case 'error': sfxError(); break;
+    case 'typewriter': sfxTypewriter(); break;
+  }
+}
+
+function sfxFootstep() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(120 + Math.random() * 40, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.08);
+}
+
+function sfxInteract() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(660, audioCtx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function sfxItemPickup() {
+  // Rising arpeggio
+  [0, 0.08, 0.16].forEach(function(delay, i) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime([523, 659, 784][i], audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.15);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.15);
+  });
+}
+
+function sfxDoorUnlock() {
+  // Click + low thud
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.2);
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.25);
+
+  // Click sound
+  var osc2 = audioCtx.createOscillator();
+  var gain2 = audioCtx.createGain();
+  osc2.type = 'triangle';
+  osc2.frequency.setValueAtTime(800, audioCtx.currentTime);
+  gain2.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+  osc2.connect(gain2);
+  gain2.connect(sfxGainNode);
+  osc2.start(audioCtx.currentTime);
+  osc2.stop(audioCtx.currentTime + 0.05);
+}
+
+function sfxCatMeow() {
+  // Frequency sweep mimicking a meow
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sine';
+  var t = audioCtx.currentTime;
+  osc.frequency.setValueAtTime(500 + Math.random() * 100, t);
+  osc.frequency.linearRampToValueAtTime(700 + Math.random() * 150, t + 0.1);
+  osc.frequency.linearRampToValueAtTime(400 + Math.random() * 100, t + 0.3);
+  gain.gain.setValueAtTime(0.15, t);
+  gain.gain.setValueAtTime(0.15, t + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(t);
+  osc.stop(t + 0.35);
+}
+
+function sfxCatFed() {
+  // Happy jingle
+  var notes = [523, 659, 784, 1047];
+  notes.forEach(function(freq, i) {
+    var delay = i * 0.1;
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.2);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.2);
+  });
+}
+
+function sfxNumpadBeep() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.06);
+}
+
+function sfxError() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.2);
+}
+
+function sfxTypewriter() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(600 + Math.random() * 200, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.03);
+}
+
+// --- MUSIC: simple looping chiptune melodies per floor ---
+
+var musicLoopTimer = null;
+var musicNoteIndex = 0;
+
+var MUSIC_DATA = {
+  outside: {
+    notes: [262, 294, 330, 349, 392, 349, 330, 294],
+    tempo: 300, type: 'sine'
+  },
+  main: {
+    notes: [330, 392, 440, 392, 349, 330, 294, 330],
+    tempo: 350, type: 'triangle'
+  },
+  basement: {
+    notes: [196, 220, 196, 175, 165, 175, 196, 220],
+    tempo: 400, type: 'sine'
+  },
+  upstairs: {
+    notes: [392, 440, 494, 523, 494, 440, 392, 349],
+    tempo: 380, type: 'triangle'
+  }
+};
+
+function startMusic(floorId) {
+  if (!audioCtx) return;
+  stopMusic();
+  var data = MUSIC_DATA[floorId];
+  if (!data) return;
+  musicNoteIndex = 0;
+  currentMusic = floorId;
+  musicPlaying = true;
+  playMusicNote(data);
+}
+
+function playMusicNote(data) {
+  if (!musicPlaying || !audioCtx) return;
+  updateAudioVolumes();
+
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = data.type;
+  var freq = data.notes[musicNoteIndex % data.notes.length];
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  var dur = data.tempo / 1000;
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime + dur * 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur * 0.95);
+  osc.connect(gain);
+  gain.connect(musicGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + dur);
+
+  musicNoteIndex++;
+  musicLoopTimer = setTimeout(function() {
+    playMusicNote(data);
+  }, data.tempo);
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  if (musicLoopTimer) {
+    clearTimeout(musicLoopTimer);
+    musicLoopTimer = null;
+  }
+  currentMusic = null;
+}
 
 // ======================== PORTRAIT CACHE ========================
 
@@ -84,12 +386,20 @@ let dialogueIndex = 0;
 let dialogueCat = null; // which cat's portrait to show
 let dialogueCallback = null; // called when dialogue ends
 
+// Typewriter effect state
+let typewriterText = '';
+let typewriterIndex = 0;
+let typewriterTimer = null;
+let typewriterDone = false;
+const TYPEWRITER_SPEED = 30; // ms per character
+
 const dialogueOverlay = document.getElementById('dialogue-overlay');
 const dialoguePortraits = document.getElementById('dialogue-portraits');
 const dialoguePortraitCat = document.getElementById('dialogue-portrait-cat');
 const dialoguePortraitMarice = document.getElementById('dialogue-portrait-marice');
 const dialogueSpeaker = document.getElementById('dialogue-speaker');
 const dialogueText = document.getElementById('dialogue-text');
+const dialogueAdvance = document.getElementById('dialogue-advance');
 
 function startDialogue(dialogueKey, catName, callback) {
   const messages = DIALOGUE[dialogueKey];
@@ -100,6 +410,11 @@ function startDialogue(dialogueKey, catName, callback) {
   dialogueCat = catName;
   dialogueCallback = callback || null;
   dialogueActive = true;
+
+  // Cat meow when talking to a cat
+  if (catName) {
+    playSfx('cat_meow');
+  }
 
   showDialogueMessage();
   dialogueOverlay.classList.add('active');
@@ -127,11 +442,48 @@ function showDialogueMessage() {
     dialogueSpeaker.style.color = '#ffd700';
   }
 
-  dialogueText.textContent = msg.text;
+  // Start typewriter effect
+  startTypewriter(msg.text);
+}
+
+function startTypewriter(text) {
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterText = text;
+  typewriterIndex = 0;
+  typewriterDone = false;
+  dialogueText.textContent = '';
+  dialogueAdvance.style.visibility = 'hidden';
+
+  typewriterTimer = setInterval(function() {
+    typewriterIndex++;
+    dialogueText.textContent = typewriterText.substring(0, typewriterIndex);
+    // Play tick sound for visible characters (not spaces)
+    if (typewriterText[typewriterIndex - 1] !== ' ') {
+      playSfx('typewriter');
+    }
+    if (typewriterIndex >= typewriterText.length) {
+      finishTypewriter();
+    }
+  }, TYPEWRITER_SPEED);
+}
+
+function finishTypewriter() {
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterTimer = null;
+  typewriterIndex = typewriterText.length;
+  dialogueText.textContent = typewriterText;
+  typewriterDone = true;
+  dialogueAdvance.style.visibility = 'visible';
 }
 
 function advanceDialogue() {
   if (!dialogueActive) return;
+
+  // If typewriter is still running, complete it instantly
+  if (!typewriterDone) {
+    finishTypewriter();
+    return;
+  }
 
   dialogueIndex++;
   if (dialogueIndex >= dialogueQueue.length) {
@@ -144,6 +496,11 @@ function advanceDialogue() {
 function closeDialogue() {
   dialogueActive = false;
   dialogueOverlay.classList.remove('active');
+
+  // Clean up typewriter
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterTimer = null;
+  typewriterDone = false;
 
   if (dialogueCallback) {
     const cb = dialogueCallback;
@@ -297,6 +654,10 @@ function addItem(itemId) {
   const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
   spawnParticles(px, py, 8, '#ffd700');
   spawnTextParticle(px, py - 20, '+', '#ffd700');
+
+  // Light screen shake on item pickup
+  triggerScreenShake(3, 10);
+  playSfx('item_pickup');
 }
 
 function hasItem(itemId) {
@@ -322,6 +683,10 @@ function markCatFed(catName) {
   const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
   spawnParticles(px, py, 12, '#ff69b4');
   spawnTextParticle(px, py - 25, '❤️', '#ff1493');
+
+  // Strong screen shake for cat fed celebration
+  triggerScreenShake(5, 15);
+  playSfx('cat_fed');
 }
 
 const ITEM_DISPLAY = {
@@ -350,13 +715,63 @@ function getCurrentFloor() {
 }
 
 function changeFloor(newFloor) {
-  gameState.currentFloor = newFloor;
-  const floor = FLOORS[newFloor];
-  gameState.player.row = floor.start.row;
-  gameState.player.col = floor.start.col;
-  gameState.player.facing = 'down';
-  updateFloorLabel();
-  saveGame();
+  var overlay = document.getElementById('transition-overlay');
+  var label = document.getElementById('transition-label');
+  var floorNames = {
+    outside: 'Front Yard',
+    main: 'Main Floor',
+    basement: 'Basement',
+    upstairs: 'Upstairs'
+  };
+
+  label.textContent = floorNames[newFloor] || newFloor;
+  overlay.classList.add('active');
+
+  setTimeout(function() {
+    // Switch floor while screen is black
+    gameState.currentFloor = newFloor;
+    var floor = FLOORS[newFloor];
+    gameState.player.row = floor.start.row;
+    gameState.player.col = floor.start.col;
+    gameState.player.facing = 'down';
+    updateFloorLabel();
+    saveGame();
+    startMusic(newFloor);
+
+    // Fade back in
+    setTimeout(function() {
+      overlay.classList.remove('active');
+    }, 400);
+  }, 350);
+}
+
+// Change floor with custom spawn position (used by stair returns)
+function changeFloorTo(newFloor, row, col, facing) {
+  var overlay = document.getElementById('transition-overlay');
+  var label = document.getElementById('transition-label');
+  var floorNames = {
+    outside: 'Front Yard',
+    main: 'Main Floor',
+    basement: 'Basement',
+    upstairs: 'Upstairs'
+  };
+
+  label.textContent = floorNames[newFloor] || newFloor;
+  overlay.classList.add('active');
+
+  setTimeout(function() {
+    gameState.currentFloor = newFloor;
+    gameState.player.row = row;
+    gameState.player.col = col;
+    gameState.player.facing = facing || 'down';
+    updateFloorLabel();
+    saveGame();
+    startMusic(newFloor);
+
+    setTimeout(function() {
+      overlay.classList.remove('active');
+    }, 400);
+  }, 350);
 }
 
 function updateFloorLabel() {
@@ -426,6 +841,8 @@ function tryMove(dir) {
   gameState.moveFrom = { row: p.row, col: p.col };
   gameState.moveTo = { row: nr, col: nc };
   gameState.moveProgress = 0;
+  playSfx('footstep');
+  checkHideControlsHint();
 }
 
 function handleStairTransition(row, col) {
@@ -441,8 +858,9 @@ function handleStairTransition(row, col) {
           removeItem('laundry_basket');
           gameState.flags.laundry_cleared = true;
           startDialogue('laundry_pile_clear', null, function() {
+            triggerScreenShake(4, 12);
             showToast('Stairway cleared!');
-            saveGame();
+            saveGameImmediate();
             changeFloor('upstairs');
           });
         } else {
@@ -457,24 +875,14 @@ function handleStairTransition(row, col) {
     const s = FLOORS.basement.stairs.toMain;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       // Return to main floor, place near basement door
-      gameState.currentFloor = 'main';
-      gameState.player.row = 7;
-      gameState.player.col = 17;
-      gameState.player.facing = 'left';
-      updateFloorLabel();
-      saveGame();
+      changeFloorTo('main', 7, 17, 'left');
       return true;
     }
   } else if (floorId === 'upstairs') {
     const s = FLOORS.upstairs.stairs.toMain;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       // Return to main floor, place near central stairs
-      gameState.currentFloor = 'main';
-      gameState.player.row = 8;
-      gameState.player.col = 10;
-      gameState.player.facing = 'down';
-      updateFloorLabel();
-      saveGame();
+      changeFloorTo('main', 8, 10, 'down');
       return true;
     }
   }
@@ -510,6 +918,7 @@ function tryInteract() {
   const obj = getInteractableAt(facing.row, facing.col);
 
   if (obj) {
+    playSfx('interact');
     handleInteraction(obj);
   }
 }
@@ -533,9 +942,12 @@ function handleInteraction(obj) {
         showNumpad(function(code) {
           if (code === '3134') {
             gameState.flags.front_door_unlocked = true;
+            triggerScreenShake(4, 12);
+            playSfx('door_unlock');
             showToast('Front door unlocked!');
             changeFloor('main');
           } else {
+            playSfx('error');
             showToast('Incorrect code. Hint: the code is in the riddle.');
           }
         });
@@ -598,7 +1010,7 @@ function handleInteraction(obj) {
         startDialogue('alice_after', 'alice', function() {
           showToast('Alice hints about the sofa!');
           markCatFed('alice');
-          saveGame();
+          saveGameImmediate();
         });
       } else {
         startDialogue('alice_before', 'alice', null);
@@ -627,6 +1039,8 @@ function handleInteraction(obj) {
         removeItem('basement_key');
         gameState.flags.basement_unlocked = true;
         startDialogue('basement_door_unlock', null, function() {
+          triggerScreenShake(5, 15);
+          playSfx('door_unlock');
           showToast('Basement unlocked!');
           changeFloor('basement');
         });
@@ -649,7 +1063,7 @@ function handleInteraction(obj) {
           gameState.flags.has_laundry_basket = true;
           showToast('Got Laundry Basket!');
           markCatFed('olive');
-          saveGame();
+          saveGameImmediate();
         });
       } else {
         startDialogue('olive_before', 'olive', null);
@@ -668,7 +1082,7 @@ function handleInteraction(obj) {
         gameState.flags.game_complete = true;
         startDialogue('beatrice_after', 'beatrice', function() {
           markCatFed('beatrice');
-          saveGame();
+          saveGameImmediate();
           showEnding();
         });
       } else {
@@ -850,6 +1264,52 @@ function handleInteraction(obj) {
     case 'linen_closet':
       startDialogue('linen_closet', null, null);
       break;
+
+    // ---- CAT TOYS (collectibles) ----
+    case 'cat_toy':
+      if (gameState.flags.cat_toys_found && gameState.flags.cat_toys_found.includes(obj.toyId)) {
+        startDialogue('cat_toy_found', null, null);
+      } else {
+        if (!gameState.flags.cat_toys_found) gameState.flags.cat_toys_found = [];
+        gameState.flags.cat_toys_found.push(obj.toyId);
+        var toyNames = { jingle_ball: 'Jingle Ball', feather_wand: 'Feather Wand', laser_pointer: 'Laser Pointer' };
+        var toyName = toyNames[obj.toyId] || 'Cat Toy';
+        var total = gameState.flags.cat_toys_found.length;
+        startDialogue('cat_toy_' + obj.toyId, null, function() {
+          showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
+          triggerScreenShake(3, 10);
+          var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+          var py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+          spawnParticles(px, py, 10, '#ff69b4');
+          spawnTextParticle(px, py - 20, '🐾', '#ff69b4');
+          playSfx('item_pickup');
+          saveGameImmediate();
+        });
+      }
+      break;
+
+    // ---- OUTSIDE INTERACTABLES ----
+    case 'welcome_mat':
+      startDialogue('welcome_mat', null, null);
+      break;
+    case 'porch_light':
+      startDialogue('porch_light', null, null);
+      break;
+    case 'flower_bed':
+      startDialogue('flower_bed', null, null);
+      break;
+    case 'bird_bath':
+      startDialogue('bird_bath', null, null);
+      break;
+    case 'mailbox':
+      startDialogue('mailbox', null, null);
+      break;
+    case 'garden_gnome':
+      startDialogue('garden_gnome', null, null);
+      break;
+    case 'garden_bench':
+      startDialogue('garden_bench', null, null);
+      break;
   }
 }
 
@@ -916,106 +1376,145 @@ function updateInteractPrompt() {
 
 // Sprite drawing functions (simple pixel art using canvas primitives)
 const SPRITES = {
-  // Player (Marice) - simple character
-  player: function(x, y, facing) {
+  // Player (Marice) - animated character
+  player: function(x, y, facing, isMoving) {
+    // Walking bob offset
+    var bobY = 0;
+    if (isMoving) {
+      bobY = (walkFrame % 2 === 0) ? -1 : 1;
+    }
+    var by = y + bobY;
+
     // Body
     ctx.fillStyle = '#ff9ecf'; // pink
-    ctx.fillRect(x + 6, y + 4, 12, 14);
+    ctx.fillRect(x + 6, by + 4, 12, 14);
     // Head
     ctx.fillStyle = '#ffe0bd';
-    ctx.fillRect(x + 7, y + 1, 10, 8);
+    ctx.fillRect(x + 7, by + 1, 10, 8);
     // Hair
     ctx.fillStyle = '#5c3317';
-    ctx.fillRect(x + 6, y, 12, 4);
+    ctx.fillRect(x + 6, by, 12, 4);
     // Eyes (based on facing)
     ctx.fillStyle = '#333';
     if (facing === 'down') {
-      ctx.fillRect(x + 9, y + 4, 2, 2);
-      ctx.fillRect(x + 13, y + 4, 2, 2);
+      ctx.fillRect(x + 9, by + 4, 2, 2);
+      ctx.fillRect(x + 13, by + 4, 2, 2);
     } else if (facing === 'up') {
       // Back of head, show hair
       ctx.fillStyle = '#5c3317';
-      ctx.fillRect(x + 7, y + 1, 10, 7);
+      ctx.fillRect(x + 7, by + 1, 10, 7);
     } else if (facing === 'left') {
-      ctx.fillRect(x + 8, y + 4, 2, 2);
+      ctx.fillRect(x + 8, by + 4, 2, 2);
     } else {
-      ctx.fillRect(x + 14, y + 4, 2, 2);
+      ctx.fillRect(x + 14, by + 4, 2, 2);
     }
-    // Feet
+
+    // Feet — animated walk cycle
     ctx.fillStyle = '#6b4226';
-    ctx.fillRect(x + 7, y + 18, 4, 3);
-    ctx.fillRect(x + 13, y + 18, 4, 3);
+    if (isMoving) {
+      if (facing === 'left' || facing === 'right') {
+        // Side view: stride forward/back
+        var stride = (walkFrame % 2 === 0) ? -2 : 2;
+        ctx.fillRect(x + 8 + stride, y + 18, 4, 3);
+        ctx.fillRect(x + 12 - stride, y + 18, 4, 3);
+      } else {
+        // Front/back view: feet apart then together
+        var spread = (walkFrame % 2 === 0) ? 2 : 0;
+        ctx.fillRect(x + 7 - spread, y + 18, 4, 3);
+        ctx.fillRect(x + 13 + spread, y + 18, 4, 3);
+      }
+    } else {
+      // Standing still — feet centered
+      ctx.fillRect(x + 7, y + 18, 4, 3);
+      ctx.fillRect(x + 13, y + 18, 4, 3);
+    }
   },
 
-  // Cat sprite (generic, colored per cat)
+  // Cat sprite (generic, colored per cat) — with idle animations
   cat: function(x, y, color, accentColor) {
+    // Idle animation state
+    var blinkCycle = animTimer % 180; // blink every ~3 seconds at 60fps
+    var isBlinking = blinkCycle > 170;
+    var tailPhase = Math.sin(animTimer * 0.08);
+    var earFlick = (animTimer % 240) > 230;
+    var breathe = Math.sin(animTimer * 0.04) * 0.5;
+
     // Shadow under cat for depth
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.fillRect(x + 5, y + 19, 15, 2);
 
-    // Body (loaf shape)
+    // Body (loaf shape) — subtle breathing
+    var bodyY = y + Math.round(breathe);
     ctx.fillStyle = color;
-    ctx.fillRect(x + 5, y + 10, 14, 8);
-    ctx.fillRect(x + 6, y + 9, 12, 1);
-    ctx.fillRect(x + 7, y + 8, 10, 1);
+    ctx.fillRect(x + 5, bodyY + 10, 14, 8);
+    ctx.fillRect(x + 6, bodyY + 9, 12, 1);
+    ctx.fillRect(x + 7, bodyY + 8, 10, 1);
 
     // Chest/front (lighter)
     ctx.fillStyle = accentColor || '#ffb6c1';
-    ctx.fillRect(x + 8, y + 12, 8, 5);
+    ctx.fillRect(x + 8, bodyY + 12, 8, 5);
 
     // Head (rounder)
     ctx.fillStyle = color;
-    ctx.fillRect(x + 7, y + 4, 10, 6);
-    ctx.fillRect(x + 6, y + 5, 12, 4);
-    ctx.fillRect(x + 8, y + 3, 8, 1);
+    ctx.fillRect(x + 7, bodyY + 4, 10, 6);
+    ctx.fillRect(x + 6, bodyY + 5, 12, 4);
+    ctx.fillRect(x + 8, bodyY + 3, 8, 1);
 
-    // Ears (triangular)
-    ctx.fillRect(x + 7, y + 2, 3, 3);
-    ctx.fillRect(x + 14, y + 2, 3, 3);
+    // Ears (triangular) — with occasional flick
+    var earOffset = earFlick ? -1 : 0;
+    ctx.fillRect(x + 7, bodyY + 2 + earOffset, 3, 3);
+    ctx.fillRect(x + 14, bodyY + 2 + earOffset, 3, 3);
     // Inner ears
     ctx.fillStyle = accentColor || '#ffb6c1';
-    ctx.fillRect(x + 8, y + 3, 1, 1);
-    ctx.fillRect(x + 15, y + 3, 1, 1);
+    ctx.fillRect(x + 8, bodyY + 3 + earOffset, 1, 1);
+    ctx.fillRect(x + 15, bodyY + 3 + earOffset, 1, 1);
 
-    // Eyes (bigger, more expressive)
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + 9, y + 6, 2, 2);
-    ctx.fillRect(x + 13, y + 6, 2, 2);
-    // Pupils
-    ctx.fillStyle = '#000';
-    ctx.fillRect(x + 10, y + 7, 1, 1);
-    ctx.fillRect(x + 14, y + 7, 1, 1);
+    // Eyes — blink animation
+    if (isBlinking) {
+      // Closed eyes (lines)
+      ctx.fillStyle = '#333';
+      ctx.fillRect(x + 9, bodyY + 7, 2, 1);
+      ctx.fillRect(x + 13, bodyY + 7, 2, 1);
+    } else {
+      // Open eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 9, bodyY + 6, 2, 2);
+      ctx.fillRect(x + 13, bodyY + 6, 2, 2);
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 10, bodyY + 7, 1, 1);
+      ctx.fillRect(x + 14, bodyY + 7, 1, 1);
+    }
 
     // Nose
     ctx.fillStyle = '#ffb6c1';
-    ctx.fillRect(x + 11, y + 8, 2, 1);
+    ctx.fillRect(x + 11, bodyY + 8, 2, 1);
 
     // Mouth (cute smile)
     ctx.fillStyle = '#333';
-    ctx.fillRect(x + 11, y + 9, 1, 1);
-    ctx.fillRect(x + 12, y + 9, 1, 1);
+    ctx.fillRect(x + 11, bodyY + 9, 1, 1);
+    ctx.fillRect(x + 12, bodyY + 9, 1, 1);
 
     // Whiskers
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    // Left whiskers
-    ctx.moveTo(x + 7, y + 7);
-    ctx.lineTo(x + 4, y + 6);
-    ctx.moveTo(x + 7, y + 8);
-    ctx.lineTo(x + 4, y + 8);
-    // Right whiskers
-    ctx.moveTo(x + 17, y + 7);
-    ctx.lineTo(x + 20, y + 6);
-    ctx.moveTo(x + 17, y + 8);
-    ctx.lineTo(x + 20, y + 8);
+    ctx.moveTo(x + 7, bodyY + 7);
+    ctx.lineTo(x + 4, bodyY + 6);
+    ctx.moveTo(x + 7, bodyY + 8);
+    ctx.lineTo(x + 4, bodyY + 8);
+    ctx.moveTo(x + 17, bodyY + 7);
+    ctx.lineTo(x + 20, bodyY + 6);
+    ctx.moveTo(x + 17, bodyY + 8);
+    ctx.lineTo(x + 20, bodyY + 8);
     ctx.stroke();
 
-    // Tail (curved)
+    // Tail — animated swish
+    var tailSwish = Math.round(tailPhase * 2);
     ctx.fillStyle = color;
-    ctx.fillRect(x + 18, y + 10, 3, 4);
-    ctx.fillRect(x + 19, y + 8, 2, 2);
-    ctx.fillRect(x + 20, y + 7, 1, 1);
+    ctx.fillRect(x + 18, bodyY + 10, 3, 4);
+    ctx.fillRect(x + 19 + tailSwish, bodyY + 8, 2, 2);
+    ctx.fillRect(x + 20 + tailSwish, bodyY + 7, 1, 1);
 
     // Front paws (visible)
     ctx.fillStyle = color;
@@ -1467,7 +1966,203 @@ const SPRITES = {
     ctx.fillRect(x + 10, y + 1, 4, 3);
   },
 
-  // Generic item renderer (small box with color)
+  // Microwave
+  microwave: function(x, y) {
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(x + 2, y + 6, 20, 14);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 4, y + 8, 12, 10);
+    ctx.fillStyle = '#1a3a2a';
+    ctx.fillRect(x + 5, y + 9, 10, 8);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 17, y + 10, 2, 6);
+    ctx.fillStyle = '#7fff7f';
+    ctx.fillRect(x + 18, y + 9, 1, 1);
+  },
+
+  // Trash can
+  trashCan: function(x, y) {
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 6, y + 6, 12, 14);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(x + 5, y + 5, 14, 3);
+    ctx.fillStyle = '#777';
+    ctx.fillRect(x + 7, y + 3, 10, 3);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 10, y + 2, 4, 2);
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(x + 7, y + 11, 10, 1);
+    ctx.fillRect(x + 7, y + 15, 10, 1);
+  },
+
+  // Potted plant
+  plant: function(x, y) {
+    ctx.fillStyle = '#8b4513';
+    ctx.fillRect(x + 7, y + 14, 10, 8);
+    ctx.fillStyle = '#a0522d';
+    ctx.fillRect(x + 6, y + 13, 12, 3);
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(x + 8, y + 14, 8, 2);
+    ctx.fillStyle = '#228b22';
+    ctx.fillRect(x + 8, y + 6, 8, 8);
+    ctx.fillRect(x + 6, y + 8, 12, 4);
+    ctx.fillStyle = '#32cd32';
+    ctx.fillRect(x + 9, y + 4, 6, 4);
+    ctx.fillRect(x + 10, y + 2, 4, 3);
+  },
+
+  // Washer
+  washer: function(x, y) {
+    ctx.fillStyle = '#e8e8e8';
+    ctx.fillRect(x + 2, y + 2, 20, 20);
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(x + 3, y + 3, 18, 4);
+    ctx.fillStyle = '#87ceeb';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#6ab7d9';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.fillRect(x + 5, y + 4, 2, 2);
+    ctx.fillRect(x + 9, y + 4, 2, 2);
+  },
+
+  // Dryer
+  dryer: function(x, y) {
+    ctx.fillStyle = '#e8e8e8';
+    ctx.fillRect(x + 2, y + 2, 20, 20);
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(x + 3, y + 3, 18, 4);
+    ctx.fillStyle = '#444';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff6347';
+    ctx.fillRect(x + 15, y + 4, 2, 2);
+  },
+
+  // Pool table
+  poolTable: function(x, y) {
+    ctx.fillStyle = '#5c3317';
+    ctx.fillRect(x + 3, y + 19, 3, 4);
+    ctx.fillRect(x + 18, y + 19, 3, 4);
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(x + 2, y + 5, 20, 16);
+    ctx.fillStyle = '#228b22';
+    ctx.fillRect(x + 4, y + 7, 16, 12);
+    ctx.fillStyle = '#4a7c3a';
+    ctx.fillRect(x + 4, y + 7, 16, 1);
+    ctx.fillRect(x + 4, y + 18, 16, 1);
+    ctx.fillRect(x + 4, y + 7, 1, 12);
+    ctx.fillRect(x + 19, y + 7, 1, 12);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 8, y + 12, 2, 2);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(x + 13, y + 10, 2, 2);
+    ctx.fillStyle = '#ffff00';
+    ctx.fillRect(x + 15, y + 14, 2, 2);
+  },
+
+  // Gaming setup
+  gamingSetup: function(x, y) {
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(x + 2, y + 12, 20, 10);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x + 5, y + 2, 14, 11);
+    ctx.fillStyle = '#9b59b6';
+    ctx.fillRect(x + 6, y + 3, 12, 9);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x + 10, y + 13, 4, 2);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x + 5, y + 16, 14, 4);
+    ctx.fillStyle = '#ff00ff';
+    ctx.fillRect(x + 6, y + 17, 3, 1);
+    ctx.fillStyle = '#00ffff';
+    ctx.fillRect(x + 11, y + 17, 3, 1);
+  },
+
+  // Exercise bike
+  exerciseBike: function(x, y) {
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 4, y + 18, 16, 4);
+    ctx.fillStyle = '#ff4500';
+    ctx.fillRect(x + 10, y + 6, 3, 14);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 6, y + 4, 12, 3);
+    ctx.fillRect(x + 6, y + 4, 2, 5);
+    ctx.fillRect(x + 16, y + 4, 2, 5);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x + 8, y + 8, 8, 3);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(x + 7, y + 16, 6, 4);
+  },
+
+  // Weights / dumbbells
+  weights: function(x, y) {
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 3, y + 4, 2, 18);
+    ctx.fillRect(x + 19, y + 4, 2, 18);
+    ctx.fillRect(x + 3, y + 4, 18, 2);
+    ctx.fillStyle = '#708090';
+    ctx.fillRect(x + 6, y + 8, 4, 4);
+    ctx.fillRect(x + 14, y + 8, 4, 4);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 9, y + 9, 6, 2);
+    ctx.fillStyle = '#708090';
+    ctx.fillRect(x + 6, y + 15, 4, 4);
+    ctx.fillRect(x + 14, y + 15, 4, 4);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 9, y + 16, 6, 2);
+  },
+
+  // Riddle / notice board
+  riddleBoard: function(x, y) {
+    ctx.fillStyle = '#5c3317';
+    ctx.fillRect(x + 10, y + 12, 4, 10);
+    ctx.fillStyle = '#c79c4c';
+    ctx.fillRect(x + 3, y + 2, 18, 12);
+    ctx.fillStyle = '#a07830';
+    ctx.fillRect(x + 4, y + 3, 16, 10);
+    ctx.fillStyle = '#f5f0e0';
+    ctx.fillRect(x + 6, y + 4, 12, 8);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 7, y + 5, 10, 1);
+    ctx.fillRect(x + 7, y + 7, 8, 1);
+    ctx.fillRect(x + 7, y + 9, 9, 1);
+  },
+
+  // Mirror
+  mirror: function(x, y) {
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(x + 5, y + 2, 14, 18);
+    ctx.fillStyle = '#add8e6';
+    ctx.fillRect(x + 6, y + 3, 12, 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(x + 7, y + 4, 4, 8);
+  },
+
+  // Wall art / painting
+  wallArt: function(x, y) {
+    ctx.fillStyle = '#8b6914';
+    ctx.fillRect(x + 4, y + 3, 16, 14);
+    ctx.fillStyle = '#2a1f14';
+    ctx.fillRect(x + 5, y + 4, 14, 12);
+    ctx.fillStyle = '#4a8fc7';
+    ctx.fillRect(x + 6, y + 5, 12, 5);
+    ctx.fillStyle = '#228b22';
+    ctx.fillRect(x + 6, y + 10, 12, 5);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(x + 14, y + 6, 3, 3);
+  },
+
+  // Generic item renderer (fallback)
   genericItem: function(x, y, color1, color2) {
     ctx.fillStyle = color1;
     ctx.fillRect(x + 4, y + 4, 16, 16);
@@ -1639,12 +2334,12 @@ function drawInteractables(floor) {
         SPRITES.futon(x, y);
         break;
 
-      // New items with simple generic rendering
+      // Upgraded sprites
       case 'microwave':
-        SPRITES.genericItem(x, y, '#c0c0c0', '#444');
+        SPRITES.microwave(x, y);
         break;
       case 'trash_can':
-        SPRITES.genericItem(x, y, '#666', '#444');
+        SPRITES.trashCan(x, y);
         break;
       case 'spice_rack':
         SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
@@ -1654,13 +2349,13 @@ function drawInteractables(floor) {
         break;
       case 'plant':
       case 'plant_hallway':
-        SPRITES.genericItem(x, y, '#228b22', '#90ee90');
+        SPRITES.plant(x, y);
         break;
       case 'game_console':
         SPRITES.genericItem(x, y, '#000', '#4169e1');
         break;
       case 'riddle_board':
-        SPRITES.genericItem(x, y, '#c79c4c', '#7a5c1b');
+        SPRITES.riddleBoard(x, y);
         break;
       case 'side_table':
         SPRITES.genericItem(x, y, '#8b6914', '#daa520');
@@ -1669,7 +2364,7 @@ function drawInteractables(floor) {
         SPRITES.armchair(x, y);
         break;
       case 'bathroom_mirror':
-        SPRITES.genericItem(x, y, '#add8e6', '#87ceeb');
+        SPRITES.mirror(x, y);
         break;
       case 'towel_rack':
         SPRITES.genericItem(x, y, '#c0c0c0', '#fff');
@@ -1678,7 +2373,7 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#8b0000', '#dc143c');
         break;
       case 'wall_art':
-        SPRITES.genericItem(x, y, '#ffd700', '#ffb347');
+        SPRITES.wallArt(x, y);
         break;
       case 'coat_rack':
         SPRITES.genericItem(x, y, '#654321', '#8b4513');
@@ -1686,10 +2381,10 @@ function drawInteractables(floor) {
 
       // Basement items
       case 'weights':
-        SPRITES.genericItem(x, y, '#708090', '#2f4f4f');
+        SPRITES.weights(x, y);
         break;
       case 'exercise_bike':
-        SPRITES.genericItem(x, y, '#ff4500', '#000');
+        SPRITES.exerciseBike(x, y);
         break;
       case 'yoga_mat':
         SPRITES.genericItem(x, y, '#9370db', '#8a2be2');
@@ -1698,10 +2393,10 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
         break;
       case 'washer':
-        SPRITES.genericItem(x, y, '#f0f0f0', '#4682b4');
+        SPRITES.washer(x, y);
         break;
       case 'dryer':
-        SPRITES.genericItem(x, y, '#f0f0f0', '#ff6347');
+        SPRITES.dryer(x, y);
         break;
       case 'laundry_basket_storage':
         SPRITES.genericItem(x, y, '#deb887', '#d2691e');
@@ -1710,13 +2405,13 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#ffff00', '#32cd32');
         break;
       case 'pool_table':
-        SPRITES.genericItem(x, y, '#228b22', '#8b4513');
+        SPRITES.poolTable(x, y);
         break;
       case 'mini_fridge':
         SPRITES.genericItem(x, y, '#c0c0c0', '#000');
         break;
       case 'gaming_setup':
-        SPRITES.genericItem(x, y, '#000', '#ff00ff');
+        SPRITES.gamingSetup(x, y);
         break;
       case 'bath_mat':
         SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
@@ -1787,6 +2482,96 @@ function drawInteractables(floor) {
       case 'linen_closet':
         SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
         break;
+
+      // Cat toy collectible
+      case 'cat_toy':
+        if (!gameState.flags.cat_toys_found || !gameState.flags.cat_toys_found.includes(obj.toyId)) {
+          // Glowing paw print indicator
+          var glowAlpha = 0.4 + Math.sin(animTimer * 0.1) * 0.2;
+          ctx.fillStyle = 'rgba(255,105,180,' + glowAlpha + ')';
+          ctx.fillRect(x + 6, y + 6, 12, 12);
+          ctx.fillStyle = '#ff69b4';
+          ctx.fillRect(x + 8, y + 8, 3, 3);
+          ctx.fillRect(x + 13, y + 8, 3, 3);
+          ctx.fillRect(x + 9, y + 12, 6, 4);
+        }
+        break;
+
+      // Outside items
+      case 'welcome_mat':
+        // Doormat
+        ctx.fillStyle = '#8b6914';
+        ctx.fillRect(x + 3, y + 14, 18, 6);
+        ctx.fillStyle = '#a07830';
+        ctx.fillRect(x + 4, y + 15, 16, 4);
+        break;
+      case 'porch_light':
+        // Wall sconce
+        ctx.fillStyle = '#888';
+        ctx.fillRect(x + 9, y + 4, 6, 4);
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(x + 10, y + 8, 4, 5);
+        ctx.fillStyle = 'rgba(255,240,150,0.3)';
+        ctx.fillRect(x + 6, y + 6, 12, 10);
+        break;
+      case 'flower_bed':
+        SPRITES.plant(x, y);
+        // Extra flowers
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(x + 5, y + 3, 3, 3);
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(x + 16, y + 5, 3, 3);
+        break;
+      case 'bird_bath':
+        // Pedestal
+        ctx.fillStyle = '#999';
+        ctx.fillRect(x + 8, y + 12, 8, 10);
+        ctx.fillRect(x + 10, y + 18, 4, 4);
+        // Basin
+        ctx.fillStyle = '#bbb';
+        ctx.fillRect(x + 5, y + 8, 14, 5);
+        ctx.fillStyle = '#87ceeb';
+        ctx.fillRect(x + 7, y + 9, 10, 3);
+        break;
+      case 'mailbox':
+        // Post
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(x + 10, y + 10, 4, 12);
+        // Box
+        ctx.fillStyle = '#333';
+        ctx.fillRect(x + 5, y + 4, 14, 8);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x + 6, y + 5, 12, 6);
+        // Flag
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(x + 18, y + 4, 2, 6);
+        break;
+      case 'garden_gnome':
+        // Body
+        ctx.fillStyle = '#4169e1';
+        ctx.fillRect(x + 8, y + 10, 8, 8);
+        // Face
+        ctx.fillStyle = '#ffe0bd';
+        ctx.fillRect(x + 9, y + 6, 6, 5);
+        // Hat
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(x + 8, y + 2, 8, 5);
+        ctx.fillRect(x + 10, y + 0, 4, 3);
+        break;
+      case 'garden_bench':
+        // Legs
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x + 3, y + 16, 2, 6);
+        ctx.fillRect(x + 19, y + 16, 2, 6);
+        // Seat
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(x + 2, y + 13, 20, 4);
+        // Back
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(x + 2, y + 7, 20, 7);
+        ctx.fillStyle = '#8b5a2b';
+        ctx.fillRect(x + 3, y + 8, 18, 5);
+        break;
     }
   }
 }
@@ -1803,12 +2588,20 @@ function drawPlayer() {
     const t = gameState.moveProgress / TILE_SIZE;
     px = fromX + (toX - fromX) * t;
     py = fromY + (toY - fromY) * t;
+
+    // Advance walk animation frame
+    walkFrameTimer++;
+    if (walkFrameTimer >= WALK_FRAME_INTERVAL) {
+      walkFrameTimer = 0;
+      walkFrame++;
+    }
   } else {
     px = p.col * TILE_SIZE;
     py = p.row * TILE_SIZE;
+    walkFrameTimer = 0;
   }
 
-  SPRITES.player(px, py, p.facing);
+  SPRITES.player(px, py, p.facing, gameState.moving);
 }
 
 function drawRoomLabels(floorId) {
@@ -1828,11 +2621,141 @@ function drawRoomLabels(floorId) {
   ctx.textAlign = 'left';
 }
 
+// ======================== DYNAMIC LIGHTING ========================
+
+// Ambient tint per floor (rgba overlay)
+var FLOOR_AMBIENT = {
+  outside: { r: 255, g: 180, b: 100, a: 0.08 },  // warm sunset
+  main: { r: 255, g: 220, b: 170, a: 0.05 },      // warm interior
+  basement: { r: 0, g: 0, b: 0, a: 0.2 },          // dim
+  upstairs: { r: 255, g: 230, b: 200, a: 0.06 }    // soft warm
+};
+
+// Light source definitions per floor: {row, col, radius, color, flicker}
+var FLOOR_LIGHTS = {
+  outside: [],
+  main: [
+    { row: 6, col: 6, radius: 72, color: '255,240,200', flicker: true },  // floor lamp
+    { row: 6, col: 15, radius: 60, color: '100,160,255', flicker: true }, // TV
+    { row: 3, col: 5, radius: 40, color: '255,180,80', flicker: false },  // stove
+  ],
+  basement: [
+    { row: 7, col: 10, radius: 64, color: '200,200,255', flicker: false }, // overhead light area
+  ],
+  upstairs: [
+    { row: 3, col: 13, radius: 56, color: '255,240,200', flicker: true },  // bedside lamp area
+  ]
+};
+
+var lightFlickerTime = 0;
+
+function drawLighting(floor) {
+  var floorId = gameState.currentFloor;
+  lightFlickerTime++;
+
+  // 1. Apply ambient tint
+  var ambient = FLOOR_AMBIENT[floorId];
+  if (ambient) {
+    ctx.fillStyle = 'rgba(' + ambient.r + ',' + ambient.g + ',' + ambient.b + ',' + ambient.a + ')';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
+
+  // 2. Draw light sources using additive-style radial gradients
+  var lights = FLOOR_LIGHTS[floorId];
+  if (lights && lights.length > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < lights.length; i++) {
+      var light = lights[i];
+      var cx = light.col * TILE_SIZE + TILE_SIZE / 2;
+      var cy = light.row * TILE_SIZE + TILE_SIZE / 2;
+      var radius = light.radius;
+
+      // Subtle flicker
+      if (light.flicker) {
+        radius += Math.sin(lightFlickerTime * 0.15 + i * 2) * 4;
+      }
+
+      var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      grad.addColorStop(0, 'rgba(' + light.color + ',0.12)');
+      grad.addColorStop(0.5, 'rgba(' + light.color + ',0.06)');
+      grad.addColorStop(1, 'rgba(' + light.color + ',0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
+// ======================== MINIMAP ========================
+
+function drawMinimap() {
+  var floor = getCurrentFloor();
+  var grid = floor.grid;
+  var dotSize = 2;
+  var padding = 4;
+  var mapW = MAP_COLS * dotSize;
+  var mapH = MAP_ROWS * dotSize;
+  var offsetX = CANVAS_W - mapW - padding - 2;
+  var offsetY = padding + 2;
+
+  // Background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(offsetX - 2, offsetY - 2, mapW + 4, mapH + 4);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(offsetX - 2, offsetY - 2, mapW + 4, mapH + 4);
+
+  // Draw tiles
+  for (var r = 0; r < MAP_ROWS; r++) {
+    for (var c = 0; c < MAP_COLS; c++) {
+      var tile = grid[r][c];
+      var dx = offsetX + c * dotSize;
+      var dy = offsetY + r * dotSize;
+      if (tile === T.WALL) {
+        ctx.fillStyle = 'rgba(100, 80, 60, 0.9)';
+      } else if (tile === T.FURNITURE || tile === T.COUNTER) {
+        ctx.fillStyle = 'rgba(139, 105, 20, 0.6)';
+      } else if (tile === T.DOOR) {
+        ctx.fillStyle = 'rgba(74, 124, 89, 0.8)';
+      } else if (tile === T.STAIRS) {
+        ctx.fillStyle = 'rgba(160, 82, 45, 0.8)';
+      } else {
+        ctx.fillStyle = 'rgba(180, 160, 130, 0.3)';
+      }
+      ctx.fillRect(dx, dy, dotSize, dotSize);
+    }
+  }
+
+  // Draw interactable markers (cats show as colored dots)
+  for (var i = 0; i < floor.interactables.length; i++) {
+    var obj = floor.interactables[i];
+    if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
+      var catColor = obj.type === 'cat_alice' ? '#f5a623' :
+                     obj.type === 'cat_olive' ? '#808080' : '#ff69b4';
+      ctx.fillStyle = catColor;
+      ctx.fillRect(offsetX + obj.col * dotSize, offsetY + obj.row * dotSize, dotSize, dotSize);
+    }
+  }
+
+  // Draw player (blinking dot)
+  var blink = Math.sin(animTimer * 0.15) > 0;
+  if (blink) {
+    var p = gameState.player;
+    ctx.fillStyle = '#ff9ecf';
+    ctx.fillRect(offsetX + p.col * dotSize, offsetY + p.row * dotSize, dotSize, dotSize);
+  }
+}
+
 function render() {
   const floor = getCurrentFloor();
 
   // Clear
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Apply screen shake offset
+  var shake = getShakeOffset();
+  ctx.save();
+  ctx.translate(shake.x, shake.y);
 
   // Draw tiles
   for (let r = 0; r < MAP_ROWS; r++) {
@@ -1873,7 +2796,16 @@ function render() {
     }
   }
 
-  // Draw subtle vignette effect
+  // Draw dynamic lighting
+  drawLighting(floor);
+
+  // Draw minimap
+  drawMinimap();
+
+  // Restore from screen shake before vignette
+  ctx.restore();
+
+  // Draw subtle vignette effect (not affected by shake)
   const gradient = ctx.createRadialGradient(
     CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
     CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
@@ -1897,8 +2829,10 @@ function gameLoop() {
     else if (keysDown['ArrowRight'] || keysDown['KeyD']) tryMove('right');
   }
 
+  animTimer++;
   updateMovement();
   updateParticles();
+  updateScreenShake();
   updateInteractPrompt();
   render();
   requestAnimationFrame(gameLoop);
@@ -1991,8 +2925,22 @@ function setupMobileControls() {
 // ======================== SAVE / LOAD ========================
 
 const SAVE_KEY = 'marice_cats_adventure_save';
+var saveDebounceTimer = null;
+var saveIndicatorTimer = null;
 
 function saveGame() {
+  // Debounce saves — wait 500ms of inactivity before writing
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(doSaveGame, 500);
+}
+
+function saveGameImmediate() {
+  // For critical moments (floor changes, quest progress)
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  doSaveGame();
+}
+
+function doSaveGame() {
   const data = {
     currentFloor: gameState.currentFloor,
     player: { row: gameState.player.row, col: gameState.player.col, facing: gameState.player.facing },
@@ -2001,9 +2949,20 @@ function saveGame() {
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    showSaveIndicator();
   } catch (e) {
     // localStorage might be unavailable
   }
+}
+
+function showSaveIndicator() {
+  var el = document.getElementById('save-indicator');
+  if (!el) return;
+  el.classList.add('visible');
+  if (saveIndicatorTimer) clearTimeout(saveIndicatorTimer);
+  saveIndicatorTimer = setTimeout(function() {
+    el.classList.remove('visible');
+  }, 1200);
 }
 
 function loadGame() {
@@ -2072,6 +3031,9 @@ function setupNumpad() {
   input.addEventListener('input', function() {
     input.value = input.value.replace(/[^0-9]/g, '');
     document.getElementById('numpad-error').textContent = '';
+    if (input.value.length > 0) {
+      playSfx('numpad_beep');
+    }
     if (input.value.length === 4) {
       numpadSubmit();
     }
@@ -2102,6 +3064,7 @@ function hideTitleScreen() {
 }
 
 function startNewGame() {
+  initAudio();
   clearSave();
   gameState.currentFloor = 'outside';
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
@@ -2116,21 +3079,48 @@ function startNewGame() {
     laundry_cleared: false,
     sofa_searched: false,
     game_complete: false,
-    front_door_unlocked: false
+    front_door_unlocked: false,
+    cat_toys_found: []
   };
   renderInventory();
   updateFloorLabel();
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
+  startMusic('outside');
+
+  // Show controls hint
+  var hint = document.getElementById('controls-hint');
+  if (hint) hint.classList.remove('hidden');
+
+  // Show intro dialogue after a short delay
+  setTimeout(function() {
+    startDialogue('intro', null, null);
+  }, 500);
+}
+
+// Hide controls hint after first few movements
+var moveCount = 0;
+function checkHideControlsHint() {
+  moveCount++;
+  if (moveCount === 5) {
+    var hint = document.getElementById('controls-hint');
+    if (hint) hint.classList.add('hidden');
+  }
 }
 
 function continueGame() {
+  initAudio();
   renderInventory();
   updateFloorLabel();
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
+  startMusic(gameState.currentFloor);
+
+  // Hide controls hint for returning players
+  var hint = document.getElementById('controls-hint');
+  if (hint) hint.classList.add('hidden');
 }
 
 // ======================== ENDING SCREEN ========================
@@ -2218,10 +3208,12 @@ function init() {
 
   sfxVolume.addEventListener('input', function() {
     sfxValue.textContent = this.value + '%';
+    updateAudioVolumes();
   });
 
   musicVolume.addEventListener('input', function() {
     musicValue.textContent = this.value + '%';
+    updateAudioVolumes();
   });
 
   document.getElementById('btn-save-settings').addEventListener('click', function() {

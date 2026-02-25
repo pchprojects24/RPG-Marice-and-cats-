@@ -85,25 +85,25 @@ const outsideGrid = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   // Row 2: house facade with front door
   [1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1],
-  // Row 3: porch in front of door
-  [1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1],
-  // Row 4: yard opening
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 3: porch with welcome mat
+  [1,1,1,1,1,1,1,4,0,0,0,4,1,1,1,1,1,1,1,1],
+  // Row 4: yard opening with flower beds
+  [1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,1],
   // Row 5: yard with shrubs
   [1,0,2,0,0,0,2,0,0,0,0,0,0,2,0,0,0,2,0,1],
-  // Row 6
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 7
+  // Row 6: garden area
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1],
+  // Row 7: tree
   [1,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 8
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 8: mailbox
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,1],
   // Row 9: riddle board
   [1,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 10
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 11
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 12
+  // Row 10: garden gnome
+  [1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,1],
+  // Row 11: bench
+  [1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 12: path
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 13
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -114,6 +114,14 @@ const outsideGrid = [
 const outsideInteractables = [
   { row: 2, col: 9, type: 'front_door', label: 'Front Door', sprite: 'door_locked' },
   { row: 9, col: 4, type: 'riddle_board', label: 'Notice Board', sprite: 'board' },
+  { row: 3, col: 7, type: 'welcome_mat', label: 'Welcome Mat', sprite: 'generic' },
+  { row: 3, col: 11, type: 'porch_light', label: 'Porch Light', sprite: 'generic' },
+  { row: 4, col: 2, type: 'flower_bed', label: 'Flower Bed', sprite: 'generic' },
+  { row: 4, col: 17, type: 'flower_bed', label: 'Flower Bed', sprite: 'generic' },
+  { row: 6, col: 15, type: 'bird_bath', label: 'Bird Bath', sprite: 'generic' },
+  { row: 8, col: 14, type: 'mailbox', label: 'Mailbox', sprite: 'generic' },
+  { row: 10, col: 11, type: 'garden_gnome', label: 'Garden Gnome', sprite: 'generic' },
+  { row: 11, col: 2, type: 'garden_bench', label: 'Garden Bench', sprite: 'generic' },
 ];
 
 const outsideStart = { row: 12, col: 10 };
@@ -195,6 +203,9 @@ const mainFloorInteractables = [
 
   // Sofa with blanket (living room) - hides basement key
   { row: 8, col: 5, type: 'sofa_blanket', label: 'Sofa', sprite: 'sofa' },
+
+  // Hidden cat toy — jingle ball under coffee table
+  { row: 8, col: 8, type: 'cat_toy', label: 'Something Shiny', sprite: 'cat_toy', toyId: 'jingle_ball' },
 
   // Basement door (right side, off kitchen area)
   { row: 7, col: 18, type: 'basement_door', label: 'Basement Door', sprite: 'door_locked' },
@@ -286,6 +297,9 @@ const basementInteractables = [
   { row: 12, col: 4, type: 'tool_bench', label: 'Tool Bench', sprite: 'tools' },
   { row: 13, col: 7, type: 'water_heater', label: 'Water Heater', sprite: 'heater' },
   { row: 10, col: 15, type: 'bookshelf_basement', label: 'Bookshelf', sprite: 'bookshelf' },
+
+  // Hidden cat toy — feather toy behind storage
+  { row: 13, col: 14, type: 'cat_toy', label: 'Something Fluffy', sprite: 'cat_toy', toyId: 'feather_wand' },
 ];
 
 const basementStairs = {
@@ -372,6 +386,9 @@ const upstairsInteractables = [
   // Additional decor
   { row: 1, col: 8, type: 'ceiling_fan', label: 'Ceiling Fan', sprite: 'fan' },
   { row: 4, col: 11, type: 'linen_closet', label: 'Linen Closet', sprite: 'closet' },
+
+  // Hidden cat toy — laser pointer in nightstand
+  { row: 5, col: 5, type: 'cat_toy', label: 'Something in the Drawer', sprite: 'cat_toy', toyId: 'laser_pointer' },
 ];
 
 const upstairsStairs = {

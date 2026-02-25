@@ -73,6 +73,89 @@ html, body {
   opacity: 1;
 }
 
+/* ======================== Save Indicator ======================== */
+#save-indicator {
+  position: absolute;
+  top: 36px;
+  right: 12px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  color: rgba(255, 215, 0, 0.7);
+  font-size: 11px;
+  z-index: 12;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+#save-indicator.visible {
+  opacity: 1;
+}
+
+/* ======================== Controls Hint ======================== */
+#controls-hint {
+  position: absolute;
+  bottom: 170px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 2px solid #ffd700;
+  border-radius: 10px;
+  z-index: 80;
+  font-size: 13px;
+  color: #ffd700;
+  font-weight: bold;
+  opacity: 1;
+  transition: opacity 1s ease;
+  pointer-events: none;
+}
+
+#controls-hint.hidden {
+  opacity: 0;
+}
+
+/* ======================== Floor Transition Overlay ======================== */
+#transition-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#transition-overlay.active {
+  opacity: 1;
+}
+
+#transition-label {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffd700;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease 0.15s, transform 0.25s ease 0.15s;
+}
+
+#transition-overlay.active #transition-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ======================== Canvas ======================== */
 #game-canvas {
   display: block;
@@ -285,6 +368,7 @@ html, body {
   color: #888;
   margin-top: 4px;
   animation: blink 1.2s infinite;
+  visibility: hidden;
 }
 
 @keyframes blink {
