@@ -3061,6 +3061,23 @@ function drawLighting(floor) {
     ctx.fillStyle = 'rgba(5, 5, 10, 0.94)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
+    // Cut overhead light sources through the darkness
+    ctx.globalCompositeOperation = 'destination-out';
+    if (lights && lights.length > 0) {
+      for (var j = 0; j < lights.length; j++) {
+        var oLight = lights[j];
+        var olcx = oLight.col * TILE_SIZE + TILE_SIZE / 2;
+        var olcy = oLight.row * TILE_SIZE + TILE_SIZE / 2;
+        var olGrad = ctx.createRadialGradient(olcx, olcy, 0, olcx, olcy, oLight.radius);
+        olGrad.addColorStop(0, 'rgba(0,0,0,0.85)');
+        olGrad.addColorStop(0.5, 'rgba(0,0,0,0.4)');
+        olGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = olGrad;
+        ctx.fillRect(olcx - oLight.radius, olcy - oLight.radius, oLight.radius * 2, oLight.radius * 2);
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
     // Cut out a circle around the player
     ctx.globalCompositeOperation = 'destination-out';
     const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
