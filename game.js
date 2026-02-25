@@ -45,7 +45,8 @@ let gameState = {
     laundry_cleared: false,
     sofa_searched: false,
     game_complete: false,
-    front_door_unlocked: false
+    front_door_unlocked: false,
+    cat_toys_found: []   // array of toy IDs collected
   },
   // Smooth movement animation
   moving: false,
@@ -841,6 +842,7 @@ function tryMove(dir) {
   gameState.moveTo = { row: nr, col: nc };
   gameState.moveProgress = 0;
   playSfx('footstep');
+  checkHideControlsHint();
 }
 
 function handleStairTransition(row, col) {
@@ -858,7 +860,7 @@ function handleStairTransition(row, col) {
           startDialogue('laundry_pile_clear', null, function() {
             triggerScreenShake(4, 12);
             showToast('Stairway cleared!');
-            saveGame();
+            saveGameImmediate();
             changeFloor('upstairs');
           });
         } else {
@@ -1008,7 +1010,7 @@ function handleInteraction(obj) {
         startDialogue('alice_after', 'alice', function() {
           showToast('Alice hints about the sofa!');
           markCatFed('alice');
-          saveGame();
+          saveGameImmediate();
         });
       } else {
         startDialogue('alice_before', 'alice', null);
@@ -1061,7 +1063,7 @@ function handleInteraction(obj) {
           gameState.flags.has_laundry_basket = true;
           showToast('Got Laundry Basket!');
           markCatFed('olive');
-          saveGame();
+          saveGameImmediate();
         });
       } else {
         startDialogue('olive_before', 'olive', null);
@@ -1080,7 +1082,7 @@ function handleInteraction(obj) {
         gameState.flags.game_complete = true;
         startDialogue('beatrice_after', 'beatrice', function() {
           markCatFed('beatrice');
-          saveGame();
+          saveGameImmediate();
           showEnding();
         });
       } else {
@@ -1261,6 +1263,52 @@ function handleInteraction(obj) {
       break;
     case 'linen_closet':
       startDialogue('linen_closet', null, null);
+      break;
+
+    // ---- CAT TOYS (collectibles) ----
+    case 'cat_toy':
+      if (gameState.flags.cat_toys_found && gameState.flags.cat_toys_found.includes(obj.toyId)) {
+        startDialogue('cat_toy_found', null, null);
+      } else {
+        if (!gameState.flags.cat_toys_found) gameState.flags.cat_toys_found = [];
+        gameState.flags.cat_toys_found.push(obj.toyId);
+        var toyNames = { jingle_ball: 'Jingle Ball', feather_wand: 'Feather Wand', laser_pointer: 'Laser Pointer' };
+        var toyName = toyNames[obj.toyId] || 'Cat Toy';
+        var total = gameState.flags.cat_toys_found.length;
+        startDialogue('cat_toy_' + obj.toyId, null, function() {
+          showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
+          triggerScreenShake(3, 10);
+          var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+          var py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+          spawnParticles(px, py, 10, '#ff69b4');
+          spawnTextParticle(px, py - 20, '🐾', '#ff69b4');
+          playSfx('item_pickup');
+          saveGameImmediate();
+        });
+      }
+      break;
+
+    // ---- OUTSIDE INTERACTABLES ----
+    case 'welcome_mat':
+      startDialogue('welcome_mat', null, null);
+      break;
+    case 'porch_light':
+      startDialogue('porch_light', null, null);
+      break;
+    case 'flower_bed':
+      startDialogue('flower_bed', null, null);
+      break;
+    case 'bird_bath':
+      startDialogue('bird_bath', null, null);
+      break;
+    case 'mailbox':
+      startDialogue('mailbox', null, null);
+      break;
+    case 'garden_gnome':
+      startDialogue('garden_gnome', null, null);
+      break;
+    case 'garden_bench':
+      startDialogue('garden_bench', null, null);
       break;
   }
 }
@@ -2434,6 +2482,96 @@ function drawInteractables(floor) {
       case 'linen_closet':
         SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
         break;
+
+      // Cat toy collectible
+      case 'cat_toy':
+        if (!gameState.flags.cat_toys_found || !gameState.flags.cat_toys_found.includes(obj.toyId)) {
+          // Glowing paw print indicator
+          var glowAlpha = 0.4 + Math.sin(animTimer * 0.1) * 0.2;
+          ctx.fillStyle = 'rgba(255,105,180,' + glowAlpha + ')';
+          ctx.fillRect(x + 6, y + 6, 12, 12);
+          ctx.fillStyle = '#ff69b4';
+          ctx.fillRect(x + 8, y + 8, 3, 3);
+          ctx.fillRect(x + 13, y + 8, 3, 3);
+          ctx.fillRect(x + 9, y + 12, 6, 4);
+        }
+        break;
+
+      // Outside items
+      case 'welcome_mat':
+        // Doormat
+        ctx.fillStyle = '#8b6914';
+        ctx.fillRect(x + 3, y + 14, 18, 6);
+        ctx.fillStyle = '#a07830';
+        ctx.fillRect(x + 4, y + 15, 16, 4);
+        break;
+      case 'porch_light':
+        // Wall sconce
+        ctx.fillStyle = '#888';
+        ctx.fillRect(x + 9, y + 4, 6, 4);
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(x + 10, y + 8, 4, 5);
+        ctx.fillStyle = 'rgba(255,240,150,0.3)';
+        ctx.fillRect(x + 6, y + 6, 12, 10);
+        break;
+      case 'flower_bed':
+        SPRITES.plant(x, y);
+        // Extra flowers
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(x + 5, y + 3, 3, 3);
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(x + 16, y + 5, 3, 3);
+        break;
+      case 'bird_bath':
+        // Pedestal
+        ctx.fillStyle = '#999';
+        ctx.fillRect(x + 8, y + 12, 8, 10);
+        ctx.fillRect(x + 10, y + 18, 4, 4);
+        // Basin
+        ctx.fillStyle = '#bbb';
+        ctx.fillRect(x + 5, y + 8, 14, 5);
+        ctx.fillStyle = '#87ceeb';
+        ctx.fillRect(x + 7, y + 9, 10, 3);
+        break;
+      case 'mailbox':
+        // Post
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(x + 10, y + 10, 4, 12);
+        // Box
+        ctx.fillStyle = '#333';
+        ctx.fillRect(x + 5, y + 4, 14, 8);
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x + 6, y + 5, 12, 6);
+        // Flag
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(x + 18, y + 4, 2, 6);
+        break;
+      case 'garden_gnome':
+        // Body
+        ctx.fillStyle = '#4169e1';
+        ctx.fillRect(x + 8, y + 10, 8, 8);
+        // Face
+        ctx.fillStyle = '#ffe0bd';
+        ctx.fillRect(x + 9, y + 6, 6, 5);
+        // Hat
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(x + 8, y + 2, 8, 5);
+        ctx.fillRect(x + 10, y + 0, 4, 3);
+        break;
+      case 'garden_bench':
+        // Legs
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x + 3, y + 16, 2, 6);
+        ctx.fillRect(x + 19, y + 16, 2, 6);
+        // Seat
+        ctx.fillStyle = '#8b4513';
+        ctx.fillRect(x + 2, y + 13, 20, 4);
+        // Back
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(x + 2, y + 7, 20, 7);
+        ctx.fillStyle = '#8b5a2b';
+        ctx.fillRect(x + 3, y + 8, 18, 5);
+        break;
     }
   }
 }
@@ -2548,6 +2686,66 @@ function drawLighting(floor) {
   }
 }
 
+// ======================== MINIMAP ========================
+
+function drawMinimap() {
+  var floor = getCurrentFloor();
+  var grid = floor.grid;
+  var dotSize = 2;
+  var padding = 4;
+  var mapW = MAP_COLS * dotSize;
+  var mapH = MAP_ROWS * dotSize;
+  var offsetX = CANVAS_W - mapW - padding - 2;
+  var offsetY = padding + 2;
+
+  // Background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(offsetX - 2, offsetY - 2, mapW + 4, mapH + 4);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(offsetX - 2, offsetY - 2, mapW + 4, mapH + 4);
+
+  // Draw tiles
+  for (var r = 0; r < MAP_ROWS; r++) {
+    for (var c = 0; c < MAP_COLS; c++) {
+      var tile = grid[r][c];
+      var dx = offsetX + c * dotSize;
+      var dy = offsetY + r * dotSize;
+      if (tile === T.WALL) {
+        ctx.fillStyle = 'rgba(100, 80, 60, 0.9)';
+      } else if (tile === T.FURNITURE || tile === T.COUNTER) {
+        ctx.fillStyle = 'rgba(139, 105, 20, 0.6)';
+      } else if (tile === T.DOOR) {
+        ctx.fillStyle = 'rgba(74, 124, 89, 0.8)';
+      } else if (tile === T.STAIRS) {
+        ctx.fillStyle = 'rgba(160, 82, 45, 0.8)';
+      } else {
+        ctx.fillStyle = 'rgba(180, 160, 130, 0.3)';
+      }
+      ctx.fillRect(dx, dy, dotSize, dotSize);
+    }
+  }
+
+  // Draw interactable markers (cats show as colored dots)
+  for (var i = 0; i < floor.interactables.length; i++) {
+    var obj = floor.interactables[i];
+    if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
+      var catColor = obj.type === 'cat_alice' ? '#f5a623' :
+                     obj.type === 'cat_olive' ? '#808080' : '#ff69b4';
+      ctx.fillStyle = catColor;
+      ctx.fillRect(offsetX + obj.col * dotSize, offsetY + obj.row * dotSize, dotSize, dotSize);
+    }
+  }
+
+  // Draw player (blinking dot)
+  var blink = Math.sin(animTimer * 0.15) > 0;
+  if (blink) {
+    var p = gameState.player;
+    ctx.fillStyle = '#ff9ecf';
+    ctx.fillRect(offsetX + p.col * dotSize, offsetY + p.row * dotSize, dotSize, dotSize);
+  }
+}
+
 function render() {
   const floor = getCurrentFloor();
 
@@ -2600,6 +2798,9 @@ function render() {
 
   // Draw dynamic lighting
   drawLighting(floor);
+
+  // Draw minimap
+  drawMinimap();
 
   // Restore from screen shake before vignette
   ctx.restore();
@@ -2724,8 +2925,22 @@ function setupMobileControls() {
 // ======================== SAVE / LOAD ========================
 
 const SAVE_KEY = 'marice_cats_adventure_save';
+var saveDebounceTimer = null;
+var saveIndicatorTimer = null;
 
 function saveGame() {
+  // Debounce saves — wait 500ms of inactivity before writing
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(doSaveGame, 500);
+}
+
+function saveGameImmediate() {
+  // For critical moments (floor changes, quest progress)
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  doSaveGame();
+}
+
+function doSaveGame() {
   const data = {
     currentFloor: gameState.currentFloor,
     player: { row: gameState.player.row, col: gameState.player.col, facing: gameState.player.facing },
@@ -2734,9 +2949,20 @@ function saveGame() {
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    showSaveIndicator();
   } catch (e) {
     // localStorage might be unavailable
   }
+}
+
+function showSaveIndicator() {
+  var el = document.getElementById('save-indicator');
+  if (!el) return;
+  el.classList.add('visible');
+  if (saveIndicatorTimer) clearTimeout(saveIndicatorTimer);
+  saveIndicatorTimer = setTimeout(function() {
+    el.classList.remove('visible');
+  }, 1200);
 }
 
 function loadGame() {
@@ -2853,7 +3079,8 @@ function startNewGame() {
     laundry_cleared: false,
     sofa_searched: false,
     game_complete: false,
-    front_door_unlocked: false
+    front_door_unlocked: false,
+    cat_toys_found: []
   };
   renderInventory();
   updateFloorLabel();
@@ -2861,6 +3088,25 @@ function startNewGame() {
   updateQuestList();
   hideTitleScreen();
   startMusic('outside');
+
+  // Show controls hint
+  var hint = document.getElementById('controls-hint');
+  if (hint) hint.classList.remove('hidden');
+
+  // Show intro dialogue after a short delay
+  setTimeout(function() {
+    startDialogue('intro', null, null);
+  }, 500);
+}
+
+// Hide controls hint after first few movements
+var moveCount = 0;
+function checkHideControlsHint() {
+  moveCount++;
+  if (moveCount === 5) {
+    var hint = document.getElementById('controls-hint');
+    if (hint) hint.classList.add('hidden');
+  }
 }
 
 function continueGame() {
@@ -2871,6 +3117,10 @@ function continueGame() {
   updateQuestList();
   hideTitleScreen();
   startMusic(gameState.currentFloor);
+
+  // Hide controls hint for returning players
+  var hint = document.getElementById('controls-hint');
+  if (hint) hint.classList.add('hidden');
 }
 
 // ======================== ENDING SCREEN ========================

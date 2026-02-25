@@ -13,6 +13,15 @@
 const DIALOGUE = {
 
   // ============================
+  // TUTORIAL / INTRO
+  // ============================
+  intro: [
+    { speaker: 'Marice', text: "My three girls are hiding again... I better find them before dinner gets cold!" },
+    { speaker: 'Marice', text: "Alice, Olive, Beatrice — where are you? Let me check the house." },
+    { speaker: 'Marice', text: "I should look around the front yard first. That notice board might have something useful..." }
+  ],
+
+  // ============================
   // ALICE — Dining room, cat tree
   // ============================
 
@@ -407,5 +416,58 @@ const DIALOGUE = {
     { speaker: 'Marice', text: "The front door is locked with a number pad." },
     { speaker: 'Marice', text: "It wants a four-digit code — that riddle about three cats and me must be the key." },
     { speaker: 'Marice', text: "Hint to self: the code is hidden in the riddle." }
+  ],
+
+  // ============================
+  // OUTSIDE INTERACTABLES
+  // ============================
+  welcome_mat: [
+    { speaker: 'Marice', text: "A cozy welcome mat that says 'Home is where the cats are.' Ain't that the truth." }
+  ],
+
+  porch_light: [
+    { speaker: 'Marice', text: "The porch light is on. At least I can see the keypad clearly." }
+  ],
+
+  flower_bed: [
+    { speaker: 'Marice', text: "Pretty flowers! The cats love hiding behind these when they escape outside." }
+  ],
+
+  bird_bath: [
+    { speaker: 'Marice', text: "A stone bird bath. The cats would sit by the window and watch the birds for hours." }
+  ],
+
+  mailbox: [
+    { speaker: 'Marice', text: "Just bills and a cat food catalog. At least the priorities are right." }
+  ],
+
+  garden_gnome: [
+    { speaker: 'Marice', text: "A cheerful garden gnome. Olive knocked it over twice last week." }
+  ],
+
+  garden_bench: [
+    { speaker: 'Marice', text: "A nice bench for sitting outside. On warmer days, I bring the cats out here." }
+  ],
+
+  // ============================
+  // CAT TOY COLLECTIBLES
+  // ============================
+  cat_toy_jingle_ball: [
+    { speaker: 'Marice', text: "Oh! A jingle ball hidden under here! The cats must have batted it around everywhere." },
+    { speaker: 'Marice', text: "This was Olive's favorite toy. She used to chase it up and down the hallway at 3 AM." }
+  ],
+
+  cat_toy_feather_wand: [
+    { speaker: 'Marice', text: "A feather wand toy tucked behind the boxes! This one's been missing for weeks." },
+    { speaker: 'Marice', text: "Alice goes absolutely wild for this thing. She'll do backflips trying to catch it." }
+  ],
+
+  cat_toy_laser_pointer: [
+    { speaker: 'Marice', text: "The laser pointer! It was in the drawer this whole time!" },
+    { speaker: 'Marice', text: "Beatrice pretends she's too dignified to chase the dot... but she always does." }
+  ],
+
+  cat_toy_found: [
+    { speaker: 'Marice', text: "I already found a toy here. The cats will be so happy later!" }
   ]
 };
