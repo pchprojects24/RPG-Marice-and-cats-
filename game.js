@@ -644,6 +644,10 @@ function updateQuestList() {
     aliceStatus.textContent = '✅';
     aliceStatus.classList.remove('pending');
     aliceStatus.classList.add('complete');
+  } else {
+    aliceStatus.textContent = '⏳';
+    aliceStatus.classList.remove('complete');
+    aliceStatus.classList.add('pending');
   }
 
   // Olive quest
@@ -652,6 +656,10 @@ function updateQuestList() {
     oliveStatus.textContent = '✅';
     oliveStatus.classList.remove('pending');
     oliveStatus.classList.add('complete');
+  } else {
+    oliveStatus.textContent = '⏳';
+    oliveStatus.classList.remove('complete');
+    oliveStatus.classList.add('pending');
   }
 
   // Beatrice quest
@@ -660,6 +668,10 @@ function updateQuestList() {
     beatriceStatus.textContent = '✅';
     beatriceStatus.classList.remove('pending');
     beatriceStatus.classList.add('complete');
+  } else {
+    beatriceStatus.textContent = '⏳';
+    beatriceStatus.classList.remove('complete');
+    beatriceStatus.classList.add('pending');
   }
 }
 
@@ -1239,8 +1251,10 @@ function handleInteraction(obj) {
       startDialogue('nightstand', null, null);
       break;
     case 'dresser':
-    case 'guest_dresser':
       startDialogue('dresser', null, null);
+      break;
+    case 'guest_dresser':
+      startDialogue('guest_dresser', null, null);
       break;
     case 'jewelry_box':
       startDialogue('jewelry_box', null, null);
@@ -1372,6 +1386,10 @@ function updateInteractPrompt() {
   const prompt = document.getElementById('interact-prompt');
   if (dialogueActive || gameState.moving) {
     prompt.classList.remove('visible');
+    // Keep mobile interact button enabled during dialogue so users can tap to advance
+    if (dialogueActive) {
+      document.getElementById('btn-interact').disabled = false;
+    }
     return;
   }
 
@@ -3308,6 +3326,7 @@ function setupMobileControls() {
 // ======================== SAVE / LOAD ========================
 
 const SAVE_KEY = 'marice_cats_adventure_save';
+const SETTINGS_KEY = 'marice_cats_settings';
 var saveDebounceTimer = null;
 var saveIndicatorTimer = null;
 
@@ -3369,6 +3388,50 @@ function loadGame() {
 
 function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { }
+}
+
+// ======================== SETTINGS PERSISTENCE ========================
+
+function saveSettings() {
+  var settings = {
+    sfxVolume: document.getElementById('sfx-volume').value,
+    musicVolume: document.getElementById('music-volume').value,
+    screenShake: document.getElementById('screen-shake').checked,
+    particleEffects: document.getElementById('particle-effects').checked
+  };
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch (e) { }
+}
+
+function loadSettings() {
+  try {
+    var raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    var settings = JSON.parse(raw);
+
+    var sfxSlider = document.getElementById('sfx-volume');
+    var musicSlider = document.getElementById('music-volume');
+    var sfxValue = document.getElementById('sfx-value');
+    var musicValue = document.getElementById('music-value');
+    var screenShake = document.getElementById('screen-shake');
+    var particleEffects = document.getElementById('particle-effects');
+
+    if (settings.sfxVolume !== undefined) {
+      sfxSlider.value = settings.sfxVolume;
+      sfxValue.textContent = settings.sfxVolume + '%';
+    }
+    if (settings.musicVolume !== undefined) {
+      musicSlider.value = settings.musicVolume;
+      musicValue.textContent = settings.musicVolume + '%';
+    }
+    if (settings.screenShake !== undefined) {
+      screenShake.checked = settings.screenShake;
+    }
+    if (settings.particleEffects !== undefined) {
+      particleEffects.checked = settings.particleEffects;
+    }
+  } catch (e) { }
 }
 
 // ======================== NUMPAD ========================
@@ -3541,6 +3604,7 @@ function init() {
   showTitleScreen();
   setupMobileControls();
   setupNumpad();
+  loadSettings();
 
   // Title screen buttons
   document.getElementById('btn-new-game').addEventListener('click', function () {
@@ -3614,6 +3678,7 @@ function init() {
   });
 
   document.getElementById('btn-save-settings').addEventListener('click', function () {
+    saveSettings();
     showToast('Settings saved!', 1500);
     settingsPanel.classList.remove('active');
   });
