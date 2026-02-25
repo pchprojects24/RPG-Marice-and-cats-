@@ -408,8 +408,7 @@ const DIALOGUE = {
 
   outside_riddle_board: [
     { speaker: 'Marice', text: "A plaque by the door reads:" },
-    { speaker: 'Marice', text: "\"There are three cats and one of you. Find the three cats then there'll be four of you.\"" },
-    { speaker: 'Marice', text: "\"That's how you get 3134.\"" }
+    { speaker: 'Marice', text: "\"There are three cats and one of you. Find the three cats then there'll be four of you.\"" }
   ],
 
   front_door_locked: [
