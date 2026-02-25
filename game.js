@@ -2994,7 +2994,7 @@ function drawRoomLabels(floorId) {
 var FLOOR_AMBIENT = {
   outside: { r: 255, g: 180, b: 100, a: 0.08 },  // warm sunset
   main: { r: 255, g: 220, b: 170, a: 0.05 },      // warm interior
-  basement: { r: 0, g: 0, b: 0, a: 0.2 },          // dim
+  basement: { r: 220, g: 230, b: 255, a: 0.05 },     // cool fluorescent
   upstairs: { r: 255, g: 230, b: 200, a: 0.06 }    // soft warm
 };
 
@@ -3010,10 +3010,19 @@ var FLOOR_LIGHTS = {
     { row: 3, col: 5, radius: 40, color: '255,180,80', flicker: false },  // stove
   ],
   basement: [
-    { row: 7, col: 10, radius: 64, color: '200,200,255', flicker: false }, // overhead light area
+    { row: 2, col: 2, radius: 72, color: '220,230,255', flicker: false },  // lobby / stairwell light
+    { row: 7, col: 6, radius: 80, color: '220,230,255', flicker: false },  // washroom / center-left light
+    { row: 7, col: 10, radius: 80, color: '200,200,255', flicker: false }, // center overhead light
+    { row: 4, col: 15, radius: 80, color: '220,230,255', flicker: false }, // rec room right light
+    { row: 11, col: 5, radius: 72, color: '220,230,255', flicker: false }, // storage area light
+    { row: 11, col: 14, radius: 72, color: '220,230,255', flicker: false }, // bottom-right light
   ],
   upstairs: [
-    { row: 3, col: 13, radius: 56, color: '255,240,200', flicker: true },  // bedside lamp area
+    { row: 2, col: 4, radius: 72, color: '255,240,200', flicker: false },  // main bedroom light
+    { row: 3, col: 13, radius: 56, color: '255,240,200', flicker: true },  // guest bedroom bedside lamp
+    { row: 7, col: 8, radius: 72, color: '255,240,200', flicker: false },  // hallway center light
+    { row: 9, col: 3, radius: 64, color: '255,240,200', flicker: false },  // office light
+    { row: 3, col: 17, radius: 56, color: '255,240,200', flicker: false }, // upstairs washroom light
   ]
 };
 
@@ -3055,68 +3064,6 @@ function drawLighting(floor) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  // 3. Dynamic Basement Flashlight overlay
-  if (floorId === 'basement') {
-    // Fill screen with deep darkness
-    ctx.fillStyle = 'rgba(5, 5, 10, 0.94)';
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-    // Cut overhead light sources through the darkness
-    ctx.globalCompositeOperation = 'destination-out';
-    if (lights && lights.length > 0) {
-      for (var j = 0; j < lights.length; j++) {
-        var oLight = lights[j];
-        var olcx = oLight.col * TILE_SIZE + TILE_SIZE / 2;
-        var olcy = oLight.row * TILE_SIZE + TILE_SIZE / 2;
-        var olGrad = ctx.createRadialGradient(olcx, olcy, 0, olcx, olcy, oLight.radius);
-        olGrad.addColorStop(0, 'rgba(0,0,0,0.85)');
-        olGrad.addColorStop(0.5, 'rgba(0,0,0,0.4)');
-        olGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = olGrad;
-        ctx.fillRect(olcx - oLight.radius, olcy - oLight.radius, oLight.radius * 2, oLight.radius * 2);
-      }
-    }
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Cut out a circle around the player
-    ctx.globalCompositeOperation = 'destination-out';
-    const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
-    const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
-    const pRadius = 75 + Math.sin(lightFlickerTime * 0.08) * 3; // slight breathing effect
-
-    const pGrad = ctx.createRadialGradient(px, py, 0, px, py, pRadius);
-    pGrad.addColorStop(0, 'rgba(0,0,0,1)');
-    pGrad.addColorStop(0.6, 'rgba(0,0,0,0.8)');
-    pGrad.addColorStop(1, 'rgba(0,0,0,0)');
-
-    ctx.fillStyle = pGrad;
-    ctx.fillRect(px - pRadius, py - pRadius, pRadius * 2, pRadius * 2);
-
-    // Also cut out a small circle around Olive so she glows slightly in the dark
-    const olivePos = getCatPosition('olive');
-    if (olivePos) {
-      const ox = olivePos.col * TILE_SIZE + TILE_SIZE / 2;
-      const oy = olivePos.row * TILE_SIZE + TILE_SIZE / 2;
-      const oGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, 24);
-      oGrad.addColorStop(0, 'rgba(0,0,0,0.6)');
-      oGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = oGrad;
-      ctx.fillRect(ox - 24, oy - 24, 48, 48);
-    }
-
-    // Reset composite operation
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Add a slight colored rim light around the flash light area for premium look
-    ctx.globalCompositeOperation = 'lighter';
-    const rimGrad = ctx.createRadialGradient(px, py, pRadius * 0.7, px, py, pRadius);
-    rimGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    rimGrad.addColorStop(0.8, 'rgba(40, 60, 100, 0.15)');
-    rimGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = rimGrad;
-    ctx.fillRect(px - pRadius, py - pRadius, pRadius * 2, pRadius * 2);
-    ctx.globalCompositeOperation = 'source-over';
-  }
 }
 
 // ======================== MINIMAP ========================
