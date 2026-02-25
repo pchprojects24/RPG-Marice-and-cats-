@@ -62,13 +62,13 @@ const TILE_COLORS = {
     [T.STAIRS]: '#a0522d',
     [T.COUNTER]: '#7a5c3a'
   },
-  // Outside / front yard
+  // Outside / front entry
   outside: {
-    [T.FLOOR]: '#74b66a',    // grass
-    [T.WALL]: '#5b4636',     // fence/house facade
-    [T.FURNITURE]: '#3f7f4c', // shrubs/trees
+    [T.FLOOR]: '#9a9a9a',    // concrete walkway
+    [T.WALL]: '#5b4636',     // house facade
+    [T.FURNITURE]: '#6f6f6f', // porch fixtures
     [T.DOOR]: '#4a7c59',     // front door
-    [T.INTERACT]: '#74b66a',
+    [T.INTERACT]: '#9a9a9a',
     [T.STAIRS]: '#a0522d',
     [T.COUNTER]: '#74b66a'
   }
@@ -76,55 +76,34 @@ const TILE_COLORS = {
 
 // ============================================================
 // OUTSIDE MAP (20x15)
-// Front yard with a keypad-locked door and a riddle board
+// Front entry only, focused on Marice's house access
 // ============================================================
 const outsideGrid = [
-  // Row 0: border
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  // Row 1: border
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  // Row 2: house facade with front door
   [1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1],
-  // Row 3: porch with welcome mat
   [1,1,1,1,1,1,1,4,0,0,0,4,1,1,1,1,1,1,1,1],
-  // Row 4: yard opening with flower beds
-  [1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,1],
-  // Row 5: yard with shrubs
-  [1,0,2,0,0,0,2,0,0,0,0,0,0,2,0,0,0,2,0,1],
-  // Row 6: garden area
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1],
-  // Row 7: tree
-  [1,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 8: mailbox
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,1],
-  // Row 9: riddle board
-  [1,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 10: garden gnome
-  [1,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,1],
-  // Row 11: bench
-  [1,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 12: path
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 13
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 14: border
+  [1,1,1,1,1,1,1,0,0,4,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
 const outsideInteractables = [
   { row: 2, col: 9, type: 'front_door', label: 'Front Door', sprite: 'door_locked' },
-  { row: 9, col: 4, type: 'riddle_board', label: 'Notice Board', sprite: 'board' },
+  { row: 4, col: 9, type: 'riddle_board', label: 'House Rules Plaque', sprite: 'board' },
   { row: 3, col: 7, type: 'welcome_mat', label: 'Welcome Mat', sprite: 'generic' },
   { row: 3, col: 11, type: 'porch_light', label: 'Porch Light', sprite: 'generic' },
-  { row: 4, col: 2, type: 'flower_bed', label: 'Flower Bed', sprite: 'generic' },
-  { row: 4, col: 17, type: 'flower_bed', label: 'Flower Bed', sprite: 'generic' },
-  { row: 6, col: 15, type: 'bird_bath', label: 'Bird Bath', sprite: 'generic' },
-  { row: 8, col: 14, type: 'mailbox', label: 'Mailbox', sprite: 'generic' },
-  { row: 10, col: 11, type: 'garden_gnome', label: 'Garden Gnome', sprite: 'generic' },
-  { row: 11, col: 2, type: 'garden_bench', label: 'Garden Bench', sprite: 'generic' },
 ];
 
-const outsideStart = { row: 12, col: 10 };
+const outsideStart = { row: 12, col: 9 };
 
 // ============================================================
 // MAIN FLOOR MAP (20x15)
@@ -139,7 +118,7 @@ const mainFloorGrid = [
   // Row 1: kitchen top wall + dining room top wall
   [1,6,6,6,6,6,6,6,1,0,0,0,0,0,0,0,0,0,0,1],
   // Row 2: kitchen cupboard wall
-  [1,4,4,4,4,6,6,4,1,0,0,0,4,0,0,0,0,0,2,1],
+  [1,4,4,4,4,6,6,4,1,0,0,0,4,0,0,0,0,0,0,1],
   // Row 3: kitchen floor + dining room
   [1,4,0,0,0,4,4,0,1,2,2,0,0,0,4,0,0,0,0,1],
   // Row 4: kitchen floor + dining passage
@@ -151,7 +130,7 @@ const mainFloorGrid = [
   // Row 7: living room - sofa area
   [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,0,0,0,4,1],
   // Row 8: living room
-  [1,0,4,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
+  [1,0,4,0,0,4,0,0,0,0,0,0,0,0,0,0,2,0,1,1],
   // Row 9: living room / half-bath divider (door moved to east wall)
   [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 10: half-bath
@@ -181,7 +160,6 @@ const mainFloorInteractables = [
   // Additional kitchen items
   { row: 4, col: 1, type: 'microwave', label: 'Microwave', sprite: 'microwave' },
   { row: 4, col: 3, type: 'trash_can', label: 'Trash Can', sprite: 'trash' },
-  { row: 4, col: 7, type: 'spice_rack', label: 'Spice Rack', sprite: 'spice' },
 
   // Alice on cat tree in dining room (near sliding door)
   { row: 3, col: 14, type: 'cat_alice', label: 'Alice', sprite: 'cat_alice' },
@@ -203,9 +181,6 @@ const mainFloorInteractables = [
 
   // Sofa with blanket (living room) - hides basement key
   { row: 8, col: 5, type: 'sofa_blanket', label: 'Sofa', sprite: 'sofa' },
-
-  // Hidden cat toy — jingle ball under coffee table
-  { row: 8, col: 8, type: 'cat_toy', label: 'Something Shiny', sprite: 'cat_toy', toyId: 'jingle_ball' },
 
   // Basement door (right side, off kitchen area)
   { row: 7, col: 18, type: 'basement_door', label: 'Basement Door', sprite: 'door_locked' },
@@ -241,7 +216,7 @@ const basementGrid = [
   // Row 2
   [1,5,5,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 3: lobby (col 14 = futon, interactable)
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,2,0,0,1],
   // Row 4
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 5: lobby / rec room divider
@@ -253,11 +228,11 @@ const basementGrid = [
   // Row 8
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 9: washroom with fixtures
-  [1,0,0,2,0,0,2,0,0,1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,2,0,0,2,0,0,1,0,0,0,2,2,2,0,0,0,1],
   // Row 10
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 11
-  [1,2,0,0,0,0,0,2,0,1,0,0,0,0,0,0,0,0,0,1],
+  [1,2,0,0,0,0,0,2,0,1,0,0,0,0,0,2,0,0,0,1],
   // Row 12
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 13
@@ -273,16 +248,13 @@ const basementInteractables = [
   { row: 3, col: 14, type: 'futon', label: 'Futon', sprite: 'futon' },
 
   // Gym equipment in rec room
-  { row: 3, col: 16, type: 'weights', label: 'Weight Set', sprite: 'weights' },
   { row: 4, col: 12, type: 'exercise_bike', label: 'Exercise Bike', sprite: 'bike' },
-  { row: 5, col: 14, type: 'yoga_mat', label: 'Yoga Mat', sprite: 'yoga' },
 
   // Storage/Laundry area
   { row: 3, col: 3, type: 'storage_box', label: 'Storage Box', sprite: 'box' },
   { row: 4, col: 5, type: 'washer', label: 'Washing Machine', sprite: 'washer' },
   { row: 4, col: 6, type: 'dryer', label: 'Dryer', sprite: 'dryer' },
   { row: 5, col: 3, type: 'laundry_basket_storage', label: 'Laundry Basket', sprite: 'basket' },
-  { row: 8, col: 5, type: 'cleaning_supplies', label: 'Cleaning Supplies', sprite: 'clean' },
 
   // Rec room entertainment
   { row: 7, col: 12, type: 'pool_table', label: 'Pool Table', sprite: 'pool' },
@@ -290,16 +262,12 @@ const basementInteractables = [
   { row: 9, col: 13, type: 'gaming_setup', label: 'Gaming Setup', sprite: 'gaming' },
 
   // Washroom items
-  { row: 8, col: 3, type: 'bath_mat', label: 'Bath Mat', sprite: 'mat' },
   { row: 10, col: 3, type: 'bathroom_cabinet', label: 'Bathroom Cabinet', sprite: 'cabinet' },
 
   // Misc basement items
   { row: 12, col: 4, type: 'tool_bench', label: 'Tool Bench', sprite: 'tools' },
   { row: 13, col: 7, type: 'water_heater', label: 'Water Heater', sprite: 'heater' },
   { row: 10, col: 15, type: 'bookshelf_basement', label: 'Bookshelf', sprite: 'bookshelf' },
-
-  // Hidden cat toy — feather toy behind storage
-  { row: 13, col: 14, type: 'cat_toy', label: 'Something Fluffy', sprite: 'cat_toy', toyId: 'feather_wand' },
 ];
 
 const basementStairs = {
@@ -326,7 +294,7 @@ const upstairsGrid = [
   // Row 2: beds
   [1,0,2,2,0,0,0,0,0,1,0,0,0,0,0,4,2,0,0,1],
   // Row 3
-  [1,0,0,0,0,0,0,2,0,1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,2,0,1,0,0,0,0,0,0,0,2,0,1],
   // Row 4
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 5: divider walls with doors
@@ -364,7 +332,6 @@ const upstairsInteractables = [
   // Guest bedroom items
   { row: 1, col: 14, type: 'bedside_lamp', label: 'Bedside Lamp', sprite: 'lamp' },
   { row: 3, col: 17, type: 'guest_dresser', label: 'Dresser', sprite: 'dresser' },
-  { row: 4, col: 15, type: 'reading_nook', label: 'Reading Nook', sprite: 'nook' },
 
   // Office items
   { row: 7, col: 2, type: 'filing_cabinet', label: 'Filing Cabinet', sprite: 'files' },
@@ -373,22 +340,12 @@ const upstairsInteractables = [
   { row: 11, col: 3, type: 'bookcase', label: 'Bookcase', sprite: 'bookcase' },
 
   // Washroom items
-  { row: 9, col: 15, type: 'bathroom_scale', label: 'Scale', sprite: 'scale' },
   { row: 9, col: 17, type: 'medicine_cabinet', label: 'Medicine Cabinet', sprite: 'medicine' },
-  { row: 10, col: 16, type: 'towel_warmer', label: 'Towel Warmer', sprite: 'warmer' },
 
   // Hallway items
   { row: 7, col: 7, type: 'hallway_table', label: 'Console Table', sprite: 'table' },
   { row: 7, col: 10, type: 'plant_hallway', label: 'Potted Plant', sprite: 'plant' },
-  { row: 9, col: 9, type: 'family_photos', label: 'Family Photos', sprite: 'photos' },
-  { row: 11, col: 11, type: 'coat_hooks', label: 'Coat Hooks', sprite: 'hooks' },
-
-  // Additional decor
-  { row: 1, col: 8, type: 'ceiling_fan', label: 'Ceiling Fan', sprite: 'fan' },
   { row: 4, col: 11, type: 'linen_closet', label: 'Linen Closet', sprite: 'closet' },
-
-  // Hidden cat toy — laser pointer in nightstand
-  { row: 5, col: 5, type: 'cat_toy', label: 'Something in the Drawer', sprite: 'cat_toy', toyId: 'laser_pointer' },
 ];
 
 const upstairsStairs = {
@@ -408,7 +365,7 @@ const FLOORS = {
     stairs: {},
     start: outsideStart,
     palette: TILE_COLORS.outside,
-    name: 'Front Yard'
+    name: 'Front Entry'
   },
   main: {
     grid: mainFloorGrid,
@@ -456,7 +413,7 @@ const ROOM_LABELS = {
     { text: 'Washroom', row: 8, col: 15 },
   ],
   outside: [
-    { text: 'Front Yard', row: 11, col: 4 },
-    { text: 'Porch', row: 3, col: 9 },
+    { text: 'Front Entry', row: 11, col: 8 },
+    { text: 'Porch', row: 3, col: 8 },
   ]
 };

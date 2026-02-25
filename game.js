@@ -737,7 +737,7 @@ function changeFloor(newFloor) {
   var overlay = document.getElementById('transition-overlay');
   var label = document.getElementById('transition-label');
   var floorNames = {
-    outside: 'Front Yard',
+    outside: 'Front Entry',
     main: 'Main Floor',
     basement: 'Basement',
     upstairs: 'Upstairs'
@@ -769,7 +769,7 @@ function changeFloorTo(newFloor, row, col, facing) {
   var overlay = document.getElementById('transition-overlay');
   var label = document.getElementById('transition-label');
   var floorNames = {
-    outside: 'Front Yard',
+    outside: 'Front Entry',
     main: 'Main Floor',
     basement: 'Basement',
     upstairs: 'Upstairs'
@@ -967,7 +967,7 @@ function handleInteraction(obj) {
             changeFloor('main');
           } else {
             playSfx('error');
-            showToast('Incorrect code. Hint: the code is in the riddle.');
+            showToast('Incorrect code. Hint: the code is in the house plaque.');
           }
         });
       });
