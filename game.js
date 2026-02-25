@@ -2298,19 +2298,19 @@ function drawInteractables(floor) {
         break;
       case 'cat_alice':
         SPRITES.catTree(x, y);
-        SPRITES.cat(x, y - 4, '#f5a623', '#ff8'); // orange tabby
+        SPRITES.cat(x, y - 4, '#cfb68b', '#e6d2aa'); // warm tan coat from portrait
         break;
       case 'front_door':
         SPRITES.door(x, y, !gameState.flags.front_door_unlocked);
         break;
       case 'cat_olive':
         SPRITES.treadmill(x, y);
-        SPRITES.cat(x, y - 2, '#808080', '#aaa'); // gray cat
+        SPRITES.cat(x, y - 2, '#9ea6b3', '#d6dce8'); // cool blue-gray coat from portrait
         break;
       case 'cat_beatrice':
         SPRITES.bed(x, y, true);
         // Beatrice is always visible, sitting on top of the bed
-        SPRITES.cat(x + 2, y + 6, '#2a2a2a', '#ffb6c1'); // black cat, positioned on bed
+        SPRITES.cat(x + 2, y + 6, '#21211f', '#5d5e53'); // charcoal coat from portrait
         break;
       case 'sofa_blanket':
         // Draw wide 3-seat sofa: interactive tile is the rightmost cushion (col 5),
@@ -2749,8 +2749,8 @@ function drawMinimap() {
   for (var i = 0; i < floor.interactables.length; i++) {
     var obj = floor.interactables[i];
     if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
-      var catColor = obj.type === 'cat_alice' ? '#f5a623' :
-                     obj.type === 'cat_olive' ? '#808080' : '#ff69b4';
+      var catColor = obj.type === 'cat_alice' ? '#cfb68b' :
+                     obj.type === 'cat_olive' ? '#9ea6b3' : '#21211f';
       ctx.fillStyle = catColor;
       ctx.fillRect(offsetX + obj.col * dotSize, offsetY + obj.row * dotSize, dotSize, dotSize);
     }

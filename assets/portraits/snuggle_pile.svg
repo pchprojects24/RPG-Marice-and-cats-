@@ -43,63 +43,63 @@
 
     <!-- Alice (orange tabby) -->
     <g id="alice" transform="translate(84 8)">
-      <polygon points="18,10 8,1 5,18" fill="#f3aa4a" stroke="#b06c1f" stroke-width="2"/>
-      <polygon points="55,10 65,1 68,18" fill="#f3aa4a" stroke="#b06c1f" stroke-width="2"/>
+      <polygon points="18,10 8,1 5,18" fill="#d8c29a" stroke="#8e7b5f" stroke-width="2"/>
+      <polygon points="55,10 65,1 68,18" fill="#d8c29a" stroke="#8e7b5f" stroke-width="2"/>
       <polygon points="17,11 10,5 8,15" fill="#ffd8a8"/>
       <polygon points="56,11 63,5 65,15" fill="#ffd8a8"/>
-      <ellipse cx="36" cy="30" rx="28" ry="24" fill="#f4a72d" stroke="#b06c1f" stroke-width="3"/>
-      <path d="M20 26 l6 -3 M28 24 l6 -3 M46 24 l6 3 M54 26 l6 3" stroke="#d48722" stroke-width="2" stroke-linecap="round"/>
-      <ellipse cx="36" cy="35" rx="12" ry="8" fill="#ffe1ba"/>
+      <ellipse cx="36" cy="30" rx="28" ry="24" fill="#cfb68b" stroke="#8e7b5f" stroke-width="3"/>
+      <path d="M20 26 l6 -3 M28 24 l6 -3 M46 24 l6 3 M54 26 l6 3" stroke="#bfa377" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="36" cy="35" rx="12" ry="8" fill="#e6d2aa"/>
       <ellipse cx="27" cy="30" rx="5" ry="4" fill="#fff"/>
       <ellipse cx="45" cy="30" rx="5" ry="4" fill="#fff"/>
       <circle cx="27" cy="30" r="2.2" fill="#2e2e2e"/>
       <circle cx="45" cy="30" r="2.2" fill="#2e2e2e"/>
       <polygon points="36,34 33,38 39,38" fill="#e78ea0"/>
-      <path d="M32 38 q4 3 8 0" stroke="#a75c20" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <line x1="10" y1="34" x2="24" y2="34" stroke="#a75c20" stroke-width="2" stroke-linecap="round"/>
-      <line x1="10" y1="38" x2="24" y2="37" stroke="#a75c20" stroke-width="2" stroke-linecap="round"/>
-      <line x1="48" y1="34" x2="62" y2="34" stroke="#a75c20" stroke-width="2" stroke-linecap="round"/>
-      <line x1="48" y1="37" x2="62" y2="38" stroke="#a75c20" stroke-width="2" stroke-linecap="round"/>
+      <path d="M32 38 q4 3 8 0" stroke="#8f7858" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <line x1="10" y1="34" x2="24" y2="34" stroke="#8f7858" stroke-width="2" stroke-linecap="round"/>
+      <line x1="10" y1="38" x2="24" y2="37" stroke="#8f7858" stroke-width="2" stroke-linecap="round"/>
+      <line x1="48" y1="34" x2="62" y2="34" stroke="#8f7858" stroke-width="2" stroke-linecap="round"/>
+      <line x1="48" y1="37" x2="62" y2="38" stroke="#8f7858" stroke-width="2" stroke-linecap="round"/>
     </g>
 
     <!-- Olive (gray cat) -->
     <g id="olive" transform="translate(158 10)">
-      <polygon points="16,10 8,2 5,18" fill="#9a9a9a" stroke="#676767" stroke-width="2"/>
-      <polygon points="52,10 60,2 63,18" fill="#9a9a9a" stroke="#676767" stroke-width="2"/>
-      <polygon points="16,10 11,6 10,14" fill="#d9d9d9"/>
-      <polygon points="52,10 57,6 58,14" fill="#d9d9d9"/>
-      <ellipse cx="34" cy="30" rx="26" ry="23" fill="#9b9b9b" stroke="#676767" stroke-width="3"/>
-      <ellipse cx="34" cy="35" rx="11" ry="7" fill="#e6e6e6"/>
+      <polygon points="16,10 8,2 5,18" fill="#9ea6b3" stroke="#707987" stroke-width="2"/>
+      <polygon points="52,10 60,2 63,18" fill="#9ea6b3" stroke="#707987" stroke-width="2"/>
+      <polygon points="16,10 11,6 10,14" fill="#d6dce8"/>
+      <polygon points="52,10 57,6 58,14" fill="#d6dce8"/>
+      <ellipse cx="34" cy="30" rx="26" ry="23" fill="#9ea6b3" stroke="#707987" stroke-width="3"/>
+      <ellipse cx="34" cy="35" rx="11" ry="7" fill="#d6dce8"/>
       <ellipse cx="25" cy="30" rx="4.5" ry="3.8" fill="#fff"/>
       <ellipse cx="43" cy="30" rx="4.5" ry="3.8" fill="#fff"/>
       <circle cx="25" cy="30" r="2" fill="#2c2c2c"/>
       <circle cx="43" cy="30" r="2" fill="#2c2c2c"/>
       <polygon points="34,34 31,38 37,38" fill="#d6999c"/>
-      <path d="M30 38 q4 3 8 0" stroke="#5e5e5e" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <line x1="8" y1="34" x2="22" y2="34" stroke="#5e5e5e" stroke-width="2" stroke-linecap="round"/>
-      <line x1="8" y1="38" x2="22" y2="37" stroke="#5e5e5e" stroke-width="2" stroke-linecap="round"/>
-      <line x1="46" y1="34" x2="60" y2="34" stroke="#5e5e5e" stroke-width="2" stroke-linecap="round"/>
-      <line x1="46" y1="37" x2="60" y2="38" stroke="#5e5e5e" stroke-width="2" stroke-linecap="round"/>
+      <path d="M30 38 q4 3 8 0" stroke="#6e7783" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <line x1="8" y1="34" x2="22" y2="34" stroke="#6e7783" stroke-width="2" stroke-linecap="round"/>
+      <line x1="8" y1="38" x2="22" y2="37" stroke="#6e7783" stroke-width="2" stroke-linecap="round"/>
+      <line x1="46" y1="34" x2="60" y2="34" stroke="#6e7783" stroke-width="2" stroke-linecap="round"/>
+      <line x1="46" y1="37" x2="60" y2="38" stroke="#6e7783" stroke-width="2" stroke-linecap="round"/>
     </g>
 
     <!-- Beatrice (black cat with pink eyes) -->
     <g id="beatrice" transform="translate(220 9)">
-      <polygon points="14,12 7,3 4,19" fill="#232323" stroke="#090909" stroke-width="2"/>
-      <polygon points="48,12 55,3 58,19" fill="#232323" stroke="#090909" stroke-width="2"/>
-      <polygon points="14,12 10,8 8,16" fill="#4f4f4f"/>
-      <polygon points="48,12 52,8 54,16" fill="#4f4f4f"/>
-      <ellipse cx="31" cy="32" rx="25" ry="23" fill="#272727" stroke="#090909" stroke-width="3"/>
-      <ellipse cx="31" cy="37" rx="10" ry="7" fill="#404040"/>
-      <ellipse cx="22" cy="32" rx="4.5" ry="3.6" fill="#ffd3ea"/>
-      <ellipse cx="40" cy="32" rx="4.5" ry="3.6" fill="#ffd3ea"/>
+      <polygon points="14,12 7,3 4,19" fill="#21211f" stroke="#070b0e" stroke-width="2"/>
+      <polygon points="48,12 55,3 58,19" fill="#21211f" stroke="#070b0e" stroke-width="2"/>
+      <polygon points="14,12 10,8 8,16" fill="#5d5e53"/>
+      <polygon points="48,12 52,8 54,16" fill="#5d5e53"/>
+      <ellipse cx="31" cy="32" rx="25" ry="23" fill="#21211f" stroke="#070b0e" stroke-width="3"/>
+      <ellipse cx="31" cy="37" rx="10" ry="7" fill="#5d5e53"/>
+      <ellipse cx="22" cy="32" rx="4.5" ry="3.6" fill="#d9ebf3"/>
+      <ellipse cx="40" cy="32" rx="4.5" ry="3.6" fill="#d9ebf3"/>
       <circle cx="22" cy="32" r="2" fill="#101010"/>
       <circle cx="40" cy="32" r="2" fill="#101010"/>
-      <polygon points="31,36 28,40 34,40" fill="#ff9fcf"/>
-      <path d="M27 40 q4 3 8 0" stroke="#ff9fcf" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <line x1="6" y1="35" x2="20" y2="35" stroke="#ffb8df" stroke-width="2" stroke-linecap="round"/>
-      <line x1="6" y1="39" x2="20" y2="38" stroke="#ffb8df" stroke-width="2" stroke-linecap="round"/>
-      <line x1="42" y1="35" x2="56" y2="35" stroke="#ffb8df" stroke-width="2" stroke-linecap="round"/>
-      <line x1="42" y1="38" x2="56" y2="39" stroke="#ffb8df" stroke-width="2" stroke-linecap="round"/>
+      <polygon points="31,36 28,40 34,40" fill="#a2ac82"/>
+      <path d="M27 40 q4 3 8 0" stroke="#a2ac82" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <line x1="6" y1="35" x2="20" y2="35" stroke="#bfced5" stroke-width="2" stroke-linecap="round"/>
+      <line x1="6" y1="39" x2="20" y2="38" stroke="#bfced5" stroke-width="2" stroke-linecap="round"/>
+      <line x1="42" y1="35" x2="56" y2="35" stroke="#bfced5" stroke-width="2" stroke-linecap="round"/>
+      <line x1="42" y1="38" x2="56" y2="39" stroke="#bfced5" stroke-width="2" stroke-linecap="round"/>
     </g>
   </g>
 </svg>
