@@ -18,7 +18,7 @@ const DIALOGUE = {
   intro: [
     { speaker: 'Marice', text: "My three girls are hiding again... I better find them before dinner gets cold!" },
     { speaker: 'Marice', text: "Alice, Olive, Beatrice — where are you? Let me check the house." },
-    { speaker: 'Marice', text: "I should look around the front yard first. That notice board might have something useful..." }
+    { speaker: 'Marice', text: "I should check the front entry first. That house rules plaque might have something useful..." }
   ],
 
   // ============================
@@ -171,7 +171,7 @@ const DIALOGUE = {
   ],
 
   sliding_door: [
-    { speaker: 'Marice', text: "The backyard looks so peaceful. But I need to find my cats first!" }
+    { speaker: 'Marice', text: "The sliding door is shut tight for now. The girls stay indoors where it's safe." }
   ],
 
   tv: [
@@ -407,14 +407,14 @@ const DIALOGUE = {
   // ============================
 
   outside_riddle_board: [
-    { speaker: 'Marice', text: "A note on the board reads:" },
-    { speaker: 'Marice', text: "\"There are three cats and one of you, find the three cats and then there will be four of you.\"" },
+    { speaker: 'Marice', text: "A plaque by the door reads:" },
+    { speaker: 'Marice', text: "\"Three cats + one Marice = four cozy souls indoors.\"" },
     { speaker: 'Marice', text: "The code is in the riddle. Four digits." }
   ],
 
   front_door_locked: [
     { speaker: 'Marice', text: "The front door is locked with a number pad." },
-    { speaker: 'Marice', text: "It wants a four-digit code — that riddle about three cats and me must be the key." },
+    { speaker: 'Marice', text: "It wants a four-digit code — that line about three cats and me must be the key." },
     { speaker: 'Marice', text: "Hint to self: the code is hidden in the riddle." }
   ],
 
@@ -430,7 +430,7 @@ const DIALOGUE = {
   ],
 
   flower_bed: [
-    { speaker: 'Marice', text: "Pretty flowers! The cats love hiding behind these when they escape outside." }
+    { speaker: 'Marice', text: "Pretty flowers. They brighten the doorway without getting in the cats' way." }
   ],
 
   bird_bath: [
@@ -446,7 +446,7 @@ const DIALOGUE = {
   ],
 
   garden_bench: [
-    { speaker: 'Marice', text: "A nice bench for sitting outside. On warmer days, I bring the cats out here." }
+    { speaker: 'Marice', text: "A sturdy bench for taking off shoes before heading inside." }
   ],
 
   // ============================
