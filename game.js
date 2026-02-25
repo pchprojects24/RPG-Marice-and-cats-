@@ -62,6 +62,9 @@ let walkFrame = 0;
 let walkFrameTimer = 0;
 const WALK_FRAME_INTERVAL = 8; // swap legs every 8 frames
 
+// Global animation timer (for cat idle animations, light flicker, etc.)
+let animTimer = 0;
+
 // Screen shake state
 let shakeIntensity = 0;
 let shakeDuration = 0;
@@ -1379,75 +1382,91 @@ const SPRITES = {
     }
   },
 
-  // Cat sprite (generic, colored per cat)
+  // Cat sprite (generic, colored per cat) — with idle animations
   cat: function(x, y, color, accentColor) {
+    // Idle animation state
+    var blinkCycle = animTimer % 180; // blink every ~3 seconds at 60fps
+    var isBlinking = blinkCycle > 170;
+    var tailPhase = Math.sin(animTimer * 0.08);
+    var earFlick = (animTimer % 240) > 230;
+    var breathe = Math.sin(animTimer * 0.04) * 0.5;
+
     // Shadow under cat for depth
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.fillRect(x + 5, y + 19, 15, 2);
 
-    // Body (loaf shape)
+    // Body (loaf shape) — subtle breathing
+    var bodyY = y + Math.round(breathe);
     ctx.fillStyle = color;
-    ctx.fillRect(x + 5, y + 10, 14, 8);
-    ctx.fillRect(x + 6, y + 9, 12, 1);
-    ctx.fillRect(x + 7, y + 8, 10, 1);
+    ctx.fillRect(x + 5, bodyY + 10, 14, 8);
+    ctx.fillRect(x + 6, bodyY + 9, 12, 1);
+    ctx.fillRect(x + 7, bodyY + 8, 10, 1);
 
     // Chest/front (lighter)
     ctx.fillStyle = accentColor || '#ffb6c1';
-    ctx.fillRect(x + 8, y + 12, 8, 5);
+    ctx.fillRect(x + 8, bodyY + 12, 8, 5);
 
     // Head (rounder)
     ctx.fillStyle = color;
-    ctx.fillRect(x + 7, y + 4, 10, 6);
-    ctx.fillRect(x + 6, y + 5, 12, 4);
-    ctx.fillRect(x + 8, y + 3, 8, 1);
+    ctx.fillRect(x + 7, bodyY + 4, 10, 6);
+    ctx.fillRect(x + 6, bodyY + 5, 12, 4);
+    ctx.fillRect(x + 8, bodyY + 3, 8, 1);
 
-    // Ears (triangular)
-    ctx.fillRect(x + 7, y + 2, 3, 3);
-    ctx.fillRect(x + 14, y + 2, 3, 3);
+    // Ears (triangular) — with occasional flick
+    var earOffset = earFlick ? -1 : 0;
+    ctx.fillRect(x + 7, bodyY + 2 + earOffset, 3, 3);
+    ctx.fillRect(x + 14, bodyY + 2 + earOffset, 3, 3);
     // Inner ears
     ctx.fillStyle = accentColor || '#ffb6c1';
-    ctx.fillRect(x + 8, y + 3, 1, 1);
-    ctx.fillRect(x + 15, y + 3, 1, 1);
+    ctx.fillRect(x + 8, bodyY + 3 + earOffset, 1, 1);
+    ctx.fillRect(x + 15, bodyY + 3 + earOffset, 1, 1);
 
-    // Eyes (bigger, more expressive)
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x + 9, y + 6, 2, 2);
-    ctx.fillRect(x + 13, y + 6, 2, 2);
-    // Pupils
-    ctx.fillStyle = '#000';
-    ctx.fillRect(x + 10, y + 7, 1, 1);
-    ctx.fillRect(x + 14, y + 7, 1, 1);
+    // Eyes — blink animation
+    if (isBlinking) {
+      // Closed eyes (lines)
+      ctx.fillStyle = '#333';
+      ctx.fillRect(x + 9, bodyY + 7, 2, 1);
+      ctx.fillRect(x + 13, bodyY + 7, 2, 1);
+    } else {
+      // Open eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 9, bodyY + 6, 2, 2);
+      ctx.fillRect(x + 13, bodyY + 6, 2, 2);
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x + 10, bodyY + 7, 1, 1);
+      ctx.fillRect(x + 14, bodyY + 7, 1, 1);
+    }
 
     // Nose
     ctx.fillStyle = '#ffb6c1';
-    ctx.fillRect(x + 11, y + 8, 2, 1);
+    ctx.fillRect(x + 11, bodyY + 8, 2, 1);
 
     // Mouth (cute smile)
     ctx.fillStyle = '#333';
-    ctx.fillRect(x + 11, y + 9, 1, 1);
-    ctx.fillRect(x + 12, y + 9, 1, 1);
+    ctx.fillRect(x + 11, bodyY + 9, 1, 1);
+    ctx.fillRect(x + 12, bodyY + 9, 1, 1);
 
     // Whiskers
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
-    // Left whiskers
-    ctx.moveTo(x + 7, y + 7);
-    ctx.lineTo(x + 4, y + 6);
-    ctx.moveTo(x + 7, y + 8);
-    ctx.lineTo(x + 4, y + 8);
-    // Right whiskers
-    ctx.moveTo(x + 17, y + 7);
-    ctx.lineTo(x + 20, y + 6);
-    ctx.moveTo(x + 17, y + 8);
-    ctx.lineTo(x + 20, y + 8);
+    ctx.moveTo(x + 7, bodyY + 7);
+    ctx.lineTo(x + 4, bodyY + 6);
+    ctx.moveTo(x + 7, bodyY + 8);
+    ctx.lineTo(x + 4, bodyY + 8);
+    ctx.moveTo(x + 17, bodyY + 7);
+    ctx.lineTo(x + 20, bodyY + 6);
+    ctx.moveTo(x + 17, bodyY + 8);
+    ctx.lineTo(x + 20, bodyY + 8);
     ctx.stroke();
 
-    // Tail (curved)
+    // Tail — animated swish
+    var tailSwish = Math.round(tailPhase * 2);
     ctx.fillStyle = color;
-    ctx.fillRect(x + 18, y + 10, 3, 4);
-    ctx.fillRect(x + 19, y + 8, 2, 2);
-    ctx.fillRect(x + 20, y + 7, 1, 1);
+    ctx.fillRect(x + 18, bodyY + 10, 3, 4);
+    ctx.fillRect(x + 19 + tailSwish, bodyY + 8, 2, 2);
+    ctx.fillRect(x + 20 + tailSwish, bodyY + 7, 1, 1);
 
     // Front paws (visible)
     ctx.fillStyle = color;
@@ -1899,7 +1918,203 @@ const SPRITES = {
     ctx.fillRect(x + 10, y + 1, 4, 3);
   },
 
-  // Generic item renderer (small box with color)
+  // Microwave
+  microwave: function(x, y) {
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(x + 2, y + 6, 20, 14);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 4, y + 8, 12, 10);
+    ctx.fillStyle = '#1a3a2a';
+    ctx.fillRect(x + 5, y + 9, 10, 8);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 17, y + 10, 2, 6);
+    ctx.fillStyle = '#7fff7f';
+    ctx.fillRect(x + 18, y + 9, 1, 1);
+  },
+
+  // Trash can
+  trashCan: function(x, y) {
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 6, y + 6, 12, 14);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(x + 5, y + 5, 14, 3);
+    ctx.fillStyle = '#777';
+    ctx.fillRect(x + 7, y + 3, 10, 3);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 10, y + 2, 4, 2);
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(x + 7, y + 11, 10, 1);
+    ctx.fillRect(x + 7, y + 15, 10, 1);
+  },
+
+  // Potted plant
+  plant: function(x, y) {
+    ctx.fillStyle = '#8b4513';
+    ctx.fillRect(x + 7, y + 14, 10, 8);
+    ctx.fillStyle = '#a0522d';
+    ctx.fillRect(x + 6, y + 13, 12, 3);
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(x + 8, y + 14, 8, 2);
+    ctx.fillStyle = '#228b22';
+    ctx.fillRect(x + 8, y + 6, 8, 8);
+    ctx.fillRect(x + 6, y + 8, 12, 4);
+    ctx.fillStyle = '#32cd32';
+    ctx.fillRect(x + 9, y + 4, 6, 4);
+    ctx.fillRect(x + 10, y + 2, 4, 3);
+  },
+
+  // Washer
+  washer: function(x, y) {
+    ctx.fillStyle = '#e8e8e8';
+    ctx.fillRect(x + 2, y + 2, 20, 20);
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(x + 3, y + 3, 18, 4);
+    ctx.fillStyle = '#87ceeb';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#6ab7d9';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.fillRect(x + 5, y + 4, 2, 2);
+    ctx.fillRect(x + 9, y + 4, 2, 2);
+  },
+
+  // Dryer
+  dryer: function(x, y) {
+    ctx.fillStyle = '#e8e8e8';
+    ctx.fillRect(x + 2, y + 2, 20, 20);
+    ctx.fillStyle = '#d0d0d0';
+    ctx.fillRect(x + 3, y + 3, 18, 4);
+    ctx.fillStyle = '#444';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#666';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 15, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff6347';
+    ctx.fillRect(x + 15, y + 4, 2, 2);
+  },
+
+  // Pool table
+  poolTable: function(x, y) {
+    ctx.fillStyle = '#5c3317';
+    ctx.fillRect(x + 3, y + 19, 3, 4);
+    ctx.fillRect(x + 18, y + 19, 3, 4);
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(x + 2, y + 5, 20, 16);
+    ctx.fillStyle = '#228b22';
+    ctx.fillRect(x + 4, y + 7, 16, 12);
+    ctx.fillStyle = '#4a7c3a';
+    ctx.fillRect(x + 4, y + 7, 16, 1);
+    ctx.fillRect(x + 4, y + 18, 16, 1);
+    ctx.fillRect(x + 4, y + 7, 1, 12);
+    ctx.fillRect(x + 19, y + 7, 1, 12);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 8, y + 12, 2, 2);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(x + 13, y + 10, 2, 2);
+    ctx.fillStyle = '#ffff00';
+    ctx.fillRect(x + 15, y + 14, 2, 2);
+  },
+
+  // Gaming setup
+  gamingSetup: function(x, y) {
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(x + 2, y + 12, 20, 10);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x + 5, y + 2, 14, 11);
+    ctx.fillStyle = '#9b59b6';
+    ctx.fillRect(x + 6, y + 3, 12, 9);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x + 10, y + 13, 4, 2);
+    ctx.fillStyle = '#444';
+    ctx.fillRect(x + 5, y + 16, 14, 4);
+    ctx.fillStyle = '#ff00ff';
+    ctx.fillRect(x + 6, y + 17, 3, 1);
+    ctx.fillStyle = '#00ffff';
+    ctx.fillRect(x + 11, y + 17, 3, 1);
+  },
+
+  // Exercise bike
+  exerciseBike: function(x, y) {
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x + 4, y + 18, 16, 4);
+    ctx.fillStyle = '#ff4500';
+    ctx.fillRect(x + 10, y + 6, 3, 14);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 6, y + 4, 12, 3);
+    ctx.fillRect(x + 6, y + 4, 2, 5);
+    ctx.fillRect(x + 16, y + 4, 2, 5);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(x + 8, y + 8, 8, 3);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(x + 7, y + 16, 6, 4);
+  },
+
+  // Weights / dumbbells
+  weights: function(x, y) {
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 3, y + 4, 2, 18);
+    ctx.fillRect(x + 19, y + 4, 2, 18);
+    ctx.fillRect(x + 3, y + 4, 18, 2);
+    ctx.fillStyle = '#708090';
+    ctx.fillRect(x + 6, y + 8, 4, 4);
+    ctx.fillRect(x + 14, y + 8, 4, 4);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 9, y + 9, 6, 2);
+    ctx.fillStyle = '#708090';
+    ctx.fillRect(x + 6, y + 15, 4, 4);
+    ctx.fillRect(x + 14, y + 15, 4, 4);
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x + 9, y + 16, 6, 2);
+  },
+
+  // Riddle / notice board
+  riddleBoard: function(x, y) {
+    ctx.fillStyle = '#5c3317';
+    ctx.fillRect(x + 10, y + 12, 4, 10);
+    ctx.fillStyle = '#c79c4c';
+    ctx.fillRect(x + 3, y + 2, 18, 12);
+    ctx.fillStyle = '#a07830';
+    ctx.fillRect(x + 4, y + 3, 16, 10);
+    ctx.fillStyle = '#f5f0e0';
+    ctx.fillRect(x + 6, y + 4, 12, 8);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(x + 7, y + 5, 10, 1);
+    ctx.fillRect(x + 7, y + 7, 8, 1);
+    ctx.fillRect(x + 7, y + 9, 9, 1);
+  },
+
+  // Mirror
+  mirror: function(x, y) {
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(x + 5, y + 2, 14, 18);
+    ctx.fillStyle = '#add8e6';
+    ctx.fillRect(x + 6, y + 3, 12, 16);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(x + 7, y + 4, 4, 8);
+  },
+
+  // Wall art / painting
+  wallArt: function(x, y) {
+    ctx.fillStyle = '#8b6914';
+    ctx.fillRect(x + 4, y + 3, 16, 14);
+    ctx.fillStyle = '#2a1f14';
+    ctx.fillRect(x + 5, y + 4, 14, 12);
+    ctx.fillStyle = '#4a8fc7';
+    ctx.fillRect(x + 6, y + 5, 12, 5);
+    ctx.fillStyle = '#228b22';
+    ctx.fillRect(x + 6, y + 10, 12, 5);
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(x + 14, y + 6, 3, 3);
+  },
+
+  // Generic item renderer (fallback)
   genericItem: function(x, y, color1, color2) {
     ctx.fillStyle = color1;
     ctx.fillRect(x + 4, y + 4, 16, 16);
@@ -2071,12 +2286,12 @@ function drawInteractables(floor) {
         SPRITES.futon(x, y);
         break;
 
-      // New items with simple generic rendering
+      // Upgraded sprites
       case 'microwave':
-        SPRITES.genericItem(x, y, '#c0c0c0', '#444');
+        SPRITES.microwave(x, y);
         break;
       case 'trash_can':
-        SPRITES.genericItem(x, y, '#666', '#444');
+        SPRITES.trashCan(x, y);
         break;
       case 'spice_rack':
         SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
@@ -2086,13 +2301,13 @@ function drawInteractables(floor) {
         break;
       case 'plant':
       case 'plant_hallway':
-        SPRITES.genericItem(x, y, '#228b22', '#90ee90');
+        SPRITES.plant(x, y);
         break;
       case 'game_console':
         SPRITES.genericItem(x, y, '#000', '#4169e1');
         break;
       case 'riddle_board':
-        SPRITES.genericItem(x, y, '#c79c4c', '#7a5c1b');
+        SPRITES.riddleBoard(x, y);
         break;
       case 'side_table':
         SPRITES.genericItem(x, y, '#8b6914', '#daa520');
@@ -2101,7 +2316,7 @@ function drawInteractables(floor) {
         SPRITES.armchair(x, y);
         break;
       case 'bathroom_mirror':
-        SPRITES.genericItem(x, y, '#add8e6', '#87ceeb');
+        SPRITES.mirror(x, y);
         break;
       case 'towel_rack':
         SPRITES.genericItem(x, y, '#c0c0c0', '#fff');
@@ -2110,7 +2325,7 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#8b0000', '#dc143c');
         break;
       case 'wall_art':
-        SPRITES.genericItem(x, y, '#ffd700', '#ffb347');
+        SPRITES.wallArt(x, y);
         break;
       case 'coat_rack':
         SPRITES.genericItem(x, y, '#654321', '#8b4513');
@@ -2118,10 +2333,10 @@ function drawInteractables(floor) {
 
       // Basement items
       case 'weights':
-        SPRITES.genericItem(x, y, '#708090', '#2f4f4f');
+        SPRITES.weights(x, y);
         break;
       case 'exercise_bike':
-        SPRITES.genericItem(x, y, '#ff4500', '#000');
+        SPRITES.exerciseBike(x, y);
         break;
       case 'yoga_mat':
         SPRITES.genericItem(x, y, '#9370db', '#8a2be2');
@@ -2130,10 +2345,10 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#d2691e', '#8b4513');
         break;
       case 'washer':
-        SPRITES.genericItem(x, y, '#f0f0f0', '#4682b4');
+        SPRITES.washer(x, y);
         break;
       case 'dryer':
-        SPRITES.genericItem(x, y, '#f0f0f0', '#ff6347');
+        SPRITES.dryer(x, y);
         break;
       case 'laundry_basket_storage':
         SPRITES.genericItem(x, y, '#deb887', '#d2691e');
@@ -2142,13 +2357,13 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#ffff00', '#32cd32');
         break;
       case 'pool_table':
-        SPRITES.genericItem(x, y, '#228b22', '#8b4513');
+        SPRITES.poolTable(x, y);
         break;
       case 'mini_fridge':
         SPRITES.genericItem(x, y, '#c0c0c0', '#000');
         break;
       case 'gaming_setup':
-        SPRITES.genericItem(x, y, '#000', '#ff00ff');
+        SPRITES.gamingSetup(x, y);
         break;
       case 'bath_mat':
         SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
@@ -2413,6 +2628,7 @@ function gameLoop() {
     else if (keysDown['ArrowRight'] || keysDown['KeyD']) tryMove('right');
   }
 
+  animTimer++;
   updateMovement();
   updateParticles();
   updateScreenShake();
