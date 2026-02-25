@@ -31,14 +31,18 @@
       <path d="M14 58 C20 92, 66 92, 72 58" fill="#f3c7a2" stroke="#a86f4d" stroke-width="2.5"/>
       <ellipse cx="43" cy="36" rx="27" ry="28" fill="#ffdcbc" stroke="#a86f4d" stroke-width="2.5"/>
       <path d="M15 35 C16 5, 70 4, 72 34 C67 18, 55 13, 43 13 C30 13, 19 20, 15 35 Z" fill="#5a3423"/>
-      <path d="M23 35 q4 -4 9 0" stroke="#3c2418" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <path d="M54 35 q4 -4 9 0" stroke="#3c2418" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <ellipse cx="33" cy="39" rx="4.5" ry="5" fill="#2f241e"/>
-      <ellipse cx="54" cy="39" rx="4.5" ry="5" fill="#2f241e"/>
+      <path d="M24 31 q6.5 -4 13 0" stroke="#4a3020" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M49 31 q6.5 -4 14 0" stroke="#4a3020" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <ellipse cx="33" cy="39" rx="4.5" ry="5" fill="#6b3d24"/>
+      <ellipse cx="33" cy="39" rx="2.8" ry="3.2" fill="#2f241e"/>
+      <circle cx="34.5" cy="37.5" r="1.4" fill="white" opacity="0.85"/>
+      <ellipse cx="54" cy="39" rx="4.5" ry="5" fill="#6b3d24"/>
+      <ellipse cx="54" cy="39" rx="2.8" ry="3.2" fill="#2f241e"/>
+      <circle cx="55.5" cy="37.5" r="1.4" fill="white" opacity="0.85"/>
       <path d="M43 42 l-2 8 h4" stroke="#b88467" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-      <path d="M33 53 q10 8 20 0" stroke="#ad615d" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-      <circle cx="24" cy="48" r="3.2" fill="#ffc8cf" opacity="0.75"/>
-      <circle cx="62" cy="48" r="3.2" fill="#ffc8cf" opacity="0.75"/>
+      <path d="M31 52 q12 10 22 0" stroke="#c25a57" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+      <circle cx="23" cy="48" r="4.5" fill="#ffc8cf" opacity="0.85"/>
+      <circle cx="63" cy="48" r="4.5" fill="#ffc8cf" opacity="0.85"/>
     </g>
 
     <!-- Alice (orange tabby) -->
