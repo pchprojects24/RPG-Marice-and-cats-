@@ -1932,6 +1932,10 @@ document.addEventListener('keyup', function(e) {
   keysDown[e.code] = false;
 });
 
+window.addEventListener('blur', function() {
+  Object.keys(keysDown).forEach(function(key) { keysDown[key] = false; });
+});
+
 // Mobile D-Pad
 function setupMobileControls() {
   const dirs = {
