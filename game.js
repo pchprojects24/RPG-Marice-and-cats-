@@ -509,6 +509,25 @@ function closeDialogue() {
   }
 }
 
+// Force dialogue UI/state closed without running callbacks.
+// Used by hard resets (new game/restart) to avoid stale state.
+function hideDialogue() {
+  dialogueActive = false;
+  dialogueQueue = [];
+  dialogueIndex = 0;
+  dialogueCat = null;
+  dialogueCallback = null;
+  dialogueOverlay.classList.remove('active');
+
+  if (typewriterTimer) clearInterval(typewriterTimer);
+  typewriterTimer = null;
+  typewriterText = '';
+  typewriterIndex = 0;
+  typewriterDone = false;
+  dialogueText.textContent = '';
+  dialogueAdvance.style.visibility = 'hidden';
+}
+
 // ======================== TOAST SYSTEM ========================
 
 const toastEl = document.getElementById('toast');
