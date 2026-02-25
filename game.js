@@ -91,6 +91,270 @@ function getShakeOffset() {
   };
 }
 
+// ======================== AUDIO SYSTEM (Web Audio API) ========================
+
+let audioCtx = null;
+let musicGainNode = null;
+let sfxGainNode = null;
+let currentMusic = null;
+let musicPlaying = false;
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGainNode = audioCtx.createGain();
+    musicGainNode.connect(audioCtx.destination);
+    sfxGainNode = audioCtx.createGain();
+    sfxGainNode.connect(audioCtx.destination);
+    updateAudioVolumes();
+  } catch (e) {
+    // Web Audio not supported
+  }
+}
+
+function updateAudioVolumes() {
+  if (!audioCtx) return;
+  var sfxSlider = document.getElementById('sfx-volume');
+  var musicSlider = document.getElementById('music-volume');
+  var sfxVol = sfxSlider ? parseInt(sfxSlider.value) / 100 : 0.7;
+  var musicVol = musicSlider ? parseInt(musicSlider.value) / 100 : 0.5;
+  sfxGainNode.gain.setValueAtTime(sfxVol, audioCtx.currentTime);
+  musicGainNode.gain.setValueAtTime(musicVol * 0.3, audioCtx.currentTime); // music quieter
+}
+
+// --- SFX: procedural chiptune sounds ---
+
+function playSfx(type) {
+  if (!audioCtx) return;
+  updateAudioVolumes();
+  switch (type) {
+    case 'footstep': sfxFootstep(); break;
+    case 'interact': sfxInteract(); break;
+    case 'item_pickup': sfxItemPickup(); break;
+    case 'door_unlock': sfxDoorUnlock(); break;
+    case 'cat_meow': sfxCatMeow(); break;
+    case 'cat_fed': sfxCatFed(); break;
+    case 'numpad_beep': sfxNumpadBeep(); break;
+    case 'error': sfxError(); break;
+    case 'typewriter': sfxTypewriter(); break;
+  }
+}
+
+function sfxFootstep() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(120 + Math.random() * 40, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.08);
+}
+
+function sfxInteract() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(660, audioCtx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function sfxItemPickup() {
+  // Rising arpeggio
+  [0, 0.08, 0.16].forEach(function(delay, i) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime([523, 659, 784][i], audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.15);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.15);
+  });
+}
+
+function sfxDoorUnlock() {
+  // Click + low thud
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.2);
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.25);
+
+  // Click sound
+  var osc2 = audioCtx.createOscillator();
+  var gain2 = audioCtx.createGain();
+  osc2.type = 'triangle';
+  osc2.frequency.setValueAtTime(800, audioCtx.currentTime);
+  gain2.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+  osc2.connect(gain2);
+  gain2.connect(sfxGainNode);
+  osc2.start(audioCtx.currentTime);
+  osc2.stop(audioCtx.currentTime + 0.05);
+}
+
+function sfxCatMeow() {
+  // Frequency sweep mimicking a meow
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sine';
+  var t = audioCtx.currentTime;
+  osc.frequency.setValueAtTime(500 + Math.random() * 100, t);
+  osc.frequency.linearRampToValueAtTime(700 + Math.random() * 150, t + 0.1);
+  osc.frequency.linearRampToValueAtTime(400 + Math.random() * 100, t + 0.3);
+  gain.gain.setValueAtTime(0.15, t);
+  gain.gain.setValueAtTime(0.15, t + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(t);
+  osc.stop(t + 0.35);
+}
+
+function sfxCatFed() {
+  // Happy jingle
+  var notes = [523, 659, 784, 1047];
+  notes.forEach(function(freq, i) {
+    var delay = i * 0.1;
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.2);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 0.2);
+  });
+}
+
+function sfxNumpadBeep() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.06);
+}
+
+function sfxError() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.2);
+}
+
+function sfxTypewriter() {
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(600 + Math.random() * 200, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.03);
+}
+
+// --- MUSIC: simple looping chiptune melodies per floor ---
+
+var musicLoopTimer = null;
+var musicNoteIndex = 0;
+
+var MUSIC_DATA = {
+  outside: {
+    notes: [262, 294, 330, 349, 392, 349, 330, 294],
+    tempo: 300, type: 'sine'
+  },
+  main: {
+    notes: [330, 392, 440, 392, 349, 330, 294, 330],
+    tempo: 350, type: 'triangle'
+  },
+  basement: {
+    notes: [196, 220, 196, 175, 165, 175, 196, 220],
+    tempo: 400, type: 'sine'
+  },
+  upstairs: {
+    notes: [392, 440, 494, 523, 494, 440, 392, 349],
+    tempo: 380, type: 'triangle'
+  }
+};
+
+function startMusic(floorId) {
+  if (!audioCtx) return;
+  stopMusic();
+  var data = MUSIC_DATA[floorId];
+  if (!data) return;
+  musicNoteIndex = 0;
+  currentMusic = floorId;
+  musicPlaying = true;
+  playMusicNote(data);
+}
+
+function playMusicNote(data) {
+  if (!musicPlaying || !audioCtx) return;
+  updateAudioVolumes();
+
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = data.type;
+  var freq = data.notes[musicNoteIndex % data.notes.length];
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  var dur = data.tempo / 1000;
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime + dur * 0.6);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur * 0.95);
+  osc.connect(gain);
+  gain.connect(musicGainNode);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + dur);
+
+  musicNoteIndex++;
+  musicLoopTimer = setTimeout(function() {
+    playMusicNote(data);
+  }, data.tempo);
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  if (musicLoopTimer) {
+    clearTimeout(musicLoopTimer);
+    musicLoopTimer = null;
+  }
+  currentMusic = null;
+}
+
 // ======================== PORTRAIT CACHE ========================
 
 const portraits = {};
@@ -143,6 +407,11 @@ function startDialogue(dialogueKey, catName, callback) {
   dialogueCallback = callback || null;
   dialogueActive = true;
 
+  // Cat meow when talking to a cat
+  if (catName) {
+    playSfx('cat_meow');
+  }
+
   showDialogueMessage();
   dialogueOverlay.classList.add('active');
 }
@@ -184,6 +453,10 @@ function startTypewriter(text) {
   typewriterTimer = setInterval(function() {
     typewriterIndex++;
     dialogueText.textContent = typewriterText.substring(0, typewriterIndex);
+    // Play tick sound for visible characters (not spaces)
+    if (typewriterText[typewriterIndex - 1] !== ' ') {
+      playSfx('typewriter');
+    }
     if (typewriterIndex >= typewriterText.length) {
       finishTypewriter();
     }
@@ -380,6 +653,7 @@ function addItem(itemId) {
 
   // Light screen shake on item pickup
   triggerScreenShake(3, 10);
+  playSfx('item_pickup');
 }
 
 function hasItem(itemId) {
@@ -408,6 +682,7 @@ function markCatFed(catName) {
 
   // Strong screen shake for cat fed celebration
   triggerScreenShake(5, 15);
+  playSfx('cat_fed');
 }
 
 const ITEM_DISPLAY = {
@@ -457,6 +732,7 @@ function changeFloor(newFloor) {
     gameState.player.facing = 'down';
     updateFloorLabel();
     saveGame();
+    startMusic(newFloor);
 
     // Fade back in
     setTimeout(function() {
@@ -486,6 +762,7 @@ function changeFloorTo(newFloor, row, col, facing) {
     gameState.player.facing = facing || 'down';
     updateFloorLabel();
     saveGame();
+    startMusic(newFloor);
 
     setTimeout(function() {
       overlay.classList.remove('active');
@@ -560,6 +837,7 @@ function tryMove(dir) {
   gameState.moveFrom = { row: p.row, col: p.col };
   gameState.moveTo = { row: nr, col: nc };
   gameState.moveProgress = 0;
+  playSfx('footstep');
 }
 
 function handleStairTransition(row, col) {
@@ -635,6 +913,7 @@ function tryInteract() {
   const obj = getInteractableAt(facing.row, facing.col);
 
   if (obj) {
+    playSfx('interact');
     handleInteraction(obj);
   }
 }
@@ -659,9 +938,11 @@ function handleInteraction(obj) {
           if (code === '3134') {
             gameState.flags.front_door_unlocked = true;
             triggerScreenShake(4, 12);
+            playSfx('door_unlock');
             showToast('Front door unlocked!');
             changeFloor('main');
           } else {
+            playSfx('error');
             showToast('Incorrect code. Hint: the code is in the riddle.');
           }
         });
@@ -754,6 +1035,7 @@ function handleInteraction(obj) {
         gameState.flags.basement_unlocked = true;
         startDialogue('basement_door_unlock', null, function() {
           triggerScreenShake(5, 15);
+          playSfx('door_unlock');
           showToast('Basement unlocked!');
           changeFloor('basement');
         });
@@ -1986,6 +2268,71 @@ function drawRoomLabels(floorId) {
   ctx.textAlign = 'left';
 }
 
+// ======================== DYNAMIC LIGHTING ========================
+
+// Ambient tint per floor (rgba overlay)
+var FLOOR_AMBIENT = {
+  outside: { r: 255, g: 180, b: 100, a: 0.08 },  // warm sunset
+  main: { r: 255, g: 220, b: 170, a: 0.05 },      // warm interior
+  basement: { r: 0, g: 0, b: 0, a: 0.2 },          // dim
+  upstairs: { r: 255, g: 230, b: 200, a: 0.06 }    // soft warm
+};
+
+// Light source definitions per floor: {row, col, radius, color, flicker}
+var FLOOR_LIGHTS = {
+  outside: [],
+  main: [
+    { row: 6, col: 6, radius: 72, color: '255,240,200', flicker: true },  // floor lamp
+    { row: 6, col: 15, radius: 60, color: '100,160,255', flicker: true }, // TV
+    { row: 3, col: 5, radius: 40, color: '255,180,80', flicker: false },  // stove
+  ],
+  basement: [
+    { row: 7, col: 10, radius: 64, color: '200,200,255', flicker: false }, // overhead light area
+  ],
+  upstairs: [
+    { row: 3, col: 13, radius: 56, color: '255,240,200', flicker: true },  // bedside lamp area
+  ]
+};
+
+var lightFlickerTime = 0;
+
+function drawLighting(floor) {
+  var floorId = gameState.currentFloor;
+  lightFlickerTime++;
+
+  // 1. Apply ambient tint
+  var ambient = FLOOR_AMBIENT[floorId];
+  if (ambient) {
+    ctx.fillStyle = 'rgba(' + ambient.r + ',' + ambient.g + ',' + ambient.b + ',' + ambient.a + ')';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
+
+  // 2. Draw light sources using additive-style radial gradients
+  var lights = FLOOR_LIGHTS[floorId];
+  if (lights && lights.length > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < lights.length; i++) {
+      var light = lights[i];
+      var cx = light.col * TILE_SIZE + TILE_SIZE / 2;
+      var cy = light.row * TILE_SIZE + TILE_SIZE / 2;
+      var radius = light.radius;
+
+      // Subtle flicker
+      if (light.flicker) {
+        radius += Math.sin(lightFlickerTime * 0.15 + i * 2) * 4;
+      }
+
+      var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      grad.addColorStop(0, 'rgba(' + light.color + ',0.12)');
+      grad.addColorStop(0.5, 'rgba(' + light.color + ',0.06)');
+      grad.addColorStop(1, 'rgba(' + light.color + ',0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+}
+
 function render() {
   const floor = getCurrentFloor();
 
@@ -2035,6 +2382,9 @@ function render() {
       ctx.fillRect(facing.col * TILE_SIZE, facing.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
   }
+
+  // Draw dynamic lighting
+  drawLighting(floor);
 
   // Restore from screen shake before vignette
   ctx.restore();
@@ -2239,6 +2589,9 @@ function setupNumpad() {
   input.addEventListener('input', function() {
     input.value = input.value.replace(/[^0-9]/g, '');
     document.getElementById('numpad-error').textContent = '';
+    if (input.value.length > 0) {
+      playSfx('numpad_beep');
+    }
     if (input.value.length === 4) {
       numpadSubmit();
     }
@@ -2269,6 +2622,7 @@ function hideTitleScreen() {
 }
 
 function startNewGame() {
+  initAudio();
   clearSave();
   gameState.currentFloor = 'outside';
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
@@ -2290,14 +2644,17 @@ function startNewGame() {
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
+  startMusic('outside');
 }
 
 function continueGame() {
+  initAudio();
   renderInventory();
   updateFloorLabel();
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
+  startMusic(gameState.currentFloor);
 }
 
 // ======================== ENDING SCREEN ========================
@@ -2385,10 +2742,12 @@ function init() {
 
   sfxVolume.addEventListener('input', function() {
     sfxValue.textContent = this.value + '%';
+    updateAudioVolumes();
   });
 
   musicVolume.addEventListener('input', function() {
     musicValue.textContent = this.value + '%';
+    updateAudioVolumes();
   });
 
   document.getElementById('btn-save-settings').addEventListener('click', function() {
