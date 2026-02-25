@@ -3066,6 +3066,20 @@ function hideTitleScreen() {
 function startNewGame() {
   initAudio();
   clearSave();
+  // Reset transient runtime state so restart/new game is always clean.
+  moveCount = 0;
+  dialogueActive = false;
+  dialogueQueue = [];
+  gameState.moving = false;
+  gameState.moveProgress = 0;
+  gameState.moveFrom = null;
+  gameState.moveTo = null;
+  Object.keys(keysDown).forEach(function(key) { keysDown[key] = false; });
+  hideNumpad();
+  hideDialogue();
+  document.getElementById('quest-panel').classList.remove('active');
+  document.getElementById('settings-panel').classList.remove('active');
+
   gameState.currentFloor = 'outside';
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
   gameState.inventory = [];
