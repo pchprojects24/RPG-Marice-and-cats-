@@ -280,7 +280,7 @@ const basementStairs = {
   toMain: { rows: [1,2], cols: [1,2] }
 };
 
-const basementStart = { row: 3, col: 2 };
+const basementStart = { row: 3, col: 7 };
 
 
 // ============================================================
