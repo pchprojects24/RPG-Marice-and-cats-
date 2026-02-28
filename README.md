@@ -40,7 +40,7 @@ Optional: find the three cat toys (jingle ball, feather wand, laser pointer) hid
   - `alice_portrait_512.png`
   - `olive_portrait_512.png`
   - `beatrice_portrait_512.png`
-- **Ending:** `assets/portraits/snuggle_pile.svg` is included.
+- **Ending:** The ending screen uses the same character portrait PNGs shown above.
 
 If portrait files are missing, dialogue still works; the portrait area is hidden.
 
