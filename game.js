@@ -533,7 +533,7 @@ function hideDialogue() {
 const toastEl = document.getElementById('toast');
 let toastTimer = null;
 const IDLE_HINT_DELAY_MS = 20000;
-const IDLE_HINT_CHECK_MS = 1000;
+const IDLE_HINT_CHECK_INTERVAL_MS = 1000;
 const IDLE_HINT_COOLDOWN_MS = 15000;
 let idleHintTimer = null;
 let lastPlayerActionAt = Date.now();
@@ -592,7 +592,7 @@ function getNextTaskHint() {
 
 function setupIdleHints() {
   if (idleHintTimer) clearInterval(idleHintTimer);
-  idleHintTimer = setInterval(function () {
+  idleHintTimer = setInterval(() => {
     if (dialogueActive) return;
     const titleScreen = document.getElementById('title-screen');
     if (titleScreen && window.getComputedStyle(titleScreen).display !== 'none') return;
@@ -605,10 +605,10 @@ function setupIdleHints() {
 
     const hint = getNextTaskHint();
     if (!hint) return;
-    showToast('Hint: ' + hint, 3500);
+    showToast(`Hint: ${hint}`, 3500);
     lastHintAt = now;
     lastPlayerActionAt = now;
-  }, IDLE_HINT_CHECK_MS);
+  }, IDLE_HINT_CHECK_INTERVAL_MS);
 }
 
 // ======================== PARTICLE SYSTEM ========================
