@@ -1,9 +1,23 @@
 /*
- * game.js — Marice & Cats House Adventure — Full Game Engine
- *
- * Pure HTML5 Canvas game with grid movement, collision, interaction,
- * inventory, dialogue overlay, and localStorage save/load.
+ * game-engine.js — Marice & Cats House Adventure — Core engine
+ * State, audio, dialogue, world, rendering, save/load.
+ * Load after data/maps.js and data/dialogue.js.
  */
+
+// ======================== CONSTANTS ========================
+const FLOOR_IDS = {
+  OUTSIDE: 'outside',
+  MAIN: 'main',
+  BASEMENT: 'basement',
+  UPSTAIRS: 'upstairs'
+};
+
+const ITEMS = {
+  PURRPOPS: 'purrpops',
+  FEAST_PLATE: 'feast_plate',
+  BASEMENT_KEY: 'basement_key',
+  LAUNDRY_BASKET: 'laundry_basket'
+};
 
 // ======================== GLOBALS ========================
 
@@ -31,23 +45,25 @@ resizeCanvas();
 
 // ======================== GAME STATE ========================
 
+const DEFAULT_FLAGS = {
+  alice_fed: false,
+  olive_fed: false,
+  beatrice_fed: false,
+  has_basement_key: false,
+  basement_unlocked: false,
+  has_laundry_basket: false,
+  laundry_cleared: false,
+  sofa_searched: false,
+  game_complete: false,
+  front_door_unlocked: false,
+  cat_toys_found: []
+};
+
 let gameState = {
-  currentFloor: 'outside',
+  currentFloor: FLOOR_IDS.OUTSIDE,
   player: { row: outsideStart.row, col: outsideStart.col, facing: 'down' },
   inventory: [],          // array of item ID strings
-  flags: {
-    alice_fed: false,
-    olive_fed: false,
-    beatrice_fed: false,
-    has_basement_key: false,
-    basement_unlocked: false,
-    has_laundry_basket: false,
-    laundry_cleared: false,
-    sofa_searched: false,
-    game_complete: false,
-    front_door_unlocked: false,
-    cat_toys_found: []   // array of toy IDs collected
-  },
+  flags: Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] }),
   // Smooth movement animation
   moving: false,
   moveProgress: 0,
@@ -372,6 +388,9 @@ const portraitPaths = {
 function preloadPortraits() {
   for (const [key, path] of Object.entries(portraitPaths)) {
     const img = new Image();
+    img.onerror = function () {
+      img._loadFailed = true;
+    };
     img.src = path;
     portraits[key] = img;
   }
@@ -418,17 +437,20 @@ function startDialogue(dialogueKey, catName, callback) {
 
   showDialogueMessage();
   dialogueOverlay.classList.add('active');
+  dialogueOverlay.setAttribute('aria-hidden', 'false');
 }
 
 function showDialogueMessage() {
   const msg = dialogueQueue[dialogueIndex];
   if (!msg) return;
 
-  // Show cat + Marice portraits together during cat dialogues
-  const hasCatPortrait = dialogueCat && portraits[dialogueCat];
-  if (hasCatPortrait && portraits.marice) {
-    dialoguePortraitCat.src = portraits[dialogueCat].src;
-    dialoguePortraitMarice.src = portraits.marice.src;
+  // Show cat + Marice portraits together during cat dialogues (hide if any failed to load)
+  const catImg = dialogueCat && portraits[dialogueCat];
+  const mariceImg = portraits.marice;
+  const showPortraits = catImg && mariceImg && !catImg._loadFailed && !mariceImg._loadFailed;
+  if (showPortraits) {
+    dialoguePortraitCat.src = catImg.src;
+    dialoguePortraitMarice.src = mariceImg.src;
     dialoguePortraits.style.display = 'flex';
   } else {
     dialoguePortraits.style.display = 'none';
@@ -452,6 +474,7 @@ function startTypewriter(text) {
   typewriterIndex = 0;
   typewriterDone = false;
   dialogueText.textContent = '';
+  dialogueAdvance.textContent = 'Tap / Space to show full text';
   dialogueAdvance.style.visibility = 'hidden';
 
   typewriterTimer = setInterval(function () {
@@ -473,6 +496,7 @@ function finishTypewriter() {
   typewriterIndex = typewriterText.length;
   dialogueText.textContent = typewriterText;
   typewriterDone = true;
+  dialogueAdvance.textContent = 'Tap / Space / Enter to continue';
   dialogueAdvance.style.visibility = 'visible';
 }
 
@@ -496,6 +520,7 @@ function advanceDialogue() {
 function closeDialogue() {
   dialogueActive = false;
   dialogueOverlay.classList.remove('active');
+  dialogueOverlay.setAttribute('aria-hidden', 'true');
 
   // Clean up typewriter
   if (typewriterTimer) clearInterval(typewriterTimer);
@@ -518,6 +543,7 @@ function hideDialogue() {
   dialogueCat = null;
   dialogueCallback = null;
   dialogueOverlay.classList.remove('active');
+  dialogueOverlay.setAttribute('aria-hidden', 'true');
 
   if (typewriterTimer) clearInterval(typewriterTimer);
   typewriterTimer = null;
@@ -560,7 +586,7 @@ function getNextTaskHint() {
     return 'Check the house plaque outside for the front door code.';
   }
   if (!gameState.flags.alice_fed) {
-    return hasItem('purrpops')
+    return hasItem(ITEMS.PURRPOPS)
       ? 'Find Alice and give her the Purrpops.'
       : 'Search the kitchen cupboards for Purrpops for Alice.';
   }
@@ -568,22 +594,22 @@ function getNextTaskHint() {
     return 'Alice gave a clue—check under the sofa blanket.';
   }
   if (!gameState.flags.basement_unlocked) {
-    return hasItem('basement_key')
+    return hasItem(ITEMS.BASEMENT_KEY)
       ? 'Use the Basement Key on the basement door.'
       : 'Look for the Basement Key near the sofa.';
   }
   if (!gameState.flags.olive_fed) {
-    return hasItem('purrpops')
+    return hasItem(ITEMS.PURRPOPS)
       ? 'Find Olive in the basement and feed her.'
       : 'Grab more Purrpops from the kitchen, then visit Olive downstairs.';
   }
   if (!gameState.flags.laundry_cleared) {
-    return hasItem('laundry_basket')
+    return hasItem(ITEMS.LAUNDRY_BASKET)
       ? 'Take the Laundry Basket to the blocked stairs on the main floor.'
       : 'Talk to Olive in the basement to get help with the blocked stairs.';
   }
   if (!gameState.flags.beatrice_fed) {
-    return hasItem('feast_plate')
+    return hasItem(ITEMS.FEAST_PLATE)
       ? 'Find Beatrice upstairs and give her the feast plate.'
       : 'Find a Shrimp & Salmon Feast plate in the kitchen cupboards.';
   }
@@ -819,10 +845,10 @@ function changeFloor(newFloor) {
   var overlay = document.getElementById('transition-overlay');
   var label = document.getElementById('transition-label');
   var floorNames = {
-    outside: 'Front Entry',
-    main: 'Main Floor',
-    basement: 'Basement',
-    upstairs: 'Upstairs'
+    [FLOOR_IDS.OUTSIDE]: 'Front Entry',
+    [FLOOR_IDS.MAIN]: 'Main Floor',
+    [FLOOR_IDS.BASEMENT]: 'Basement',
+    [FLOOR_IDS.UPSTAIRS]: 'Upstairs'
   };
 
   label.textContent = floorNames[newFloor] || newFloor;
@@ -851,10 +877,10 @@ function changeFloorTo(newFloor, row, col, facing) {
   var overlay = document.getElementById('transition-overlay');
   var label = document.getElementById('transition-label');
   var floorNames = {
-    outside: 'Front Entry',
-    main: 'Main Floor',
-    basement: 'Basement',
-    upstairs: 'Upstairs'
+    [FLOOR_IDS.OUTSIDE]: 'Front Entry',
+    [FLOOR_IDS.MAIN]: 'Main Floor',
+    [FLOOR_IDS.BASEMENT]: 'Basement',
+    [FLOOR_IDS.UPSTAIRS]: 'Upstairs'
   };
 
   label.textContent = floorNames[newFloor] || newFloor;
@@ -958,14 +984,14 @@ function tryMove(dir) {
 function handleStairTransition(row, col) {
   const floorId = gameState.currentFloor;
 
-  if (floorId === 'main') {
+  if (floorId === FLOOR_IDS.MAIN) {
     // Check if stepping on upstairs stairs
     const s = FLOORS.main.stairs.toUpstairs;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       if (!gameState.flags.laundry_cleared) {
-        if (hasItem('laundry_basket')) {
+        if (hasItem(ITEMS.LAUNDRY_BASKET)) {
           // Player walked into the laundry pile while carrying the basket — clear it
-          removeItem('laundry_basket');
+          removeItem(ITEMS.LAUNDRY_BASKET);
           gameState.flags.laundry_cleared = true;
           startDialogue('laundry_pile_clear', null, function () {
             triggerScreenShake(4, 12);
@@ -985,14 +1011,14 @@ function handleStairTransition(row, col) {
     const s = FLOORS.basement.stairs.toMain;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       // Return to main floor, place near basement door
-      changeFloorTo('main', 7, 17, 'left');
+      changeFloorTo(FLOOR_IDS.MAIN, 7, 17, 'left');
       return true;
     }
   } else if (floorId === 'upstairs') {
     const s = FLOORS.upstairs.stairs.toMain;
     if (s.rows.includes(row) && s.cols.includes(col)) {
       // Return to main floor, place near central stairs
-      changeFloorTo('main', 8, 10, 'down');
+      changeFloorTo(FLOOR_IDS.MAIN, 8, 10, 'down');
       return true;
     }
   }
@@ -1035,46 +1061,38 @@ function tryInteract() {
 }
 
 function handleInteraction(obj) {
+  // Data-driven: if interactable has dialogueKey and no special logic, show dialogue and return
+  if (obj.dialogueKey) {
+    startDialogue(obj.dialogueKey, null, null);
+    return;
+  }
+
   switch (obj.type) {
 
     // ---- CUPBOARDS ----
-    case 'fridge':
-      startDialogue('fridge', null, null);
-      break;
     case 'riddle_board':
       startDialogue('outside_riddle_board', null, null);
       break;
     case 'front_door':
       if (gameState.flags.front_door_unlocked) {
-        changeFloor('main');
+        changeFloor(FLOOR_IDS.MAIN);
         break;
       }
       startDialogue('front_door_locked', null, function () {
         showNumpad(function (code) {
-          if (code === '3134') {
+          const validCodes = ['3134', '3141'];
+          if (validCodes.includes(code)) {
             gameState.flags.front_door_unlocked = true;
             triggerScreenShake(4, 12);
             playSfx('door_unlock');
             showToast('Front door unlocked!');
-            changeFloor('main');
+            changeFloor(FLOOR_IDS.MAIN);
           } else {
             playSfx('error');
             showToast('Incorrect code. Hint: the code is in the house plaque.');
           }
         });
       });
-      break;
-    case 'stove':
-      startDialogue('stove', null, null);
-      break;
-    case 'kitchen_sink':
-      startDialogue('kitchen_sink', null, null);
-      break;
-    case 'coffee_station':
-      startDialogue('coffee_station', null, null);
-      break;
-    case 'dining_table':
-      startDialogue('dining_table', null, null);
       break;
     case 'cupboard_empty':
       startDialogue('cupboard_empty', null, null);
@@ -1085,11 +1103,11 @@ function handleInteraction(obj) {
       // or if the player is already carrying purrpops
       if (gameState.flags.alice_fed && gameState.flags.olive_fed) {
         startDialogue('cupboard_empty', null, null);
-      } else if (hasItem('purrpops')) {
+      } else if (hasItem(ITEMS.PURRPOPS)) {
         startDialogue('cupboard_empty', null, null);
       } else {
         startDialogue('cupboard_purrpops', null, function () {
-          addItem('purrpops');
+          addItem(ITEMS.PURRPOPS);
           showToast('Got Purrpops!');
         });
       }
@@ -1097,11 +1115,11 @@ function handleInteraction(obj) {
 
     case 'cupboard_feast':
       // Cupboard is empty once Beatrice has been fed, or if already carrying the plate
-      if (gameState.flags.beatrice_fed || hasItem('feast_plate')) {
+      if (gameState.flags.beatrice_fed || hasItem(ITEMS.FEAST_PLATE)) {
         startDialogue('cupboard_empty', null, null);
       } else {
         startDialogue('cupboard_feast', null, function () {
-          addItem('feast_plate');
+          addItem(ITEMS.FEAST_PLATE);
           showToast('Got Shrimp & Salmon Feast plate!');
         });
       }
@@ -1111,18 +1129,20 @@ function handleInteraction(obj) {
     case 'cat_alice':
       if (gameState.flags.alice_fed) {
         startDialogue('alice_done', 'alice', null);
-      } else if (hasItem('feast_plate') && !hasItem('purrpops')) {
+      } else if (hasItem(ITEMS.FEAST_PLATE) && !hasItem(ITEMS.PURRPOPS)) {
         // Only has feast, offer wrong item
         startDialogue('alice_wrong_item', 'alice', null);
-      } else if (hasItem('purrpops')) {
+      } else if (hasItem(ITEMS.PURRPOPS)) {
         // Give purrpops to Alice
-        removeItem('purrpops');
+        removeItem(ITEMS.PURRPOPS);
         gameState.flags.alice_fed = true;
         startDialogue('alice_after', 'alice', function () {
           showToast('Alice hints about the sofa!');
           markCatFed('alice');
           saveGameImmediate();
         });
+      } else if (gameState.inventory.length > 0) {
+        startDialogue('cat_wrong_item_generic', 'alice', null);
       } else {
         startDialogue('alice_before', 'alice', null);
       }
@@ -1136,7 +1156,7 @@ function handleInteraction(obj) {
         gameState.flags.sofa_searched = true;
         gameState.flags.has_basement_key = true;
         startDialogue('sofa_blanket', null, function () {
-          addItem('basement_key');
+          addItem(ITEMS.BASEMENT_KEY);
           showToast('Got Basement Key!');
         });
       }
@@ -1146,8 +1166,8 @@ function handleInteraction(obj) {
     case 'basement_door':
       if (gameState.flags.basement_unlocked) {
         changeFloor('basement');
-      } else if (hasItem('basement_key')) {
-        removeItem('basement_key');
+      } else if (hasItem(ITEMS.BASEMENT_KEY)) {
+        removeItem(ITEMS.BASEMENT_KEY);
         gameState.flags.basement_unlocked = true;
         startDialogue('basement_door_unlock', null, function () {
           triggerScreenShake(5, 15);
@@ -1164,18 +1184,20 @@ function handleInteraction(obj) {
     case 'cat_olive':
       if (gameState.flags.olive_fed) {
         startDialogue('olive_done', 'olive', null);
-      } else if (hasItem('feast_plate') && !hasItem('purrpops')) {
+      } else if (hasItem(ITEMS.FEAST_PLATE) && !hasItem(ITEMS.PURRPOPS)) {
         startDialogue('olive_wrong_item', 'olive', null);
-      } else if (hasItem('purrpops')) {
-        removeItem('purrpops');
+      } else if (hasItem(ITEMS.PURRPOPS)) {
+        removeItem(ITEMS.PURRPOPS);
         gameState.flags.olive_fed = true;
         startDialogue('olive_after', 'olive', function () {
-          addItem('laundry_basket');
+          addItem(ITEMS.LAUNDRY_BASKET);
           gameState.flags.has_laundry_basket = true;
           showToast('Got Laundry Basket!');
           markCatFed('olive');
           saveGameImmediate();
         });
+      } else if (gameState.inventory.length > 0) {
+        startDialogue('cat_wrong_item_generic', 'olive', null);
       } else {
         startDialogue('olive_before', 'olive', null);
       }
@@ -1185,10 +1207,10 @@ function handleInteraction(obj) {
     case 'cat_beatrice':
       if (gameState.flags.beatrice_fed) {
         showEnding();
-      } else if (hasItem('purrpops') && !hasItem('feast_plate')) {
+      } else if (hasItem(ITEMS.PURRPOPS) && !hasItem(ITEMS.FEAST_PLATE)) {
         startDialogue('beatrice_wrong_item', 'beatrice', null);
-      } else if (hasItem('feast_plate')) {
-        removeItem('feast_plate');
+      } else if (hasItem(ITEMS.FEAST_PLATE)) {
+        removeItem(ITEMS.FEAST_PLATE);
         gameState.flags.beatrice_fed = true;
         gameState.flags.game_complete = true;
         startDialogue('beatrice_after', 'beatrice', function () {
@@ -1196,59 +1218,27 @@ function handleInteraction(obj) {
           saveGameImmediate();
           showEnding();
         });
+      } else if (gameState.inventory.length > 0) {
+        startDialogue('cat_wrong_item_generic', 'beatrice', null);
       } else {
         startDialogue('beatrice_before', 'beatrice', null);
       }
       break;
 
-    // ---- SLIDING DOOR ----
-    case 'sliding_door':
-      startDialogue('sliding_door', null, null);
-      break;
-
-    // ---- LIVING ROOM ----
-    case 'tv':
-      startDialogue('tv', null, null);
-      break;
-    case 'floor_lamp':
-      startDialogue('floor_lamp', null, null);
-      break;
-    case 'coffee_table':
-      startDialogue('coffee_table', null, null);
-      break;
-    case 'bookshelf':
-      startDialogue('bookshelf', null, null);
-      break;
-
-    // ---- FUTON ----
+    // ---- LIVING ROOM (dialogueKey used for tv, floor_lamp, coffee_table, bookshelf, sliding_door) ----
     case 'futon':
       startDialogue('futon', null, null);
       break;
 
-    // ---- NEW MAIN FLOOR INTERACTABLES ----
-    case 'microwave':
-      startDialogue('microwave', null, null);
-      break;
-    case 'trash_can':
-      startDialogue('trash_can', null, null);
-      break;
+    // ---- NEW MAIN FLOOR (dialogueKey used for microwave, trash_can, china_cabinet, plant, etc.) ----
     case 'spice_rack':
       startDialogue('spice_rack', null, null);
-      break;
-    case 'china_cabinet':
-      startDialogue('china_cabinet', null, null);
-      break;
-    case 'plant':
-      startDialogue('plant', null, null);
       break;
     case 'game_console':
       startDialogue('game_console', null, null);
       break;
     case 'side_table':
       startDialogue('side_table', null, null);
-      break;
-    case 'reading_chair':
-      startDialogue('reading_chair', null, null);
       break;
     case 'bathroom_mirror':
       startDialogue('bathroom_mirror', null, null);
@@ -1264,6 +1254,32 @@ function handleInteraction(obj) {
       break;
     case 'coat_rack':
       startDialogue('coat_rack', null, null);
+      break;
+
+    // ---- CAT TOY COLLECTIBLES ----
+    case 'cat_toy_jingle_ball':
+      if (gameState.flags.cat_toys_found.includes('jingle_ball')) {
+        startDialogue('cat_toy_found', null, null);
+      } else {
+        gameState.flags.cat_toys_found.push('jingle_ball');
+        startDialogue('cat_toy_jingle_ball', null, null);
+      }
+      break;
+    case 'cat_toy_feather_wand':
+      if (gameState.flags.cat_toys_found.includes('feather_wand')) {
+        startDialogue('cat_toy_found', null, null);
+      } else {
+        gameState.flags.cat_toys_found.push('feather_wand');
+        startDialogue('cat_toy_feather_wand', null, null);
+      }
+      break;
+    case 'cat_toy_laser_pointer':
+      if (gameState.flags.cat_toys_found.includes('laser_pointer')) {
+        startDialogue('cat_toy_found', null, null);
+      } else {
+        gameState.flags.cat_toys_found.push('laser_pointer');
+        startDialogue('cat_toy_laser_pointer', null, null);
+      }
       break;
 
     // ---- NEW BASEMENT INTERACTABLES ----
@@ -1428,7 +1444,7 @@ function handleInteraction(obj) {
 
 // Check stair-step for laundry clearing (when player tries to go upstairs)
 function checkLaundryInteraction() {
-  if (gameState.currentFloor !== 'main') return false;
+  if (gameState.currentFloor !== FLOOR_IDS.MAIN) return false;
   if (gameState.flags.laundry_cleared) return false;
 
   const p = gameState.player;
@@ -1437,8 +1453,8 @@ function checkLaundryInteraction() {
   // Check if adjacent to stairs and facing them
   const facing = getFacingTile();
   if (s.rows.includes(facing.row) && s.cols.includes(facing.col)) {
-    if (hasItem('laundry_basket')) {
-      removeItem('laundry_basket');
+    if (hasItem(ITEMS.LAUNDRY_BASKET)) {
+      removeItem(ITEMS.LAUNDRY_BASKET);
       gameState.flags.laundry_cleared = true;
       startDialogue('laundry_pile_clear', null, function () {
         showToast('Stairway cleared!');
@@ -1469,7 +1485,7 @@ function updateInteractPrompt() {
   // Also check stairs for laundry interaction
   const floor = getCurrentFloor();
   let isStairInteract = false;
-  if (gameState.currentFloor === 'main' && !gameState.flags.laundry_cleared) {
+  if (gameState.currentFloor === FLOOR_IDS.MAIN && !gameState.flags.laundry_cleared) {
     const s = FLOORS.main.stairs.toUpstairs;
     if (s.rows.includes(facing.row) && s.cols.includes(facing.col)) {
       isStairInteract = true;
@@ -1478,7 +1494,8 @@ function updateInteractPrompt() {
 
   if (obj || isStairInteract) {
     const label = obj ? obj.label : 'Stairs';
-    prompt.textContent = 'E: ' + label;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    prompt.textContent = isTouch ? ('Interact: ' + label) : ('E: ' + label);
     prompt.classList.add('visible');
 
     // Enable interact button
@@ -2547,7 +2564,7 @@ function drawAsphaltTile(x, y, row, col) {
 
 // Outside overlay — roof gable, chimney, porch beam, curb
 function drawOutsideOverlay() {
-  if (gameState.currentFloor !== 'outside') return;
+  if (gameState.currentFloor !== FLOOR_IDS.OUTSIDE) return;
   var houseL = 4 * TILE_SIZE;
   var houseR = 16 * TILE_SIZE;
   var houseW = houseR - houseL;
@@ -2635,7 +2652,7 @@ function drawTile(floor, row, col) {
   const palette = floor.palette;
 
   // Outside floor uses custom detailed rendering
-  if (gameState.currentFloor === 'outside') {
+  if (gameState.currentFloor === FLOOR_IDS.OUTSIDE) {
     drawOutsideTile(tile, x, y, row, col);
     return;
   }
@@ -2663,7 +2680,7 @@ function drawTile(floor, row, col) {
 
   // Draw stairs
   if (tile === T.STAIRS) {
-    const hasLaundry = (gameState.currentFloor === 'main' && !gameState.flags.laundry_cleared &&
+    const hasLaundry = (gameState.currentFloor === FLOOR_IDS.MAIN && !gameState.flags.laundry_cleared &&
       FLOORS.main.stairs.toUpstairs.rows.includes(row) &&
       FLOORS.main.stairs.toUpstairs.cols.includes(col));
     SPRITES.stairs(x, y, hasLaundry);
@@ -2679,7 +2696,7 @@ function drawFurnitureBlock(floor, row, col, x, y) {
   const floorId = gameState.currentFloor;
 
   // Context-based furniture rendering
-  if (floorId === 'main') {
+  if (floorId === FLOOR_IDS.MAIN) {
     if (row === 2 && col === 18) SPRITES.furniture(x, y); // dining room cabinet
     else if (row === 6 && (col === 3)) SPRITES.sofa(x, y);
     else if (row === 7 && (col === 3)) SPRITES.sofa(x, y);
@@ -2840,6 +2857,17 @@ function drawInteractables(floor) {
         break;
       case 'coat_rack':
         SPRITES.genericItem(x, y, '#654321', '#8b4513');
+        break;
+
+      // Cat toy collectibles
+      case 'cat_toy_jingle_ball':
+        SPRITES.genericItem(x, y, '#ffd700', '#b8860b');
+        break;
+      case 'cat_toy_feather_wand':
+        SPRITES.genericItem(x, y, '#ff69b4', '#ff1493');
+        break;
+      case 'cat_toy_laser_pointer':
+        SPRITES.genericItem(x, y, '#dc143c', '#000');
         break;
 
       // Basement items
@@ -3262,7 +3290,7 @@ function render() {
 
     // Check stairs interaction too
     let isStairInteract = false;
-    if (gameState.currentFloor === 'main' && !gameState.flags.laundry_cleared) {
+    if (gameState.currentFloor === FLOOR_IDS.MAIN && !gameState.flags.laundry_cleared) {
       const s = FLOORS.main.stairs.toUpstairs;
       if (s.rows.includes(facing.row) && s.cols.includes(facing.col)) {
         isStairInteract = true;
@@ -3320,6 +3348,11 @@ function gameLoop() {
 // ======================== INPUT HANDLING ========================
 
 document.addEventListener('keydown', function (e) {
+  // Resume AudioContext if suspended (e.g. after tab background)
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
   // Block game input while code entry overlay is open
   if (document.getElementById('numpad-overlay').classList.contains('active')) {
     return;
@@ -3431,7 +3464,7 @@ function doSaveGame() {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     showSaveIndicator();
   } catch (e) {
-    // localStorage might be unavailable
+    showToast('Save failed; check storage.');
   }
 }
 
@@ -3451,15 +3484,16 @@ function loadGame() {
     if (!raw) return false;
     const data = JSON.parse(raw);
 
-    gameState.currentFloor = data.currentFloor || 'outside';
+    gameState.currentFloor = data.currentFloor || FLOOR_IDS.OUTSIDE;
     gameState.player.row = data.player.row;
     gameState.player.col = data.player.col;
     gameState.player.facing = data.player.facing || 'down';
     gameState.inventory = data.inventory || [];
-    gameState.flags = Object.assign(gameState.flags, data.flags || {});
+    gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] }, data.flags || {});
 
     return true;
   } catch (e) {
+    showToast('Could not load save.');
     return false;
   }
 }
@@ -3512,261 +3546,3 @@ function loadSettings() {
   } catch (e) { }
 }
 
-// ======================== NUMPAD ========================
-
-let numpadCallback = null;
-
-function showNumpad(onSubmit) {
-  numpadCallback = onSubmit;
-  const input = document.getElementById('numpad-input');
-  input.value = '';
-  document.getElementById('numpad-error').textContent = '';
-  document.getElementById('numpad-overlay').classList.add('active');
-  setTimeout(function () { input.focus(); }, 50);
-}
-
-function hideNumpad() {
-  document.getElementById('numpad-overlay').classList.remove('active');
-  numpadCallback = null;
-  document.getElementById('numpad-input').value = '';
-}
-
-function numpadSubmit() {
-  const code = document.getElementById('numpad-input').value.trim();
-  if (code.length < 4) {
-    document.getElementById('numpad-error').textContent = 'Enter all 4 digits.';
-    return;
-  }
-  const cb = numpadCallback;
-  hideNumpad();
-  if (cb) {
-    cb(code);
-  }
-}
-
-function setupNumpad() {
-  const overlay = document.getElementById('numpad-overlay');
-  const input = document.getElementById('numpad-input');
-
-  overlay.addEventListener('click', function (e) {
-    if (e.target === overlay) hideNumpad();
-  });
-
-  input.addEventListener('input', function () {
-    input.value = input.value.replace(/[^0-9]/g, '');
-    document.getElementById('numpad-error').textContent = '';
-    if (input.value.length > 0) {
-      playSfx('numpad_beep');
-    }
-    if (input.value.length === 4) {
-      numpadSubmit();
-    }
-  });
-
-  input.addEventListener('keydown', function (e) {
-    if (e.code === 'Enter') {
-      e.preventDefault();
-      numpadSubmit();
-    } else if (e.code === 'Escape') {
-      e.preventDefault();
-      hideNumpad();
-    }
-  });
-
-  document.getElementById('numpad-btn-enter').addEventListener('click', numpadSubmit);
-  document.getElementById('numpad-btn-cancel').addEventListener('click', hideNumpad);
-}
-
-// ======================== TITLE SCREEN ========================
-
-function showTitleScreen() {
-  document.getElementById('title-screen').style.display = 'flex';
-}
-
-function hideTitleScreen() {
-  document.getElementById('title-screen').style.display = 'none';
-}
-
-function startNewGame() {
-  initAudio();
-  markPlayerActivity();
-  clearSave();
-  // Reset transient runtime state so restart/new game is always clean.
-  moveCount = 0;
-  dialogueActive = false;
-  dialogueQueue = [];
-  gameState.moving = false;
-  gameState.moveProgress = 0;
-  gameState.moveFrom = null;
-  gameState.moveTo = null;
-  Object.keys(keysDown).forEach(function (key) { keysDown[key] = false; });
-  hideNumpad();
-  hideDialogue();
-  document.getElementById('quest-panel').classList.remove('active');
-  document.getElementById('settings-panel').classList.remove('active');
-
-  gameState.currentFloor = 'outside';
-  gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
-  gameState.inventory = [];
-  gameState.flags = {
-    alice_fed: false,
-    olive_fed: false,
-    beatrice_fed: false,
-    has_basement_key: false,
-    basement_unlocked: false,
-    has_laundry_basket: false,
-    laundry_cleared: false,
-    sofa_searched: false,
-    game_complete: false,
-    front_door_unlocked: false,
-    cat_toys_found: []
-  };
-  renderInventory();
-  updateFloorLabel();
-  updateQuestCounter();
-  updateQuestList();
-  hideTitleScreen();
-  startMusic('outside');
-
-  // Show controls hint
-  var hint = document.getElementById('controls-hint');
-  if (hint) hint.classList.remove('hidden');
-
-  // Show intro dialogue after a short delay
-  setTimeout(function () {
-    startDialogue('intro', null, null);
-  }, 500);
-}
-
-// Hide controls hint after first few movements
-var moveCount = 0;
-function checkHideControlsHint() {
-  moveCount++;
-  if (moveCount === 5) {
-    var hint = document.getElementById('controls-hint');
-    if (hint) hint.classList.add('hidden');
-  }
-}
-
-function continueGame() {
-  initAudio();
-  markPlayerActivity();
-  renderInventory();
-  updateFloorLabel();
-  updateQuestCounter();
-  updateQuestList();
-  hideTitleScreen();
-  startMusic(gameState.currentFloor);
-
-  // Hide controls hint for returning players
-  var hint = document.getElementById('controls-hint');
-  if (hint) hint.classList.add('hidden');
-}
-
-// ======================== ENDING SCREEN ========================
-
-function showEnding() {
-  document.getElementById('ending-overlay').classList.add('active');
-}
-
-function hideEnding() {
-  document.getElementById('ending-overlay').classList.remove('active');
-}
-
-function restartGame() {
-  hideEnding();
-  startNewGame();
-}
-
-// ======================== INIT ========================
-
-function init() {
-  showTitleScreen();
-  setupMobileControls();
-  setupNumpad();
-  setupIdleHints();
-  loadSettings();
-
-  // Title screen buttons
-  document.getElementById('btn-new-game').addEventListener('click', function () {
-    startNewGame();
-  });
-
-  const continueBtn = document.getElementById('btn-continue');
-  if (loadGame()) {
-    continueBtn.style.display = 'inline-block';
-    continueBtn.addEventListener('click', function () {
-      continueGame();
-    });
-  } else {
-    continueBtn.style.display = 'none';
-  }
-
-  // Ending screen restart
-  document.getElementById('btn-restart').addEventListener('click', function () {
-    restartGame();
-  });
-
-  // Dialogue overlay click to advance
-  dialogueOverlay.addEventListener('click', function () {
-    advanceDialogue();
-  });
-
-  // Quest panel toggle
-  const questPanel = document.getElementById('quest-panel');
-  const btnToggleQuest = document.getElementById('btn-toggle-quest');
-  const btnCloseQuest = document.getElementById('btn-close-quest');
-
-  btnToggleQuest.addEventListener('click', function () {
-    questPanel.classList.toggle('active');
-    // Close settings if open
-    document.getElementById('settings-panel').classList.remove('active');
-  });
-
-  btnCloseQuest.addEventListener('click', function () {
-    questPanel.classList.remove('active');
-  });
-
-  // Settings panel toggle
-  const settingsPanel = document.getElementById('settings-panel');
-  const btnToggleSettings = document.getElementById('btn-toggle-settings');
-  const btnCloseSettings = document.getElementById('btn-close-settings');
-
-  btnToggleSettings.addEventListener('click', function () {
-    settingsPanel.classList.toggle('active');
-    // Close quest if open
-    questPanel.classList.remove('active');
-  });
-
-  btnCloseSettings.addEventListener('click', function () {
-    settingsPanel.classList.remove('active');
-  });
-
-  // Settings volume sliders
-  const sfxVolume = document.getElementById('sfx-volume');
-  const sfxValue = document.getElementById('sfx-value');
-  const musicVolume = document.getElementById('music-volume');
-  const musicValue = document.getElementById('music-value');
-
-  sfxVolume.addEventListener('input', function () {
-    sfxValue.textContent = this.value + '%';
-    updateAudioVolumes();
-  });
-
-  musicVolume.addEventListener('input', function () {
-    musicValue.textContent = this.value + '%';
-    updateAudioVolumes();
-  });
-
-  document.getElementById('btn-save-settings').addEventListener('click', function () {
-    saveSettings();
-    showToast('Settings saved!', 1500);
-    settingsPanel.classList.remove('active');
-  });
-
-  // Start game loop
-  requestAnimationFrame(gameLoop);
-}
-
-// Wait for DOM
-document.addEventListener('DOMContentLoaded', init);

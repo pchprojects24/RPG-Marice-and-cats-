@@ -103,6 +103,11 @@ const DIALOGUE = {
     { speaker: 'Beatrice', text: "Shrimp & Salmon Feast. On a plate. Like a civilized meal. That is my price for emerging from this cocoon." }
   ],
 
+  // Generic wrong item (e.g. key, laundry basket) when offering to a cat
+  cat_wrong_item_generic: [
+    { speaker: 'Marice', text: "I don't think that's what they want right now." }
+  ],
+
   // F) After receiving Shrimp & Salmon Feast
   beatrice_after: [
     { speaker: 'Marice', text: "One plate of Shrimp & Salmon Feast, served with love for my most dramatic princess!" },

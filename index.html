@@ -73,7 +73,7 @@
     </div>
 
     <!-- Toast notifications -->
-    <div id="toast"></div>
+    <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Game Canvas -->
     <canvas id="game-canvas"></canvas>
@@ -105,7 +105,7 @@
     </div>
 
     <!-- Dialogue Overlay -->
-    <div id="dialogue-overlay">
+    <div id="dialogue-overlay" role="dialog" aria-labelledby="dialogue-speaker" aria-describedby="dialogue-text" aria-modal="true" aria-hidden="true">
       <div id="dialogue-box">
         <div id="dialogue-portraits">
           <img id="dialogue-portrait-cat" class="dialogue-portrait" src="" alt="Character portrait">
@@ -216,17 +216,20 @@
 
     <!-- Bottom Action Buttons -->
     <div id="bottom-buttons">
+      <button id="btn-hint" class="hud-btn" aria-label="Get hint">💡</button>
       <button id="btn-toggle-quest" class="hud-btn">📋</button>
       <button id="btn-toggle-settings" class="hud-btn">⚙️</button>
     </div>
 
   </div>
 
-  <!-- Data scripts (must load before game.js) -->
+  <!-- Data scripts (must load before game) -->
   <script src="data/maps.js"></script>
   <script src="data/dialogue.js"></script>
-  <!-- Game engine -->
-  <script src="game.js"></script>
+  <!-- Game engine (state, audio, dialogue, world, render, save) -->
+  <script src="game-engine.js"></script>
+  <!-- Game entry (numpad, title, ending, init) -->
+  <script src="game-main.js"></script>
 
 </body>
 </html>

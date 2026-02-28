@@ -133,7 +133,8 @@ const mainFloorGrid = [
   // Row 7: living room - sofa area
   [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,0,0,0,4,1],
   // Row 8: living room
-  [1,0,4,0,0,4,0,0,0,0,0,0,0,0,0,0,2,0,1,1],
+  // Row 8: living room (col 4 = cat toy behind bookshelf)
+  [1,0,4,0,4,4,0,0,0,0,0,0,0,0,0,0,2,0,1,1],
   // Row 9: living room / half-bath divider (door moved to east wall)
   [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 10: half-bath
@@ -150,37 +151,38 @@ const mainFloorGrid = [
 
 const mainFloorInteractables = [
   // Kitchen appliances
-  { row: 3, col: 1, type: 'fridge', label: 'Fridge', sprite: 'fridge' },
+  { row: 3, col: 1, type: 'fridge', label: 'Fridge', sprite: 'fridge', dialogueKey: 'fridge' },
   // Kitchen cupboards (row 2, cols 1-4)
   { row: 2, col: 1, type: 'cupboard_empty', label: 'Cupboard', sprite: 'cupboard' },
   { row: 2, col: 2, type: 'cupboard_purrpops', label: 'Cupboard', sprite: 'cupboard_treat' },
   { row: 2, col: 3, type: 'cupboard_empty', label: 'Cupboard', sprite: 'cupboard' },
   { row: 2, col: 4, type: 'cupboard_feast', label: 'Cupboard', sprite: 'cupboard_food' },
-  { row: 3, col: 5, type: 'stove', label: 'Stove', sprite: 'stove' },
-  { row: 3, col: 6, type: 'kitchen_sink', label: 'Sink', sprite: 'sink' },
-  { row: 2, col: 7, type: 'coffee_station', label: 'Coffee Station', sprite: 'coffee' },
+  { row: 3, col: 5, type: 'stove', label: 'Stove', sprite: 'stove', dialogueKey: 'stove' },
+  { row: 3, col: 6, type: 'kitchen_sink', label: 'Sink', sprite: 'sink', dialogueKey: 'kitchen_sink' },
+  { row: 2, col: 7, type: 'coffee_station', label: 'Coffee Station', sprite: 'coffee', dialogueKey: 'coffee_station' },
 
   // Additional kitchen items
-  { row: 4, col: 1, type: 'microwave', label: 'Microwave', sprite: 'microwave' },
-  { row: 4, col: 3, type: 'trash_can', label: 'Trash Can', sprite: 'trash' },
+  { row: 4, col: 1, type: 'microwave', label: 'Microwave', sprite: 'microwave', dialogueKey: 'microwave' },
+  { row: 4, col: 3, type: 'trash_can', label: 'Trash Can', sprite: 'trash', dialogueKey: 'trash_can' },
 
   // Alice on cat tree in dining room (near sliding door)
   { row: 3, col: 14, type: 'cat_alice', label: 'Alice', sprite: 'cat_alice' },
 
   // Dining room table and chairs
-  { row: 2, col: 12, type: 'dining_table', label: 'Dining Table', sprite: 'dining' },
-  { row: 4, col: 14, type: 'china_cabinet', label: 'China Cabinet', sprite: 'cabinet' },
-  { row: 4, col: 16, type: 'plant', label: 'Potted Plant', sprite: 'plant' },
+  { row: 2, col: 12, type: 'dining_table', label: 'Dining Table', sprite: 'dining', dialogueKey: 'dining_table' },
+  { row: 4, col: 14, type: 'china_cabinet', label: 'China Cabinet', sprite: 'cabinet', dialogueKey: 'china_cabinet' },
+  { row: 4, col: 16, type: 'plant', label: 'Potted Plant', sprite: 'plant', dialogueKey: 'plant' },
 
   // Sliding door (decorative, right side of dining room)
-  { row: 5, col: 18, type: 'sliding_door', label: 'Sliding Door', sprite: 'sliding_door' },
+  { row: 5, col: 18, type: 'sliding_door', label: 'Sliding Door', sprite: 'sliding_door', dialogueKey: 'sliding_door' },
 
   // Living room decor - more detailed
-  { row: 6, col: 6, type: 'floor_lamp', label: 'Floor Lamp', sprite: 'lamp' },
-  { row: 7, col: 6, type: 'coffee_table', label: 'Coffee Table', sprite: 'coffee_table' },
-  { row: 6, col: 15, type: 'tv', label: 'TV Console', sprite: 'tv' },
-  { row: 8, col: 2, type: 'bookshelf', label: 'Bookshelf', sprite: 'bookshelf' },
-  { row: 8, col: 16, type: 'reading_chair', label: 'Reading Chair', sprite: 'chair' },
+  { row: 6, col: 6, type: 'floor_lamp', label: 'Floor Lamp', sprite: 'lamp', dialogueKey: 'floor_lamp' },
+  { row: 7, col: 6, type: 'coffee_table', label: 'Coffee Table', sprite: 'coffee_table', dialogueKey: 'coffee_table' },
+  { row: 6, col: 15, type: 'tv', label: 'TV Console', sprite: 'tv', dialogueKey: 'tv' },
+  { row: 8, col: 2, type: 'bookshelf', label: 'Bookshelf', sprite: 'bookshelf', dialogueKey: 'bookshelf' },
+  { row: 8, col: 4, type: 'cat_toy_feather_wand', label: 'Behind bookshelf', sprite: 'generic' },
+  { row: 8, col: 16, type: 'reading_chair', label: 'Reading Chair', sprite: 'chair', dialogueKey: 'reading_chair' },
 
   // Sofa with blanket (living room) - hides basement key
   { row: 8, col: 5, type: 'sofa_blanket', label: 'Sofa', sprite: 'sofa' },
@@ -220,8 +222,8 @@ const basementGrid = [
   [1,5,5,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 3: lobby (col 14 = futon, interactable)
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,2,0,0,1],
-  // Row 4
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 4: basement lobby (col 4 = cat toy)
+  [1,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 5: lobby / rec room divider
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 6: washroom area + rec room
@@ -255,6 +257,7 @@ const basementInteractables = [
 
   // Storage/Laundry area
   { row: 3, col: 3, type: 'storage_box', label: 'Storage Box', sprite: 'box' },
+  { row: 4, col: 4, type: 'cat_toy_jingle_ball', label: 'Under boxes', sprite: 'generic' },
   { row: 4, col: 5, type: 'washer', label: 'Washing Machine', sprite: 'washer' },
   { row: 4, col: 6, type: 'dryer', label: 'Dryer', sprite: 'dryer' },
   { row: 5, col: 3, type: 'laundry_basket_storage', label: 'Laundry Basket', sprite: 'basket' },
@@ -304,8 +307,8 @@ const upstairsGrid = [
   [1,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,1],
   // Row 6: hallway
   [1,1,1,3,1,1,0,0,0,1,0,0,0,1,1,3,1,1,1,1],
-  // Row 7: office + hallway + washroom
-  [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+  // Row 7: office + hallway + washroom (col 3 = cat toy laser)
+  [1,0,0,4,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
   // Row 8: office with desk
   [1,0,0,2,0,1,0,0,0,0,0,0,0,1,0,0,0,2,0,1],
   // Row 9
@@ -338,6 +341,7 @@ const upstairsInteractables = [
 
   // Office items
   { row: 7, col: 2, type: 'filing_cabinet', label: 'Filing Cabinet', sprite: 'files' },
+  { row: 7, col: 3, type: 'cat_toy_laser_pointer', label: 'Drawer', sprite: 'generic' },
   { row: 10, col: 2, type: 'office_chair', label: 'Office Chair', sprite: 'chair' },
   { row: 7, col: 4, type: 'printer', label: 'Printer', sprite: 'printer' },
   { row: 11, col: 3, type: 'bookcase', label: 'Bookcase', sprite: 'bookcase' },
