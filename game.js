@@ -594,7 +594,8 @@ function setupIdleHints() {
   if (idleHintTimer) clearInterval(idleHintTimer);
   idleHintTimer = setInterval(function () {
     if (dialogueActive) return;
-    if (document.getElementById('title-screen').style.display !== 'none') return;
+    const titleScreen = document.getElementById('title-screen');
+    if (titleScreen && window.getComputedStyle(titleScreen).display !== 'none') return;
     if (document.getElementById('ending-overlay').classList.contains('active')) return;
     if (document.getElementById('numpad-overlay').classList.contains('active')) return;
 
