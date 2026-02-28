@@ -532,6 +532,12 @@ function hideDialogue() {
 
 const toastEl = document.getElementById('toast');
 let toastTimer = null;
+const IDLE_HINT_DELAY_MS = 20000;
+const IDLE_HINT_CHECK_MS = 1000;
+const IDLE_HINT_COOLDOWN_MS = 15000;
+let idleHintTimer = null;
+let lastPlayerActionAt = Date.now();
+let lastHintAt = 0;
 
 function showToast(text, duration) {
   duration = duration || 2000;
@@ -541,6 +547,67 @@ function showToast(text, duration) {
   toastTimer = setTimeout(() => {
     toastEl.classList.remove('visible');
   }, duration);
+}
+
+function markPlayerActivity() {
+  lastPlayerActionAt = Date.now();
+}
+
+function getNextTaskHint() {
+  if (gameState.flags.game_complete) return null;
+
+  if (!gameState.flags.front_door_unlocked) {
+    return 'Check the house plaque outside for the front door code.';
+  }
+  if (!gameState.flags.alice_fed) {
+    return hasItem('purrpops')
+      ? 'Find Alice and give her the Purrpops.'
+      : 'Search the kitchen cupboards for Purrpops for Alice.';
+  }
+  if (!gameState.flags.has_basement_key && !gameState.flags.basement_unlocked) {
+    return 'Alice gave a clue—check under the sofa blanket.';
+  }
+  if (!gameState.flags.basement_unlocked) {
+    return hasItem('basement_key')
+      ? 'Use the Basement Key on the basement door.'
+      : 'Look for the Basement Key near the sofa.';
+  }
+  if (!gameState.flags.olive_fed) {
+    return hasItem('purrpops')
+      ? 'Find Olive in the basement and feed her.'
+      : 'Grab more Purrpops from the kitchen, then visit Olive downstairs.';
+  }
+  if (!gameState.flags.laundry_cleared) {
+    return hasItem('laundry_basket')
+      ? 'Take the Laundry Basket to the blocked stairs on the main floor.'
+      : 'Talk to Olive in the basement to get help with the blocked stairs.';
+  }
+  if (!gameState.flags.beatrice_fed) {
+    return hasItem('feast_plate')
+      ? 'Find Beatrice upstairs and give her the feast plate.'
+      : 'Find a Shrimp & Salmon Feast plate in the kitchen cupboards.';
+  }
+  return null;
+}
+
+function setupIdleHints() {
+  if (idleHintTimer) clearInterval(idleHintTimer);
+  idleHintTimer = setInterval(function () {
+    if (dialogueActive) return;
+    if (document.getElementById('title-screen').style.display !== 'none') return;
+    if (document.getElementById('ending-overlay').classList.contains('active')) return;
+    if (document.getElementById('numpad-overlay').classList.contains('active')) return;
+
+    const now = Date.now();
+    if (now - lastPlayerActionAt < IDLE_HINT_DELAY_MS) return;
+    if (now - lastHintAt < IDLE_HINT_COOLDOWN_MS) return;
+
+    const hint = getNextTaskHint();
+    if (!hint) return;
+    showToast('Hint: ' + hint, 3500);
+    lastHintAt = now;
+    lastPlayerActionAt = now;
+  }, IDLE_HINT_CHECK_MS);
 }
 
 // ======================== PARTICLE SYSTEM ========================
@@ -856,6 +923,7 @@ function getCatPosition(catName) {
 
 function tryMove(dir) {
   if (gameState.moving || dialogueActive) return;
+  markPlayerActivity();
 
   const p = gameState.player;
   p.facing = dir;
@@ -949,6 +1017,7 @@ function updateMovement() {
 // ======================== INTERACTION SYSTEM ========================
 
 function tryInteract() {
+  markPlayerActivity();
   if (dialogueActive) {
     advanceDialogue();
     return;
@@ -3511,6 +3580,7 @@ function hideTitleScreen() {
 
 function startNewGame() {
   initAudio();
+  markPlayerActivity();
   clearSave();
   // Reset transient runtime state so restart/new game is always clean.
   moveCount = 0;
@@ -3571,6 +3641,7 @@ function checkHideControlsHint() {
 
 function continueGame() {
   initAudio();
+  markPlayerActivity();
   renderInventory();
   updateFloorLabel();
   updateQuestCounter();
@@ -3604,6 +3675,7 @@ function init() {
   showTitleScreen();
   setupMobileControls();
   setupNumpad();
+  setupIdleHints();
   loadSettings();
 
   // Title screen buttons
