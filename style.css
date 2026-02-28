@@ -984,6 +984,61 @@ html, body {
   transform: scale(0.95);
 }
 
+/* ======================== Pause Overlay ======================== */
+#pause-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 98;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#pause-overlay.active {
+  display: flex;
+}
+
+#pause-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: rgba(20, 20, 30, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-radius: 16px;
+  padding: 32px 48px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+}
+
+#pause-box h2 {
+  color: #ffd700;
+  font-size: 28px;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 12px rgba(255,215,0,0.5);
+}
+
+/* ======================== Ending Stats ======================== */
+#ending-stats {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffd700;
+}
+
 /* ======================== Responsive Scaling ======================== */
 @media (max-width: 520px) {
   #game-canvas {

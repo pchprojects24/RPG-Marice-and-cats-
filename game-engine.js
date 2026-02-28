@@ -82,6 +82,12 @@ const WALK_FRAME_INTERVAL = 8; // swap legs every 8 frames
 // Global animation timer (for cat idle animations, light flicker, etc.)
 let animTimer = 0;
 
+// Pause state
+let gamePaused = false;
+
+// Game session start time (for stats)
+let gameStartTime = null;
+
 // Screen shake state
 let shakeIntensity = 0;
 let shakeDuration = 0;
@@ -98,6 +104,12 @@ function triggerScreenShake(intensity, duration) {
 function updateScreenShake() {
   if (shakeTimer > 0) {
     shakeTimer--;
+  }
+}
+
+function triggerHaptic(ms) {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(ms || 10); } catch (e) {}
   }
 }
 
@@ -118,6 +130,11 @@ let musicGainNode = null;
 let sfxGainNode = null;
 let currentMusic = null;
 let musicPlaying = false;
+let musicFading = false;
+
+// Ambient sound (floor drone)
+let ambientOsc = null;
+let ambientGainNode = null;
 
 function initAudio() {
   if (audioCtx) return;
@@ -135,10 +152,13 @@ function initAudio() {
 
 function updateAudioVolumes() {
   if (!audioCtx) return;
+  if (musicFading) return; // don't interrupt crossfade
   var sfxSlider = document.getElementById('sfx-volume');
   var musicSlider = document.getElementById('music-volume');
+  var musicMute = document.getElementById('music-mute');
   var sfxVol = sfxSlider ? parseInt(sfxSlider.value) / 100 : 0.7;
   var musicVol = musicSlider ? parseInt(musicSlider.value) / 100 : 0.5;
+  if (musicMute && musicMute.checked) musicVol = 0;
   sfxGainNode.gain.setValueAtTime(sfxVol, audioCtx.currentTime);
   musicGainNode.gain.setValueAtTime(musicVol * 0.3, audioCtx.currentTime); // music quieter
 }
@@ -295,6 +315,8 @@ function sfxError() {
 }
 
 function sfxTypewriter() {
+  var twToggle = document.getElementById('typewriter-sound');
+  if (twToggle && !twToggle.checked) return;
   var osc = audioCtx.createOscillator();
   var gain = audioCtx.createGain();
   osc.type = 'square';
@@ -333,13 +355,31 @@ var MUSIC_DATA = {
 
 function startMusic(floorId) {
   if (!audioCtx) return;
-  stopMusic();
   var data = MUSIC_DATA[floorId];
   if (!data) return;
-  musicNoteIndex = 0;
-  currentMusic = floorId;
-  musicPlaying = true;
-  playMusicNote(data);
+
+  if (musicPlaying) {
+    // Crossfade: fade out current music then start new
+    musicFading = true;
+    musicGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+    musicGainNode.gain.setValueAtTime(musicGainNode.gain.value, audioCtx.currentTime);
+    musicGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+    stopMusic();
+    setTimeout(function () {
+      musicFading = false;
+      musicNoteIndex = 0;
+      currentMusic = floorId;
+      musicPlaying = true;
+      updateAudioVolumes();
+      playMusicNote(data);
+    }, 450);
+  } else {
+    stopMusic();
+    musicNoteIndex = 0;
+    currentMusic = floorId;
+    musicPlaying = true;
+    playMusicNote(data);
+  }
 }
 
 function playMusicNote(data) {
@@ -373,6 +413,42 @@ function stopMusic() {
     musicLoopTimer = null;
   }
   currentMusic = null;
+}
+
+// --- Ambient sound (low drone per floor) ---
+function startAmbient(floorId) {
+  stopAmbient();
+  if (!audioCtx) return;
+  var cfgs = {
+    basement: { freq: 58, type: 'sine', vol: 0.018 }
+  };
+  var cfg = cfgs[floorId];
+  if (!cfg) return;
+  ambientOsc = audioCtx.createOscillator();
+  ambientGainNode = audioCtx.createGain();
+  ambientOsc.type = cfg.type;
+  ambientOsc.frequency.setValueAtTime(cfg.freq, audioCtx.currentTime);
+  ambientGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  ambientGainNode.gain.linearRampToValueAtTime(cfg.vol, audioCtx.currentTime + 2.0);
+  ambientOsc.connect(ambientGainNode);
+  ambientGainNode.connect(audioCtx.destination);
+  ambientOsc.start(audioCtx.currentTime);
+}
+
+function stopAmbient() {
+  if (ambientOsc) {
+    var oscRef = ambientOsc;
+    var gainRef = ambientGainNode;
+    ambientOsc = null;
+    ambientGainNode = null;
+    try {
+      if (gainRef) {
+        gainRef.gain.setValueAtTime(gainRef.gain.value, audioCtx.currentTime);
+        gainRef.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      }
+      setTimeout(function () { try { oscRef.stop(); } catch (e) {} }, 600);
+    } catch (e) {}
+  }
 }
 
 // ======================== PORTRAIT CACHE ========================
@@ -813,6 +889,7 @@ function markCatFed(catName) {
 
   // Strong screen shake for cat fed celebration
   triggerScreenShake(5, 15);
+  triggerHaptic(40);
   playSfx('cat_fed');
 }
 
@@ -864,6 +941,7 @@ function changeFloor(newFloor) {
     updateFloorLabel();
     saveGame();
     startMusic(newFloor);
+    startAmbient(newFloor);
 
     // Fade back in
     setTimeout(function () {
@@ -894,6 +972,7 @@ function changeFloorTo(newFloor, row, col, facing) {
     updateFloorLabel();
     saveGame();
     startMusic(newFloor);
+    startAmbient(newFloor);
 
     setTimeout(function () {
       overlay.classList.remove('active');
@@ -977,6 +1056,7 @@ function tryMove(dir) {
   gameState.moveFrom = { row: p.row, col: p.col };
   gameState.moveTo = { row: nr, col: nc };
   gameState.moveProgress = 0;
+  triggerHaptic(8);
   playSfx('footstep');
   checkHideControlsHint();
 }
@@ -1080,7 +1160,7 @@ function handleInteraction(obj) {
       }
       startDialogue('front_door_locked', null, function () {
         showNumpad(function (code) {
-          const validCodes = ['3134', '3141'];
+          const validCodes = ['3141'];
           if (validCodes.includes(code)) {
             gameState.flags.front_door_unlocked = true;
             triggerScreenShake(4, 12);
@@ -2799,6 +2879,10 @@ function drawInteractables(floor) {
         break;
       case 'tv':
         SPRITES.tv(x, y);
+        // Animated screen flicker
+        var tvAlpha = 0.78 + Math.sin(animTimer * 0.35) * 0.1 + (Math.random() > 0.97 ? 0.25 : 0);
+        ctx.fillStyle = 'rgba(45,140,255,' + tvAlpha + ')';
+        ctx.fillRect(x + 4, y + 4, 16, 10);
         break;
       case 'floor_lamp':
         SPRITES.floorLamp(x, y);
@@ -2967,9 +3051,28 @@ function drawInteractables(floor) {
       case 'coat_hooks':
         SPRITES.genericItem(x, y, '#654321', '#8b4513');
         break;
-      case 'ceiling_fan':
+      case 'ceiling_fan': {
         SPRITES.genericItem(x, y, '#c0c0c0', '#696969');
+        // Spinning blades
+        var fanAngle = animTimer * 0.09;
+        ctx.save();
+        ctx.translate(x + 12, y + 12);
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 2;
+        for (var fi = 0; fi < 4; fi++) {
+          var fAngle = fanAngle + fi * Math.PI / 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(fAngle) * 8, Math.sin(fAngle) * 8);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#777';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
         break;
+      }
       case 'linen_closet':
         SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
         break;
@@ -3327,20 +3430,31 @@ function render() {
 
 let keysDown = {};
 
-function gameLoop() {
-  // Handle continuous input
-  if (!dialogueActive && !gameState.moving) {
-    if (keysDown['ArrowUp'] || keysDown['KeyW']) tryMove('up');
-    else if (keysDown['ArrowDown'] || keysDown['KeyS']) tryMove('down');
-    else if (keysDown['ArrowLeft'] || keysDown['KeyA']) tryMove('left');
-    else if (keysDown['ArrowRight'] || keysDown['KeyD']) tryMove('right');
-  }
+function togglePause() {
+  var titleScreen = document.getElementById('title-screen');
+  if (titleScreen && titleScreen.style.display !== 'none') return;
+  if (document.getElementById('ending-overlay').classList.contains('active')) return;
+  if (document.getElementById('numpad-overlay').classList.contains('active')) return;
+  if (dialogueActive) return;
+  gamePaused = !gamePaused;
+  document.getElementById('pause-overlay').classList.toggle('active', gamePaused);
+}
 
+function gameLoop() {
+  if (!gamePaused) {
+    // Handle continuous input
+    if (!dialogueActive && !gameState.moving) {
+      if (keysDown['ArrowUp'] || keysDown['KeyW']) tryMove('up');
+      else if (keysDown['ArrowDown'] || keysDown['KeyS']) tryMove('down');
+      else if (keysDown['ArrowLeft'] || keysDown['KeyA']) tryMove('left');
+      else if (keysDown['ArrowRight'] || keysDown['KeyD']) tryMove('right');
+    }
+    updateMovement();
+    updateParticles();
+    updateScreenShake();
+    updateInteractPrompt();
+  }
   animTimer++;
-  updateMovement();
-  updateParticles();
-  updateScreenShake();
-  updateInteractPrompt();
   render();
   requestAnimationFrame(gameLoop);
 }
@@ -3357,6 +3471,16 @@ document.addEventListener('keydown', function (e) {
   if (document.getElementById('numpad-overlay').classList.contains('active')) {
     return;
   }
+
+  // P key always toggles pause (when game is active)
+  if (e.code === 'KeyP') {
+    togglePause();
+    e.preventDefault();
+    return;
+  }
+
+  // Block all other game input when paused
+  if (gamePaused) return;
 
   keysDown[e.code] = true;
 
@@ -3509,11 +3633,20 @@ function saveSettings() {
     sfxVolume: document.getElementById('sfx-volume').value,
     musicVolume: document.getElementById('music-volume').value,
     screenShake: document.getElementById('screen-shake').checked,
-    particleEffects: document.getElementById('particle-effects').checked
+    particleEffects: document.getElementById('particle-effects').checked,
+    crtOverlay: document.getElementById('crt-overlay-enabled') ? document.getElementById('crt-overlay-enabled').checked : true,
+    typewriterSound: document.getElementById('typewriter-sound') ? document.getElementById('typewriter-sound').checked : true,
+    musicMute: document.getElementById('music-mute') ? document.getElementById('music-mute').checked : false
   };
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   } catch (e) { }
+}
+
+function applyCrtSetting() {
+  var cb = document.getElementById('crt-overlay-enabled');
+  var el = document.getElementById('crt-overlay');
+  if (el) el.style.display = (cb && !cb.checked) ? 'none' : '';
 }
 
 function loadSettings() {
@@ -3542,6 +3675,19 @@ function loadSettings() {
     }
     if (settings.particleEffects !== undefined) {
       particleEffects.checked = settings.particleEffects;
+    }
+    var crtCb = document.getElementById('crt-overlay-enabled');
+    if (crtCb && settings.crtOverlay !== undefined) {
+      crtCb.checked = settings.crtOverlay;
+      applyCrtSetting();
+    }
+    var twCb = document.getElementById('typewriter-sound');
+    if (twCb && settings.typewriterSound !== undefined) {
+      twCb.checked = settings.typewriterSound;
+    }
+    var muteCb = document.getElementById('music-mute');
+    if (muteCb && settings.musicMute !== undefined) {
+      muteCb.checked = settings.musicMute;
     }
   } catch (e) { }
 }

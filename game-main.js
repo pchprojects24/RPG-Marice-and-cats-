@@ -100,11 +100,13 @@ function startNewGame() {
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
   gameState.inventory = [];
   gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] });
+  gameStartTime = Date.now();
   updateFloorLabel();
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
   startMusic(FLOOR_IDS.OUTSIDE);
+  startAmbient(FLOOR_IDS.OUTSIDE);
 
   // Show controls hint
   var hint = document.getElementById('controls-hint');
@@ -129,12 +131,14 @@ function checkHideControlsHint() {
 function continueGame() {
   initAudio();
   markPlayerActivity();
+  gameStartTime = Date.now();
   renderInventory();
   updateFloorLabel();
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
   startMusic(gameState.currentFloor);
+  startAmbient(gameState.currentFloor);
 
   // Hide controls hint for returning players
   var hint = document.getElementById('controls-hint');
@@ -144,6 +148,21 @@ function continueGame() {
 // ======================== ENDING SCREEN ========================
 
 function showEnding() {
+  // Populate stats
+  if (gameStartTime) {
+    var elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+    var mins = Math.floor(elapsed / 60);
+    var secs = elapsed % 60;
+    var timeEl = document.getElementById('stat-time');
+    if (timeEl) timeEl.textContent = '⏱ ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+  var toysEl = document.getElementById('stat-toys');
+  if (toysEl) {
+    var toysCount = gameState.flags.cat_toys_found ? gameState.flags.cat_toys_found.length : 0;
+    var toyText = '🐾 Toys: ' + toysCount + '/3';
+    if (toysCount === 3) toyText += ' ✨';
+    toysEl.textContent = toyText;
+  }
   document.getElementById('ending-overlay').classList.add('active');
 }
 
@@ -247,7 +266,7 @@ function init() {
     btnToggleSettings.focus();
   });
 
-  // Escape closes Quest or Settings panel when open (and no other overlay is open)
+  // Escape closes Quest/Settings panel, or toggles pause
   document.addEventListener('keydown', function (e) {
     if (e.code !== 'Escape') return;
     if (document.getElementById('numpad-overlay').classList.contains('active')) return;
@@ -260,8 +279,26 @@ function init() {
       settingsPanel.classList.remove('active');
       btnToggleSettings.focus();
       e.preventDefault();
+    } else {
+      togglePause();
+      e.preventDefault();
     }
   });
+
+  // Pause overlay buttons
+  var btnResume = document.getElementById('btn-resume');
+  if (btnResume) btnResume.addEventListener('click', function () { togglePause(); });
+
+  var btnQuitTitle = document.getElementById('btn-quit-title');
+  if (btnQuitTitle) {
+    btnQuitTitle.addEventListener('click', function () {
+      gamePaused = false;
+      document.getElementById('pause-overlay').classList.remove('active');
+      stopMusic();
+      stopAmbient();
+      document.getElementById('title-screen').style.display = 'flex';
+    });
+  }
 
   // Settings volume sliders
   const sfxVolume = document.getElementById('sfx-volume');
@@ -284,6 +321,13 @@ function init() {
     showToast('Settings saved!', 1500);
     settingsPanel.classList.remove('active');
   });
+
+  // Live-update toggles
+  var crtCheckbox = document.getElementById('crt-overlay-enabled');
+  if (crtCheckbox) crtCheckbox.addEventListener('change', applyCrtSetting);
+
+  var musicMuteCheckbox = document.getElementById('music-mute');
+  if (musicMuteCheckbox) musicMuteCheckbox.addEventListener('change', updateAudioVolumes);
 
   // Start game loop
   requestAnimationFrame(gameLoop);

@@ -156,7 +156,20 @@
         Marice finally settles into bed with Alice, Olive, and Beatrice curled close — a cozy house,
         full hearts, and a perfect snuggle pile.
       </p>
+      <div id="ending-stats">
+        <span id="stat-time">⏱ --:--</span>
+        <span id="stat-toys">🐾 Toys: 0/3</span>
+      </div>
       <button id="btn-restart" class="title-btn">Play Again</button>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div id="pause-overlay">
+      <div id="pause-box">
+        <h2>⏸ Paused</h2>
+        <button id="btn-resume" class="title-btn">Resume</button>
+        <button id="btn-quit-title" class="title-btn">Quit to Title</button>
+      </div>
     </div>
 
     <!-- Quest Log Panel -->
@@ -211,6 +224,24 @@
           <label>
             <input type="checkbox" id="particle-effects" checked>
             Enable Particle Effects
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="crt-overlay-enabled" checked>
+            Enable CRT Scanline Effect
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="typewriter-sound" checked>
+            Enable Typewriter Sound
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="music-mute">
+            Mute Music
           </label>
         </div>
         <button id="btn-save-settings" class="title-btn">Save Settings</button>
