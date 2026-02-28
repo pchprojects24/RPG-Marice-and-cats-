@@ -1562,6 +1562,15 @@ const SPRITES = {
 
     // Body (loaf shape) — subtle breathing
     var bodyY = y + Math.round(breathe);
+    var earOffset = earFlick ? -1 : 0;
+
+    // Dark outline so cats stand out against any floor colour
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(x + 6, bodyY + 1 + earOffset, 5, 4);   // left ear outline
+    ctx.fillRect(x + 13, bodyY + 1 + earOffset, 5, 4);  // right ear outline
+    ctx.fillRect(x + 5, bodyY + 2, 14, 10);             // head outline
+    ctx.fillRect(x + 4, bodyY + 9, 16, 10);             // body outline
+
     ctx.fillStyle = color;
     ctx.fillRect(x + 5, bodyY + 10, 14, 8);
     ctx.fillRect(x + 6, bodyY + 9, 12, 1);
@@ -1578,7 +1587,6 @@ const SPRITES = {
     ctx.fillRect(x + 8, bodyY + 3, 8, 1);
 
     // Ears (triangular) — with occasional flick
-    var earOffset = earFlick ? -1 : 0;
     ctx.fillRect(x + 7, bodyY + 2 + earOffset, 3, 3);
     ctx.fillRect(x + 14, bodyY + 2 + earOffset, 3, 3);
     // Inner ears
@@ -2734,14 +2742,14 @@ function drawInteractables(floor) {
         break;
       case 'cat_alice':
         SPRITES.catTree(x, y);
-        SPRITES.cat(x, y - 4, '#cfb68b', '#e6d2aa'); // warm tan coat from portrait
+        SPRITES.cat(x, y - 4, '#c8722e', '#f0c070'); // richer orange-tan coat from portrait
         break;
       case 'front_door':
         SPRITES.door(x, y, !gameState.flags.front_door_unlocked);
         break;
       case 'cat_olive':
         SPRITES.treadmill(x, y);
-        SPRITES.cat(x, y - 2, '#9ea6b3', '#d6dce8'); // cool blue-gray coat from portrait
+        SPRITES.cat(x, y - 2, '#6b92c8', '#c2d8f0'); // cool blue coat from portrait
         break;
       case 'cat_beatrice':
         SPRITES.bed(x, y, true);
@@ -3198,8 +3206,8 @@ function drawMinimap() {
   for (var i = 0; i < floor.interactables.length; i++) {
     var obj = floor.interactables[i];
     if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
-      var catColor = obj.type === 'cat_alice' ? '#cfb68b' :
-        obj.type === 'cat_olive' ? '#9ea6b3' : '#21211f';
+      var catColor = obj.type === 'cat_alice' ? '#c8722e' :
+        obj.type === 'cat_olive' ? '#6b92c8' : '#21211f';
       ctx.fillStyle = catColor;
       ctx.fillRect(offsetX + obj.col * dotSize, offsetY + obj.row * dotSize, dotSize, dotSize);
     }
