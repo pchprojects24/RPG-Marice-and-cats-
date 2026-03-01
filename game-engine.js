@@ -3608,12 +3608,45 @@ function loadGame() {
     if (!raw) return false;
     const data = JSON.parse(raw);
 
-    gameState.currentFloor = data.currentFloor || FLOOR_IDS.OUTSIDE;
-    gameState.player.row = data.player.row;
-    gameState.player.col = data.player.col;
-    gameState.player.facing = data.player.facing || 'down';
-    gameState.inventory = data.inventory || [];
-    gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] }, data.flags || {});
+    const validFloorIds = Object.values(FLOOR_IDS);
+    const floorId = validFloorIds.includes(data.currentFloor) ? data.currentFloor : FLOOR_IDS.OUTSIDE;
+    const floor = FLOORS[floorId] || FLOORS[FLOOR_IDS.OUTSIDE];
+
+    const startsByFloor = {
+      outside: outsideStart,
+      main: mainFloorStart,
+      basement: basementStart,
+      upstairs: upstairsStart
+    };
+    const floorStart = startsByFloor[floorId] || outsideStart;
+
+    const savedRow = data.player && Number.isFinite(data.player.row) ? data.player.row : floorStart.row;
+    const savedCol = data.player && Number.isFinite(data.player.col) ? data.player.col : floorStart.col;
+    const inBounds =
+      savedRow >= 0 && savedRow < MAP_ROWS &&
+      savedCol >= 0 && savedCol < MAP_COLS;
+
+    // Recover gracefully from malformed/old save data that points to walls or invalid tiles.
+    const canStandHere = inBounds && isWalkable(savedRow, savedCol, floor);
+    const validFacing = ['up', 'down', 'left', 'right'];
+
+    const validItems = Object.values(ITEMS);
+    const inventory = Array.isArray(data.inventory)
+      ? data.inventory.filter(function (item) { return validItems.includes(item); })
+      : [];
+
+    const mergedFlags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] }, data.flags || {});
+    const validToyIds = ['jingle_ball', 'feather_wand', 'laser_pointer'];
+    mergedFlags.cat_toys_found = Array.isArray(mergedFlags.cat_toys_found)
+      ? Array.from(new Set(mergedFlags.cat_toys_found.filter(function (toyId) { return validToyIds.includes(toyId); })))
+      : [];
+
+    gameState.currentFloor = floorId;
+    gameState.player.row = canStandHere ? savedRow : floorStart.row;
+    gameState.player.col = canStandHere ? savedCol : floorStart.col;
+    gameState.player.facing = validFacing.includes(data.player && data.player.facing) ? data.player.facing : 'down';
+    gameState.inventory = inventory;
+    gameState.flags = mergedFlags;
 
     return true;
   } catch (e) {
@@ -3691,4 +3724,3 @@ function loadSettings() {
     }
   } catch (e) { }
 }
-
