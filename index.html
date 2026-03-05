@@ -63,8 +63,9 @@
 
     <!-- Controls hint overlay (first-time) -->
     <div id="controls-hint">
-      <div>WASD / Arrows to move</div>
-      <div>E / Space to interact</div>
+      <div>WASD / Arrows: Move</div>
+      <div>E / Space: Interact</div>
+      <div>Q: Quest Log &nbsp; P: Pause</div>
     </div>
 
     <!-- Floor transition fade overlay -->
@@ -161,6 +162,7 @@
         <span id="stat-toys">🐾 Toys: 0/3</span>
       </div>
       <button id="btn-restart" class="title-btn">Play Again</button>
+      <button id="btn-ending-title" class="title-btn" style="font-size:14px;padding:10px 28px;">Back to Title</button>
     </div>
 
     <!-- Pause Overlay -->
@@ -250,9 +252,9 @@
 
     <!-- Bottom Action Buttons -->
     <div id="bottom-buttons">
-      <button id="btn-hint" class="hud-btn" aria-label="Get hint">💡</button>
-      <button id="btn-toggle-quest" class="hud-btn">📋</button>
-      <button id="btn-toggle-settings" class="hud-btn">⚙️</button>
+      <button id="btn-hint" class="hud-btn" aria-label="Get hint" title="Hint (💡)">💡</button>
+      <button id="btn-toggle-quest" class="hud-btn" aria-label="Quest log" title="Quest Log (Q)">📋</button>
+      <button id="btn-toggle-settings" class="hud-btn" aria-label="Settings" title="Settings">⚙️</button>
     </div>
 
   </div>

@@ -21,6 +21,9 @@ const ITEMS = {
 
 // ======================== GLOBALS ========================
 
+// The front-door code is encoded in the riddle: 3 cats + 1 Marice = 4 → "3141"
+const FRONT_DOOR_CODE = '3141';
+
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -30,13 +33,18 @@ const CANVAS_H = MAP_ROWS * TILE_SIZE; // 360
 canvas.width = CANVAS_W;
 canvas.height = CANVAS_H;
 
-// Scale canvas for display
+// Scale canvas for display.
+// Reserve space for the HUD bar (~32px) and the mobile controls / inventory
+// area at the bottom (~170px), with a small horizontal margin.
 function resizeCanvas() {
-  const maxW = window.innerWidth - 10;
-  const maxH = window.innerHeight - 180;
-  const scaleW = maxW / CANVAS_W;
-  const scaleH = maxH / CANVAS_H;
-  const scale = Math.min(scaleW, scaleH, 3);
+  var hudH = 32;
+  var bottomH = 170;
+  var margin = 10;
+  var maxW = window.innerWidth - margin * 2;
+  var maxH = window.innerHeight - hudH - bottomH;
+  var scaleW = maxW / CANVAS_W;
+  var scaleH = maxH / CANVAS_H;
+  var scale = Math.min(scaleW, scaleH, 3);
   canvas.style.width = (CANVAS_W * scale) + 'px';
   canvas.style.height = (CANVAS_H * scale) + 'px';
 }
@@ -689,6 +697,11 @@ function getNextTaskHint() {
       ? 'Find Beatrice upstairs and give her the feast plate.'
       : 'Find a Shrimp & Salmon Feast plate in the kitchen cupboards.';
   }
+  // Side-quest: cat toys
+  if (!gameState.flags.cat_toys_found || gameState.flags.cat_toys_found.length < 3) {
+    var found = gameState.flags.cat_toys_found ? gameState.flags.cat_toys_found.length : 0;
+    return 'Hidden cat toys: ' + found + '/3 found. Check behind furniture!';
+  }
   return null;
 }
 
@@ -918,56 +931,27 @@ function getCurrentFloor() {
   return FLOORS[gameState.currentFloor];
 }
 
-function changeFloor(newFloor) {
-  var overlay = document.getElementById('transition-overlay');
-  var label = document.getElementById('transition-label');
-  var floorNames = {
-    [FLOOR_IDS.OUTSIDE]: 'Front Entry',
-    [FLOOR_IDS.MAIN]: 'Main Floor',
-    [FLOOR_IDS.BASEMENT]: 'Basement',
-    [FLOOR_IDS.UPSTAIRS]: 'Upstairs'
-  };
+// Unified floor-change helper.
+// When row/col are omitted the floor's default start position is used.
+const FLOOR_NAMES = {
+  [FLOOR_IDS.OUTSIDE]: 'Front Entry',
+  [FLOOR_IDS.MAIN]: 'Main Floor',
+  [FLOOR_IDS.BASEMENT]: 'Basement',
+  [FLOOR_IDS.UPSTAIRS]: 'Upstairs'
+};
 
-  label.textContent = floorNames[newFloor] || newFloor;
-  overlay.classList.add('active');
-
-  setTimeout(function () {
-    // Switch floor while screen is black
-    gameState.currentFloor = newFloor;
-    var floor = FLOORS[newFloor];
-    gameState.player.row = floor.start.row;
-    gameState.player.col = floor.start.col;
-    gameState.player.facing = 'down';
-    updateFloorLabel();
-    saveGame();
-    startMusic(newFloor);
-    startAmbient(newFloor);
-
-    // Fade back in
-    setTimeout(function () {
-      overlay.classList.remove('active');
-    }, 400);
-  }, 350);
-}
-
-// Change floor with custom spawn position (used by stair returns)
 function changeFloorTo(newFloor, row, col, facing) {
   var overlay = document.getElementById('transition-overlay');
   var label = document.getElementById('transition-label');
-  var floorNames = {
-    [FLOOR_IDS.OUTSIDE]: 'Front Entry',
-    [FLOOR_IDS.MAIN]: 'Main Floor',
-    [FLOOR_IDS.BASEMENT]: 'Basement',
-    [FLOOR_IDS.UPSTAIRS]: 'Upstairs'
-  };
 
-  label.textContent = floorNames[newFloor] || newFloor;
+  label.textContent = FLOOR_NAMES[newFloor] || newFloor;
   overlay.classList.add('active');
 
   setTimeout(function () {
     gameState.currentFloor = newFloor;
-    gameState.player.row = row;
-    gameState.player.col = col;
+    var floor = FLOORS[newFloor];
+    gameState.player.row = (row !== undefined) ? row : floor.start.row;
+    gameState.player.col = (col !== undefined) ? col : floor.start.col;
     gameState.player.facing = facing || 'down';
     updateFloorLabel();
     saveGame();
@@ -980,11 +964,24 @@ function changeFloorTo(newFloor, row, col, facing) {
   }, 350);
 }
 
+// Convenience wrapper — use floor's default start position.
+function changeFloor(newFloor) {
+  changeFloorTo(newFloor, undefined, undefined, 'down');
+}
+
 function updateFloorLabel() {
   document.getElementById('floor-label').textContent = getCurrentFloor().name;
 }
 
 // ======================== COLLISION & MOVEMENT ========================
+
+// Returns true when a tile can be stood on (not a wall, furniture, or counter).
+// Used by loadGame to validate saved player positions.
+function isWalkable(row, col, floor) {
+  if (row < 0 || row >= MAP_ROWS || col < 0 || col >= MAP_COLS) return false;
+  const tile = floor.grid[row][col];
+  return tile !== T.WALL && tile !== T.FURNITURE && tile !== T.COUNTER;
+}
 
 function isTileBlocked(floor, row, col) {
   if (row < 0 || row >= MAP_ROWS || col < 0 || col >= MAP_COLS) return true;
@@ -1160,7 +1157,7 @@ function handleInteraction(obj) {
       }
       startDialogue('front_door_locked', null, function () {
         showNumpad(function (code) {
-          const validCodes = ['3141'];
+          const validCodes = [FRONT_DOOR_CODE];
           if (validCodes.includes(code)) {
             gameState.flags.front_door_unlocked = true;
             triggerScreenShake(4, 12);
@@ -1286,7 +1283,12 @@ function handleInteraction(obj) {
     // ---- BEATRICE ----
     case 'cat_beatrice':
       if (gameState.flags.beatrice_fed) {
-        showEnding();
+        // Game already complete — show a short post-game dialogue then re-show the ending
+        startDialogue('beatrice_done', 'beatrice', function () {
+          if (!document.getElementById('ending-overlay').classList.contains('active')) {
+            showEnding();
+          }
+        });
       } else if (hasItem(ITEMS.PURRPOPS) && !hasItem(ITEMS.FEAST_PLATE)) {
         startDialogue('beatrice_wrong_item', 'beatrice', null);
       } else if (hasItem(ITEMS.FEAST_PLATE)) {
@@ -1485,13 +1487,25 @@ function handleInteraction(obj) {
         var toyName = toyNames[obj.toyId] || 'Cat Toy';
         var total = gameState.flags.cat_toys_found.length;
         startDialogue('cat_toy_' + obj.toyId, null, function () {
-          showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
-          triggerScreenShake(3, 10);
           var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
           var py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
-          spawnParticles(px, py, 10, '#ff69b4');
-          spawnTextParticle(px, py - 20, '🐾', '#ff69b4');
-          playSfx('item_pickup');
+          if (total === 3) {
+            // All toys found — big celebration!
+            showToast('All 3 cat toys found! ✨', 4000);
+            triggerScreenShake(6, 20);
+            triggerHaptic(60);
+            spawnParticles(px, py, 20, '#ffd700');
+            spawnParticles(px, py, 10, '#ff69b4');
+            spawnTextParticle(px, py - 25, '✨', '#ffd700');
+            spawnTextParticle(px, py - 35, '🐾', '#ff69b4');
+            playSfx('cat_fed');
+          } else {
+            showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
+            triggerScreenShake(3, 10);
+            spawnParticles(px, py, 10, '#ff69b4');
+            spawnTextParticle(px, py - 20, '🐾', '#ff69b4');
+            playSfx('item_pickup');
+          }
           saveGameImmediate();
         });
       }
@@ -3299,6 +3313,7 @@ function drawMinimap() {
   var floor = getCurrentFloor();
   var grid = floor.grid;
   var dotSize = 2;
+  var catDotSize = 4; // cats rendered larger for visibility
   var padding = 4;
   var mapW = MAP_COLS * dotSize;
   var mapH = MAP_ROWS * dotSize;
@@ -3307,10 +3322,16 @@ function drawMinimap() {
 
   // Background
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-  ctx.fillRect(offsetX - 2, offsetY - 2, mapW + 4, mapH + 4);
+  ctx.fillRect(offsetX - 2, offsetY - 12, mapW + 4, mapH + 16);
   ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(offsetX - 2, offsetY - 2, mapW + 4, mapH + 4);
+  ctx.strokeRect(offsetX - 2, offsetY - 12, mapW + 4, mapH + 16);
+  // "MAP" label
+  ctx.fillStyle = 'rgba(255,215,0,0.7)';
+  ctx.font = '6px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('MAP', offsetX + mapW / 2, offsetY - 3);
+  ctx.textAlign = 'left';
 
   // Draw tiles
   for (var r = 0; r < MAP_ROWS; r++) {
@@ -3333,14 +3354,23 @@ function drawMinimap() {
     }
   }
 
-  // Draw interactable markers (cats show as colored dots)
+  // Draw interactable markers (cats shown as larger, distinct dots)
+  // Fed cats get a gold ring; unfed cats get a white ring.
   for (var i = 0; i < floor.interactables.length; i++) {
     var obj = floor.interactables[i];
     if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
+      var catName = obj.type.replace('cat_', '');
+      var isFed = gameState.flags[catName + '_fed'];
       var catColor = obj.type === 'cat_alice' ? '#c8722e' :
-        obj.type === 'cat_olive' ? '#6b92c8' : '#21211f';
+        obj.type === 'cat_olive' ? '#6b92c8' : '#aaaaaa';
+      var cx2 = offsetX + obj.col * dotSize;
+      var cy2 = offsetY + obj.row * dotSize;
+      // Ring: gold if fed, white if not
+      ctx.fillStyle = isFed ? 'rgba(255,215,0,0.7)' : 'rgba(255,255,255,0.35)';
+      ctx.fillRect(cx2 - 1, cy2 - 1, catDotSize + 2, catDotSize + 2);
+      // Cat dot
       ctx.fillStyle = catColor;
-      ctx.fillRect(offsetX + obj.col * dotSize, offsetY + obj.row * dotSize, dotSize, dotSize);
+      ctx.fillRect(cx2, cy2, catDotSize, catDotSize);
     }
   }
 
@@ -3479,6 +3509,18 @@ document.addEventListener('keydown', function (e) {
     return;
   }
 
+  // Q / I key toggles quest log
+  if (e.code === 'KeyQ' || e.code === 'KeyI') {
+    var qp = document.getElementById('quest-panel');
+    var sp = document.getElementById('settings-panel');
+    if (qp) {
+      qp.classList.toggle('active');
+      if (sp) sp.classList.remove('active');
+    }
+    e.preventDefault();
+    return;
+  }
+
   // Block all other game input when paused
   if (gamePaused) return;
 
@@ -3503,7 +3545,17 @@ document.addEventListener('keyup', function (e) {
 });
 
 window.addEventListener('blur', function () {
+  // Clear all held keys so movement doesn't continue after alt-tab / focus loss
   Object.keys(keysDown).forEach(function (key) { keysDown[key] = false; });
+  // Also stop any in-progress movement to prevent the player sliding into walls
+  if (gameState.moving) {
+    gameState.player.row = gameState.moveTo ? gameState.moveTo.row : gameState.player.row;
+    gameState.player.col = gameState.moveTo ? gameState.moveTo.col : gameState.player.col;
+    gameState.moving = false;
+    gameState.moveProgress = 0;
+    gameState.moveFrom = null;
+    gameState.moveTo = null;
+  }
 });
 
 // Mobile D-Pad

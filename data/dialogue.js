@@ -103,6 +103,13 @@ const DIALOGUE = {
     { speaker: 'Beatrice', text: "Shrimp & Salmon Feast. On a plate. Like a civilized meal. That is my price for emerging from this cocoon." }
   ],
 
+  // Beatrice — already fed (game complete)
+  beatrice_done: [
+    { speaker: 'Beatrice', text: "*purring loudly* I am content. The feast was acceptable." },
+    { speaker: 'Marice', text: "You're adorable when you're full, Beatrice." },
+    { speaker: 'Beatrice', text: "I am always adorable. Now come to bed, all of us." }
+  ],
+
   // Generic wrong item (e.g. key, laundry basket) when offering to a cat
   cat_wrong_item_generic: [
     { speaker: 'Marice', text: "I don't think that's what they want right now." }
@@ -264,7 +271,7 @@ const DIALOGUE = {
   ],
 
   exercise_bike: [
-    { speaker: 'Marice', text: "Stationary bike. Olive uses this area as her fortress of solitude." }
+    { speaker: 'Marice', text: "Stationary bike. Good for cardio, better for Olive to sit on and judge me." }
   ],
 
   yoga_mat: [

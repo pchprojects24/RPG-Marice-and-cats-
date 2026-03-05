@@ -71,6 +71,12 @@ html, body {
 
 #interact-prompt.visible {
   opacity: 1;
+  animation: promptPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes promptPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
 }
 
 /* ======================== Save Indicator ======================== */
@@ -97,7 +103,7 @@ html, body {
 /* ======================== Controls Hint ======================== */
 #controls-hint {
   position: absolute;
-  bottom: 170px;
+  bottom: 215px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -113,6 +119,7 @@ html, body {
   opacity: 1;
   transition: opacity 1s ease;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 #controls-hint.hidden {
@@ -316,15 +323,19 @@ html, body {
   bottom: 0;
   background: rgba(0, 0, 0, 0.8);
   z-index: 100;
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 
 #dialogue-overlay.active {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 #dialogue-box {
@@ -431,7 +442,8 @@ html, body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #1a1a2e 0%, #2d1b3d 50%, #1a1a2e 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d1b3d 35%, #16213e 65%, #1a1a2e 100%);
+  background-size: 300% 300%;
   z-index: 200;
   display: flex;
   flex-direction: column;
@@ -662,22 +674,28 @@ html, body {
   bottom: 0;
   background: rgba(0, 0, 0, 0.9);
   z-index: 150;
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 16px;
   padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
 }
 
 #ending-overlay.active {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 #ending-overlay h1 {
   font-size: 26px;
   color: #ffd700;
   text-align: center;
+  text-shadow: 0 0 12px rgba(255,215,0,0.8), 0 0 24px rgba(255,215,0,0.4);
+  animation: titleGlow 2s ease-in-out infinite alternate;
 }
 
 #ending-bed {
@@ -977,7 +995,7 @@ html, body {
   background: rgba(60, 45, 30, 0.95);
   border-color: #ffd700;
   transform: scale(1.1);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5), 0 0 8px rgba(255,215,0,0.25);
 }
 
 .hud-btn:active {

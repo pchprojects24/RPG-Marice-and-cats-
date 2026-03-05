@@ -72,6 +72,11 @@ function setupNumpad() {
 
 function showTitleScreen() {
   document.getElementById('title-screen').style.display = 'flex';
+  // Re-evaluate whether a save exists so Continue button reflects current state
+  var continueBtn = document.getElementById('btn-continue');
+  if (continueBtn) {
+    continueBtn.style.display = loadGame() ? 'inline-block' : 'none';
+  }
 }
 
 function hideTitleScreen() {
@@ -204,6 +209,17 @@ function init() {
     restartGame();
   });
 
+  // Ending screen — back to title
+  var btnEndingTitle = document.getElementById('btn-ending-title');
+  if (btnEndingTitle) {
+    btnEndingTitle.addEventListener('click', function () {
+      hideEnding();
+      stopMusic();
+      stopAmbient();
+      showTitleScreen();
+    });
+  }
+
   // Dialogue overlay click to advance
   dialogueOverlay.addEventListener('click', function () {
     advanceDialogue();
@@ -322,12 +338,27 @@ function init() {
     settingsPanel.classList.remove('active');
   });
 
-  // Live-update toggles
+  // Live-update toggles — also persist immediately so changes survive a reload
   var crtCheckbox = document.getElementById('crt-overlay-enabled');
-  if (crtCheckbox) crtCheckbox.addEventListener('change', applyCrtSetting);
+  if (crtCheckbox) crtCheckbox.addEventListener('change', function () {
+    applyCrtSetting();
+    saveSettings();
+  });
 
   var musicMuteCheckbox = document.getElementById('music-mute');
-  if (musicMuteCheckbox) musicMuteCheckbox.addEventListener('change', updateAudioVolumes);
+  if (musicMuteCheckbox) musicMuteCheckbox.addEventListener('change', function () {
+    updateAudioVolumes();
+    saveSettings();
+  });
+
+  var screenShakeCheckbox = document.getElementById('screen-shake');
+  if (screenShakeCheckbox) screenShakeCheckbox.addEventListener('change', saveSettings);
+
+  var particleCheckbox = document.getElementById('particle-effects');
+  if (particleCheckbox) particleCheckbox.addEventListener('change', saveSettings);
+
+  var typewriterCheckbox = document.getElementById('typewriter-sound');
+  if (typewriterCheckbox) typewriterCheckbox.addEventListener('change', saveSettings);
 
   // Start game loop
   requestAnimationFrame(gameLoop);
