@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Birthday! 🎂</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: linear-gradient(135deg, #fff0f6 0%, #fce4ec 40%, #e8f5e9 100%);
+      min-height: 100vh;
+      color: #3a2a2a;
+    }
+
+    /* ── Confetti canvas ── */
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Page wrapper ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+
+    /* ── Hero header ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .hero .tag {
+      display: inline-block;
+      background: #e91e8c;
+      color: #fff;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 8vw, 4.2rem);
+      font-weight: 900;
+      line-height: 1.1;
+      background: linear-gradient(90deg, #e91e8c, #ff6f00, #e91e8c);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 3s linear infinite;
+    }
+
+    @keyframes shimmer {
+      to { background-position: 200% center; }
+    }
+
+    .hero .subtitle {
+      margin-top: 12px;
+      font-size: 1.25rem;
+      color: #7b3f6e;
+      font-style: italic;
+    }
+
+    /* ── Balloons row ── */
+    .balloons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      font-size: 2.6rem;
+      margin: 18px 0 28px;
+      animation: float 3s ease-in-out infinite alternate;
+    }
+    @keyframes float {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-10px); }
+    }
+
+    /* ── Cat trio section ── */
+    .cats-section {
+      background: rgba(255,255,255,0.75);
+      border-radius: 24px;
+      padding: 32px 28px;
+      margin-bottom: 36px;
+      box-shadow: 0 8px 32px rgba(233,30,140,0.10);
+      text-align: center;
+    }
+
+    .cats-section h2 {
+      font-size: 1.6rem;
+      color: #c2185b;
+      margin-bottom: 8px;
+    }
+
+    .cats-section .intro {
+      font-size: 1.05rem;
+      color: #5d4037;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+
+    .cat-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .cat-card {
+      background: #fff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.10);
+      width: 220px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .cat-card:hover {
+      transform: translateY(-6px) rotate(-1deg);
+      box-shadow: 0 12px 32px rgba(233,30,140,0.18);
+    }
+
+    .cat-card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .cat-card .cat-name {
+      padding: 10px 0 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ad1457;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Message card ── */
+    .message-card {
+      background: linear-gradient(135deg, #fff9c4, #fff3e0);
+      border: 2px dashed #ffb300;
+      border-radius: 20px;
+      padding: 30px 32px;
+      margin-bottom: 36px;
+      text-align: center;
+      box-shadow: 0 6px 24px rgba(255,179,0,0.15);
+    }
+
+    .message-card .big-emoji {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    .message-card p {
+      font-size: 1.15rem;
+      line-height: 1.8;
+      color: #4e342e;
+    }
+
+    .message-card .sig {
+      margin-top: 18px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #e91e8c;
+    }
+
+    /* ── Calgary note ── */
+    .calgary-note {
+      background: rgba(255,255,255,0.80);
+      border-left: 5px solid #1565c0;
+      border-radius: 0 16px 16px 0;
+      padding: 20px 24px;
+      margin-bottom: 40px;
+      font-size: 1.05rem;
+      color: #1a237e;
+      line-height: 1.7;
+      box-shadow: 0 4px 16px rgba(21,101,192,0.10);
+    }
+
+    .calgary-note strong {
+      display: block;
+      font-size: 1.15rem;
+      margin-bottom: 6px;
+      color: #0d47a1;
+    }
+
+    /* ── Carousel section ── */
+    .carousel-section {
+      text-align: center;
+    }
+
+    .carousel-section h2 {
+      font-size: 1.6rem;
+      color: #c2185b;
+      margin-bottom: 20px;
+    }
+
+    .carousel-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.18);
+      background: #111;
+    }
+
+    .carousel-track {
+      display: flex;
+      transition: transform 0.7s cubic-bezier(0.77,0,0.18,1);
+    }
+
+    .carousel-slide {
+      min-width: 100%;
+      position: relative;
+    }
+
+    .carousel-slide img {
+      width: 100%;
+      height: 480px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .carousel-caption {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.65));
+      color: #fff;
+      padding: 28px 20px 16px;
+      font-size: 1rem;
+      font-style: italic;
+    }
+
+    /* Arrows */
+    .carousel-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.25);
+      border: none;
+      color: #fff;
+      font-size: 1.8rem;
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s;
+      z-index: 10;
+      line-height: 1;
+    }
+    .carousel-btn:hover { background: rgba(255,255,255,0.45); }
+    .carousel-btn.prev { left: 12px; }
+    .carousel-btn.next { right: 12px; }
+
+    /* Dots */
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #ccc;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    .dot.active {
+      background: #e91e8c;
+      transform: scale(1.3);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 0.9rem;
+      color: #9e9e9e;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .cat-card { width: 160px; }
+      .cat-card img { height: 160px; }
+      .carousel-slide img { height: 300px; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div class="page">
+
+  <!-- ── Hero ── -->
+  <header class="hero">
+    <div class="tag">Today is your special day</div>
+    <h1>Happy Birthday, Mona!</h1>
+    <p class="subtitle">Wishing you all the love, laughter &amp; cake you deserve 🎂</p>
+  </header>
+
+  <div class="balloons">🎈🎉🎂🎊🎈</div>
+
+  <!-- ── Cats ── -->
+  <section class="cats-section">
+    <h2>Greetings from the Fur Crew!</h2>
+    <p class="intro">
+      We tried to get them to sign a card, but they were too busy napping and knocking things off tables.
+      They insisted we pass along their warmest birthday purrs! 🐾
+    </p>
+    <div class="cat-grid">
+      <div class="cat-card">
+        <img src="images/alice.webp" alt="Alice the cat" />
+        <div class="cat-name">Alice 🐱</div>
+      </div>
+      <div class="cat-card">
+        <img src="images/olive.webp" alt="Olive the cat" />
+        <div class="cat-name">Olive 🐱</div>
+      </div>
+      <div class="cat-card">
+        <img src="images/beatrice.webp" alt="Beatrice the cat" />
+        <div class="cat-name">Beatrice 🐱</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Message ── -->
+  <div class="message-card">
+    <div class="big-emoji">💝</div>
+    <p>
+      Happy Birthday, Mona — the most wonderful mom!<br />
+      Today is all about you — we hope it's filled with joy, good food,
+      and absolutely zero responsibilities. You deserve every bit of it!
+      <br /><br />
+      Alice, Olive, and Beatrice would have baked you a cake,
+      but they can't be trusted near the kitchen counter.
+      They did, however, knock something over in your honour. 🐾
+    </p>
+    <div class="sig">With all our love — Chad &amp; Marice xo<br/>
+      <span style="font-size:0.9rem; font-weight:400; color:#7b3f6e;">
+        (and Alice, Olive &amp; Beatrice — who are definitely not plotting anything)
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Calgary note ── -->
+  <div class="calgary-note">
+    <strong>✈️ Welcome Home from Calgary!</strong>
+    We hope you had the most amazing trip to Calgary &amp; Banff!
+    Those mountain views looked absolutely breathtaking — we're so glad you got to experience that.
+    Now that you're back home safe and sound, it's time to put your feet up and celebrate your birthday in style. 🏔️🎉
+  </div>
+
+  <!-- ── Carousel ── -->
+  <section class="carousel-section">
+    <h2>📸 Memories &amp; Moments</h2>
+
+    <div class="carousel-wrapper">
+      <div class="carousel-track" id="track">
+
+        <div class="carousel-slide">
+          <img src="images/mom-dog.webp" alt="Relaxing at home" />
+          <div class="carousel-caption">Perfectly relaxed — the only way to be! 😄</div>
+        </div>
+
+        <div class="carousel-slide">
+          <img src="images/card-game.webp" alt="Card game fun" />
+          <div class="carousel-caption">Game night — looking like a winning hand! 🃏</div>
+        </div>
+
+        <div class="carousel-slide">
+          <img src="images/calgary-transit.webp" alt="Calgary transit adventure" />
+          <div class="carousel-caption">Exploring Calgary — transit style! 🚇</div>
+        </div>
+
+        <div class="carousel-slide">
+          <img src="images/calgary-skyline.webp" alt="Calgary skyline view" />
+          <div class="carousel-caption">That Calgary skyline view is absolutely stunning! 🏙️</div>
+        </div>
+
+        <div class="carousel-slide">
+          <img src="images/banff.jpg" alt="Banff sign" />
+          <div class="carousel-caption">Banff! What a beautiful place to visit! 🏔️❄️</div>
+        </div>
+
+      </div>
+
+      <button class="carousel-btn prev" id="prevBtn" aria-label="Previous">&#8249;</button>
+      <button class="carousel-btn next" id="nextBtn" aria-label="Next">&#8250;</button>
+    </div>
+
+    <div class="carousel-dots" id="dots"></div>
+  </section>
+
+  <footer>
+    Made with love for Mona, by Chad &amp; Marice &nbsp;|&nbsp; Alice, Olive &amp; Beatrice approve this message 🐾
+  </footer>
+
+</div>
+
+<!-- ── Scripts ── -->
+<script>
+  /* ── Carousel ── */
+  const track   = document.getElementById('track');
+  const slides  = track.querySelectorAll('.carousel-slide');
+  const dotsEl  = document.getElementById('dots');
+  let current   = 0;
+  let timer;
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('button');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  });
+
+  function updateDots() {
+    dotsEl.querySelectorAll('.dot').forEach((d, i) =>
+      d.classList.toggle('active', i === current));
+  }
+
+  function goTo(n) {
+    current = (n + slides.length) % slides.length;
+    track.style.transform = `translateX(-${current * 100}%)`;
+    updateDots();
+    resetTimer();
+  }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => goTo(current + 1), 4000);
+  }
+
+  document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+
+  resetTimer();
+
+  /* ── Confetti ── */
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx    = canvas.getContext('2d');
+  const colors = ['#e91e8c','#ff6f00','#ffb300','#1565c0','#43a047','#ab47bc'];
+  let pieces   = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function spawn() {
+    for (let i = 0; i < 6; i++) {
+      pieces.push({
+        x: Math.random() * canvas.width,
+        y: -10,
+        w: 8 + Math.random() * 8,
+        h: 4 + Math.random() * 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        angle: Math.random() * Math.PI * 2,
+        spin:  (Math.random() - 0.5) * 0.15,
+        vx:    (Math.random() - 0.5) * 2,
+        vy:    1.5 + Math.random() * 2,
+        alpha: 1
+      });
+    }
+  }
+
+  function drawConfetti() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+      p.x     += p.vx;
+      p.y     += p.vy;
+      p.angle += p.spin;
+      if (p.y > canvas.height * 0.6) p.alpha -= 0.012;
+    });
+    pieces = pieces.filter(p => p.alpha > 0);
+    requestAnimationFrame(drawConfetti);
+  }
+
+  setInterval(spawn, 300);
+  drawConfetti();
+</script>
+
+</body>
+</html>
