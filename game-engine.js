@@ -34,25 +34,50 @@ canvas.width = CANVAS_W;
 canvas.height = CANVAS_H;
 
 // Scale canvas for display.
-// Reserve space for the HUD bar (~32px) and the mobile controls / inventory
-// area at the bottom (~170px), with a small horizontal margin.
+// Reserve space for HUD and on-screen controls, with a small margin.
 function resizeCanvas() {
+  var desktopLike = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  var vv = window.visualViewport;
+  var viewportW = vv ? vv.width : window.innerWidth;
+  var viewportH = vv ? vv.height : window.innerHeight;
+
   var hudEl = document.getElementById('hud');
   var hudH = hudEl ? hudEl.getBoundingClientRect().height : 32;
 
+  function bottomReserveFromElement(el) {
+    if (!el || el.offsetParent === null) return 0;
+    var r = el.getBoundingClientRect();
+    return Math.max(0, viewportH - r.top + 10);
+  }
+
   // On desktop, touch controls are hidden via CSS, so reserve less space.
-  var desktopLike = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  var bottomH = desktopLike ? 90 : 190;
+  var bottomH = desktopLike ? 90 : 0;
+  bottomH = Math.max(
+    bottomH,
+    bottomReserveFromElement(document.getElementById('mobile-controls')),
+    bottomReserveFromElement(document.getElementById('inventory-bar')),
+    bottomReserveFromElement(document.getElementById('bottom-buttons')),
+    bottomReserveFromElement(document.getElementById('controls-hint'))
+  );
+
   var margin = 10;
-  var maxW = window.innerWidth - margin * 2;
-  var maxH = window.innerHeight - hudH - bottomH;
+  var maxW = viewportW - margin * 2;
+  var maxH = viewportH - hudH - bottomH;
+  if (maxW <= 0 || maxH <= 0) return;
   var scaleW = maxW / CANVAS_W;
   var scaleH = maxH / CANVAS_H;
   var scale = Math.min(scaleW, scaleH, 3);
+  if (!isFinite(scale) || scale <= 0) scale = 1;
   canvas.style.width = (CANVAS_W * scale) + 'px';
   canvas.style.height = (CANVAS_H * scale) + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeCanvas);
+  window.visualViewport.addEventListener('scroll', resizeCanvas);
+}
 resizeCanvas();
 
 // ======================== GAME STATE ========================
@@ -3752,25 +3777,52 @@ function setupMobileControls() {
     const btn = document.getElementById(id);
     if (!btn) continue;
 
-    let interval = null;
+    var codeByDir = {
+      up: 'ArrowUp',
+      down: 'ArrowDown',
+      left: 'ArrowLeft',
+      right: 'ArrowRight'
+    };
 
-    function startMove(e) {
-      e.preventDefault();
-      tryMove(dir);
-      interval = setInterval(function () { tryMove(dir); }, 150);
+    function clearDpadKeys() {
+      keysDown.ArrowUp = false;
+      keysDown.ArrowDown = false;
+      keysDown.ArrowLeft = false;
+      keysDown.ArrowRight = false;
     }
 
-    function stopMove(e) {
+    function onDown(e) {
       e.preventDefault();
-      if (interval) { clearInterval(interval); interval = null; }
+      markPlayerActivity();
+      clearDpadKeys();
+      keysDown[codeByDir[dir]] = true;
+      // Ensure immediate response on tap (not just "held" movement).
+      if (!dialogueActive && !gameState.moving && !gamePaused) {
+        tryMove(dir);
+      }
+      if (btn.setPointerCapture && e.pointerId !== undefined) {
+        try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+      }
     }
 
-    btn.addEventListener('touchstart', startMove, { passive: false });
-    btn.addEventListener('mousedown', startMove);
-    btn.addEventListener('touchend', stopMove, { passive: false });
-    btn.addEventListener('touchcancel', stopMove, { passive: false });
-    btn.addEventListener('mouseup', stopMove);
-    btn.addEventListener('mouseleave', stopMove);
+    function onUp(e) {
+      e.preventDefault();
+      keysDown[codeByDir[dir]] = false;
+    }
+
+    if (window.PointerEvent) {
+      btn.addEventListener('pointerdown', onDown);
+      btn.addEventListener('pointerup', onUp);
+      btn.addEventListener('pointercancel', onUp);
+      btn.addEventListener('pointerleave', onUp);
+    } else {
+      btn.addEventListener('touchstart', onDown, { passive: false });
+      btn.addEventListener('mousedown', onDown);
+      btn.addEventListener('touchend', onUp, { passive: false });
+      btn.addEventListener('touchcancel', onUp, { passive: false });
+      btn.addEventListener('mouseup', onUp);
+      btn.addEventListener('mouseleave', onUp);
+    }
   }
 
   // Interact button
@@ -3778,6 +3830,7 @@ function setupMobileControls() {
   if (interactBtn) {
     function doInteract(e) {
       e.preventDefault();
+      markPlayerActivity();
       if (dialogueActive) {
         advanceDialogue();
       } else {
@@ -3786,7 +3839,11 @@ function setupMobileControls() {
         }
       }
     }
-    interactBtn.addEventListener('touchstart', doInteract, { passive: false });
+    if (window.PointerEvent) {
+      interactBtn.addEventListener('pointerdown', doInteract);
+    } else {
+      interactBtn.addEventListener('touchstart', doInteract, { passive: false });
+    }
     interactBtn.addEventListener('click', doInteract);
   }
 }
