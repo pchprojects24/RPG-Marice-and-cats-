@@ -21,8 +21,8 @@ const ITEMS = {
 
 // ======================== GLOBALS ========================
 
-// The front-door code is encoded in the riddle: 3 cats + 1 Marice = 4 → "3141"
-const FRONT_DOOR_CODE = '3141';
+// The front-door code is encoded in the riddle: 3 cats + 1 Marice = 4 → "3134"
+const FRONT_DOOR_CODE = '3134';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -3235,7 +3235,7 @@ function drawRoomLabels(floorId) {
 var FLOOR_AMBIENT = {
   outside: { r: 255, g: 180, b: 100, a: 0.08 },  // warm sunset
   main: { r: 255, g: 220, b: 170, a: 0.05 },      // warm interior
-  basement: { r: 220, g: 230, b: 255, a: 0.05 },     // cool fluorescent
+  basement: { r: 220, g: 230, b: 255, a: 0.12 },     // cool fluorescent
   upstairs: { r: 255, g: 230, b: 200, a: 0.06 }    // soft warm
 };
 
@@ -3272,6 +3272,8 @@ var lightFlickerTime = 0;
 function drawLighting(floor) {
   var floorId = gameState.currentFloor;
   lightFlickerTime++;
+  var lightCoreAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.22 : 0.12;
+  var lightMidAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.12 : 0.06;
 
   // 1. Apply ambient tint
   var ambient = FLOOR_AMBIENT[floorId];
@@ -3296,8 +3298,8 @@ function drawLighting(floor) {
       }
 
       var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-      grad.addColorStop(0, 'rgba(' + light.color + ',0.12)');
-      grad.addColorStop(0.5, 'rgba(' + light.color + ',0.06)');
+      grad.addColorStop(0, 'rgba(' + light.color + ',' + lightCoreAlpha + ')');
+      grad.addColorStop(0.5, 'rgba(' + light.color + ',' + lightMidAlpha + ')');
       grad.addColorStop(1, 'rgba(' + light.color + ',0)');
       ctx.fillStyle = grad;
       ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
@@ -3446,12 +3448,13 @@ function render() {
   ctx.restore();
 
   // Draw subtle vignette effect (not affected by shake)
+  const vignetteOuterAlpha = gameState.currentFloor === FLOOR_IDS.BASEMENT ? 0.18 : 0.3;
   const gradient = ctx.createRadialGradient(
     CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
     CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
   );
   gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, ' + vignetteOuterAlpha + ')');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 }
