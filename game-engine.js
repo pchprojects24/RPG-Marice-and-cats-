@@ -37,8 +37,12 @@ canvas.height = CANVAS_H;
 // Reserve space for the HUD bar (~32px) and the mobile controls / inventory
 // area at the bottom (~170px), with a small horizontal margin.
 function resizeCanvas() {
-  var hudH = 32;
-  var bottomH = 170;
+  var hudEl = document.getElementById('hud');
+  var hudH = hudEl ? hudEl.getBoundingClientRect().height : 32;
+
+  // On desktop, touch controls are hidden via CSS, so reserve less space.
+  var desktopLike = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var bottomH = desktopLike ? 90 : 190;
   var margin = 10;
   var maxW = window.innerWidth - margin * 2;
   var maxH = window.innerHeight - hudH - bottomH;
@@ -561,6 +565,16 @@ function startTypewriter(text) {
   dialogueAdvance.textContent = 'Tap / Space to show full text';
   dialogueAdvance.style.visibility = 'hidden';
 
+  var instantCb = document.getElementById('instant-dialogue');
+  if (instantCb && instantCb.checked) {
+    typewriterIndex = typewriterText.length;
+    dialogueText.textContent = typewriterText;
+    typewriterDone = true;
+    dialogueAdvance.textContent = 'Tap / Space / Enter to continue';
+    dialogueAdvance.style.visibility = 'visible';
+    return;
+  }
+
   typewriterTimer = setInterval(function () {
     typewriterIndex++;
     dialogueText.textContent = typewriterText.substring(0, typewriterIndex);
@@ -703,6 +717,121 @@ function getNextTaskHint() {
     return 'Hidden cat toys: ' + found + '/3 found. Check behind furniture!';
   }
   return null;
+}
+
+// ======================== OBJECTIVE PING (HINT TARGET) ========================
+
+let objectivePing = null; // { floorId, row, col, label }
+let objectivePingUntil = 0;
+
+function findInteractableByType(floorId, type) {
+  const floor = FLOORS[floorId];
+  if (!floor) return null;
+  for (const obj of floor.interactables) {
+    if (obj.type === type) return obj;
+  }
+  return null;
+}
+
+function getNextTaskTarget() {
+  if (gameState.flags.game_complete) return null;
+
+  if (!gameState.flags.front_door_unlocked) {
+    const plaque = findInteractableByType(FLOOR_IDS.OUTSIDE, 'riddle_board');
+    if (plaque) return { floorId: FLOOR_IDS.OUTSIDE, row: plaque.row, col: plaque.col, label: plaque.label || 'House Rules Plaque' };
+    const door = findInteractableByType(FLOOR_IDS.OUTSIDE, 'front_door');
+    if (door) return { floorId: FLOOR_IDS.OUTSIDE, row: door.row, col: door.col, label: door.label || 'Front Door' };
+    return { floorId: FLOOR_IDS.OUTSIDE, row: outsideStart.row, col: outsideStart.col, label: 'Front Entry' };
+  }
+
+  if (!gameState.flags.alice_fed) {
+    if (hasItem(ITEMS.PURRPOPS)) {
+      const alice = findInteractableByType(FLOOR_IDS.MAIN, 'cat_alice');
+      if (alice) return { floorId: FLOOR_IDS.MAIN, row: alice.row, col: alice.col, label: alice.label || 'Alice' };
+    }
+    const cupboard = findInteractableByType(FLOOR_IDS.MAIN, 'cupboard_purrpops');
+    if (cupboard) return { floorId: FLOOR_IDS.MAIN, row: cupboard.row, col: cupboard.col, label: cupboard.label || 'Cupboard' };
+  }
+
+  if (!gameState.flags.has_basement_key && !gameState.flags.basement_unlocked) {
+    const sofa = findInteractableByType(FLOOR_IDS.MAIN, 'sofa_blanket');
+    if (sofa) return { floorId: FLOOR_IDS.MAIN, row: sofa.row, col: sofa.col, label: sofa.label || 'Sofa' };
+  }
+
+  if (!gameState.flags.basement_unlocked) {
+    const basementDoor = findInteractableByType(FLOOR_IDS.MAIN, 'basement_door');
+    if (basementDoor) return { floorId: FLOOR_IDS.MAIN, row: basementDoor.row, col: basementDoor.col, label: basementDoor.label || 'Basement Door' };
+  }
+
+  if (!gameState.flags.olive_fed) {
+    if (hasItem(ITEMS.PURRPOPS)) {
+      const olive = findInteractableByType(FLOOR_IDS.BASEMENT, 'cat_olive');
+      if (olive) return { floorId: FLOOR_IDS.BASEMENT, row: olive.row, col: olive.col, label: olive.label || 'Olive' };
+    }
+    const cupboard = findInteractableByType(FLOOR_IDS.MAIN, 'cupboard_purrpops');
+    if (cupboard) return { floorId: FLOOR_IDS.MAIN, row: cupboard.row, col: cupboard.col, label: cupboard.label || 'Cupboard' };
+  }
+
+  if (!gameState.flags.laundry_cleared) {
+    // No interactable tile; target the stair pile area.
+    return { floorId: FLOOR_IDS.MAIN, row: 6, col: 10, label: 'Blocked Stairs' };
+  }
+
+  if (!gameState.flags.beatrice_fed) {
+    if (hasItem(ITEMS.FEAST_PLATE)) {
+      const beatrice = findInteractableByType(FLOOR_IDS.UPSTAIRS, 'cat_beatrice');
+      if (beatrice) return { floorId: FLOOR_IDS.UPSTAIRS, row: beatrice.row, col: beatrice.col, label: beatrice.label || 'Beatrice' };
+    }
+    const cupboard = findInteractableByType(FLOOR_IDS.MAIN, 'cupboard_feast');
+    if (cupboard) return { floorId: FLOOR_IDS.MAIN, row: cupboard.row, col: cupboard.col, label: cupboard.label || 'Cupboard' };
+  }
+
+  // Side quest: guide to the next unfound toy, if possible.
+  if (!gameState.flags.cat_toys_found || gameState.flags.cat_toys_found.length < 3) {
+    const found = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found : [];
+    for (const [floorId, floor] of Object.entries(FLOORS)) {
+      for (const obj of floor.interactables) {
+        if (!obj.type || !obj.type.startsWith('cat_toy_')) continue;
+        const toyId = obj.type.replace('cat_toy_', '');
+        if (found.includes(toyId)) continue;
+        return { floorId, row: obj.row, col: obj.col, label: obj.label || 'Hidden Toy' };
+      }
+    }
+  }
+
+  return null;
+}
+
+function setObjectivePing(target, durationMs) {
+  durationMs = durationMs || 8000;
+  if (!target) return;
+  objectivePing = {
+    floorId: target.floorId,
+    row: target.row,
+    col: target.col,
+    label: target.label || 'Objective'
+  };
+  objectivePingUntil = Date.now() + durationMs;
+}
+
+function showHintAndPing() {
+  const hint = getNextTaskHint();
+  const target = getNextTaskTarget();
+  if (target) {
+    setObjectivePing(target, 9000);
+  }
+
+  if (!hint) {
+    showToast('No hint right now.', 2000);
+    return;
+  }
+
+  if (target && target.floorId && target.floorId !== gameState.currentFloor) {
+    const floorName = (typeof FLOOR_NAMES !== 'undefined' && FLOOR_NAMES[target.floorId]) ? FLOOR_NAMES[target.floorId] : target.floorId;
+    showToast(`Hint: ${hint} (Go to ${floorName})`, 5000);
+  } else {
+    showToast(`Hint: ${hint}`, 4500);
+  }
 }
 
 function setupIdleHints() {
@@ -3376,6 +3505,16 @@ function drawMinimap() {
     }
   }
 
+  // Draw objective ping marker (pulsing ring)
+  if (objectivePing && Date.now() < objectivePingUntil && objectivePing.floorId === gameState.currentFloor) {
+    var pulse = (Math.sin(animTimer * 0.22) + 1) / 2; // 0..1
+    var ox = offsetX + objectivePing.col * dotSize;
+    var oy = offsetY + objectivePing.row * dotSize;
+    ctx.strokeStyle = 'rgba(255,215,0,' + (0.35 + pulse * 0.35) + ')';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox - 1, oy - 1, dotSize + 2, dotSize + 2);
+  }
+
   // Draw player (blinking dot)
   var blink = Math.sin(animTimer * 0.15) > 0;
   if (blink) {
@@ -3383,6 +3522,33 @@ function drawMinimap() {
     ctx.fillStyle = '#ff9ecf';
     ctx.fillRect(offsetX + p.col * dotSize, offsetY + p.row * dotSize, dotSize, dotSize);
   }
+}
+
+function drawObjectivePingWorld() {
+  if (!objectivePing) return;
+  if (Date.now() >= objectivePingUntil) {
+    objectivePing = null;
+    objectivePingUntil = 0;
+    return;
+  }
+  if (objectivePing.floorId !== gameState.currentFloor) return;
+
+  var tx = objectivePing.col * TILE_SIZE;
+  var ty = objectivePing.row * TILE_SIZE;
+  var cx = tx + TILE_SIZE / 2;
+  var cy = ty + TILE_SIZE / 2;
+  var pulse = (Math.sin(animTimer * 0.22) + 1) / 2; // 0..1
+  var radius = TILE_SIZE * (0.34 + pulse * 0.14);
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,215,0,' + (0.08 + pulse * 0.06) + ')';
+  ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+  ctx.strokeStyle = 'rgba(255,215,0,' + (0.35 + pulse * 0.35) + ')';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function render() {
@@ -3411,6 +3577,9 @@ function render() {
 
   // Draw interactables
   drawInteractables(floor);
+
+  // Draw objective ping (if any)
+  drawObjectivePingWorld();
 
   // Draw player
   drawPlayer();
@@ -3519,6 +3688,15 @@ document.addEventListener('keydown', function (e) {
     if (qp) {
       qp.classList.toggle('active');
       if (sp) sp.classList.remove('active');
+    }
+    e.preventDefault();
+    return;
+  }
+
+  // H key shows hint and pings the next objective
+  if (e.code === 'KeyH') {
+    if (!dialogueActive) {
+      showHintAndPing();
     }
     e.preventDefault();
     return;
@@ -3724,6 +3902,7 @@ function saveSettings() {
     particleEffects: document.getElementById('particle-effects').checked,
     crtOverlay: document.getElementById('crt-overlay-enabled') ? document.getElementById('crt-overlay-enabled').checked : true,
     typewriterSound: document.getElementById('typewriter-sound') ? document.getElementById('typewriter-sound').checked : true,
+    instantDialogue: document.getElementById('instant-dialogue') ? document.getElementById('instant-dialogue').checked : false,
     musicMute: document.getElementById('music-mute') ? document.getElementById('music-mute').checked : false
   };
   try {
@@ -3740,7 +3919,22 @@ function applyCrtSetting() {
 function loadSettings() {
   try {
     var raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return;
+    if (!raw) {
+      // First run: honor reduced-motion preference with gentler defaults.
+      var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduceMotion) {
+        var screenShake = document.getElementById('screen-shake');
+        var particleEffects = document.getElementById('particle-effects');
+        var crtCb = document.getElementById('crt-overlay-enabled');
+        var instantCb = document.getElementById('instant-dialogue');
+        if (screenShake) screenShake.checked = false;
+        if (particleEffects) particleEffects.checked = false;
+        if (crtCb) crtCb.checked = false;
+        if (instantCb) instantCb.checked = true;
+        applyCrtSetting();
+      }
+      return;
+    }
     var settings = JSON.parse(raw);
 
     var sfxSlider = document.getElementById('sfx-volume');
@@ -3772,6 +3966,10 @@ function loadSettings() {
     var twCb = document.getElementById('typewriter-sound');
     if (twCb && settings.typewriterSound !== undefined) {
       twCb.checked = settings.typewriterSound;
+    }
+    var instantCb = document.getElementById('instant-dialogue');
+    if (instantCb && settings.instantDialogue !== undefined) {
+      instantCb.checked = settings.instantDialogue;
     }
     var muteCb = document.getElementById('music-mute');
     if (muteCb && settings.musicMute !== undefined) {

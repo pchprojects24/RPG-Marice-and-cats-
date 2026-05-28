@@ -1105,11 +1105,14 @@ html, body {
 /* Hide mobile controls on desktop with keyboard */
 @media (hover: hover) and (pointer: fine) {
   #mobile-controls {
-    opacity: 0.3;
-    transition: opacity 0.3s;
+    display: none;
   }
 
-  #mobile-controls:hover {
-    opacity: 1;
+  #inventory-bar {
+    bottom: 20px;
+  }
+
+  #controls-hint {
+    bottom: 90px;
   }
 }

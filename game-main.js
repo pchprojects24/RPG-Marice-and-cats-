@@ -240,8 +240,12 @@ function init() {
   const btnHint = document.getElementById('btn-hint');
   if (btnHint) {
     btnHint.addEventListener('click', function () {
+      if (typeof showHintAndPing === 'function') {
+        showHintAndPing();
+        return;
+      }
       const hint = getNextTaskHint();
-      showToast(hint || 'No hint right now.', hint ? 5000 : 2000);
+      showToast(hint ? ('Hint: ' + hint) : 'No hint right now.', hint ? 5000 : 2000);
     });
   }
 
@@ -359,6 +363,9 @@ function init() {
 
   var typewriterCheckbox = document.getElementById('typewriter-sound');
   if (typewriterCheckbox) typewriterCheckbox.addEventListener('change', saveSettings);
+
+  var instantDialogueCheckbox = document.getElementById('instant-dialogue');
+  if (instantDialogueCheckbox) instantDialogueCheckbox.addEventListener('change', saveSettings);
 
   // Start game loop
   requestAnimationFrame(gameLoop);
