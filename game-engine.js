@@ -93,8 +93,28 @@ const DEFAULT_FLAGS = {
   sofa_searched: false,
   game_complete: false,
   front_door_unlocked: false,
-  cat_toys_found: []
+  cat_toys_found: [],
+  pet_count: 0
 };
+
+// Free-roam mode: after the ending the player can keep exploring with the
+// whole cat parade trailing behind them.
+let freeRoam = false;
+
+// Cat coat colours (body, accent) — shared by static sprites and followers.
+const CAT_COLORS = {
+  alice: ['#c8722e', '#f0c070'],
+  olive: ['#6b92c8', '#c2d8f0'],
+  beatrice: ['#21211f', '#5d5e53']
+};
+
+// Fixed join order — cats always join in the order the player feeds them.
+const CAT_ORDER = ['alice', 'olive', 'beatrice'];
+
+// Returns the list of cats currently following Marice, nearest-first.
+function getFollowers() {
+  return CAT_ORDER.filter(function (name) { return gameState.flags[name + '_fed']; });
+}
 
 let gameState = {
   currentFloor: FLOOR_IDS.OUTSIDE,
@@ -118,6 +138,35 @@ const WALK_FRAME_INTERVAL = 8; // swap legs every 8 frames
 
 // Global animation timer (for cat idle animations, light flicker, etc.)
 let animTimer = 0;
+
+// ---- Follower trail (cats trailing behind Marice) ----
+// Ring buffer of recent player center positions {x, y, facing}, newest first.
+let playerTrail = [];
+// Spacing (in trail samples) between each follower in the conga line.
+const FOLLOWER_GAP = 11;
+const TRAIL_MAX = FOLLOWER_GAP * 4 + 4;
+
+function trailReset() {
+  const p = gameState.player;
+  const cx = p.col * TILE_SIZE + TILE_SIZE / 2;
+  const cy = p.row * TILE_SIZE + TILE_SIZE / 2;
+  playerTrail = [];
+  for (let i = 0; i < TRAIL_MAX; i++) {
+    playerTrail.push({ x: cx, y: cy, facing: p.facing });
+  }
+}
+
+function trailPush(x, y, facing) {
+  // Only record a new sample once Marice has actually moved a little — otherwise
+  // standing still would collapse the whole parade onto her.
+  const head = playerTrail[0];
+  if (head && Math.hypot(x - head.x, y - head.y) < 2) {
+    head.facing = facing;
+    return;
+  }
+  playerTrail.unshift({ x: x, y: y, facing: facing });
+  if (playerTrail.length > TRAIL_MAX) playerTrail.length = TRAIL_MAX;
+}
 
 // Pause state
 let gamePaused = false;
@@ -211,6 +260,7 @@ function playSfx(type) {
     case 'item_pickup': sfxItemPickup(); break;
     case 'door_unlock': sfxDoorUnlock(); break;
     case 'cat_meow': sfxCatMeow(); break;
+    case 'cat_purr': sfxCatPurr(); break;
     case 'cat_fed': sfxCatFed(); break;
     case 'numpad_beep': sfxNumpadBeep(); break;
     case 'error': sfxError(); break;
@@ -304,6 +354,29 @@ function sfxCatMeow() {
   gain.connect(sfxGainNode);
   osc.start(t);
   osc.stop(t + 0.35);
+}
+
+function sfxCatPurr() {
+  // Low, warm amplitude-modulated rumble — a contented purr.
+  var t = audioCtx.currentTime;
+  var osc = audioCtx.createOscillator();
+  var lfo = audioCtx.createOscillator();
+  var lfoGain = audioCtx.createGain();
+  var gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(55, t);
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(26, t); // purr flutter rate
+  lfoGain.gain.setValueAtTime(0.06, t);
+  lfo.connect(lfoGain);
+  lfoGain.connect(gain.gain);
+  gain.gain.setValueAtTime(0.08, t);
+  gain.gain.setValueAtTime(0.08, t + 0.5);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
+  osc.connect(gain);
+  gain.connect(sfxGainNode);
+  osc.start(t); lfo.start(t);
+  osc.stop(t + 0.75); lfo.stop(t + 0.75);
 }
 
 function sfxCatFed() {
@@ -1107,6 +1180,7 @@ function changeFloorTo(newFloor, row, col, facing) {
     gameState.player.row = (row !== undefined) ? row : floor.start.row;
     gameState.player.col = (col !== undefined) ? col : floor.start.col;
     gameState.player.facing = facing || 'down';
+    trailReset();
     updateFloorLabel();
     saveGame();
     startMusic(newFloor);
@@ -1144,10 +1218,21 @@ function isTileBlocked(floor, row, col) {
 
   // Check if an interactable blocks this tile (cats, etc.)
   for (const obj of floor.interactables) {
-    if (obj.row === row && obj.col === col) return true;
+    if (obj.row === row && obj.col === col) {
+      // A fed cat has left its spot to follow Marice — walk right through it.
+      if (isFollowerCatObj(obj)) continue;
+      return true;
+    }
   }
 
   return false;
+}
+
+// True when this interactable is a cat that has been fed (and is now a follower).
+function isFollowerCatObj(obj) {
+  if (!obj || !obj.type || obj.type.indexOf('cat_') !== 0) return false;
+  const name = obj.type.replace('cat_', '');
+  return CAT_ORDER.includes(name) && gameState.flags[name + '_fed'];
 }
 
 function getFacingTile() {
@@ -1165,7 +1250,11 @@ function getFacingTile() {
 function getInteractableAt(row, col) {
   const floor = getCurrentFloor();
   for (const obj of floor.interactables) {
-    if (obj.row === row && obj.col === col) return obj;
+    if (obj.row === row && obj.col === col) {
+      // Fed cats are followers now; their old tile is empty floor.
+      if (isFollowerCatObj(obj)) continue;
+      return obj;
+    }
   }
   return null;
 }
@@ -1288,7 +1377,54 @@ function tryInteract() {
   if (obj) {
     playSfx('interact');
     handleInteraction(obj);
+    return;
   }
+
+  // Nothing to interact with in front of us — try petting a nearby cat.
+  petNearbyFollower();
+}
+
+const PET_LINES = [
+  'purrs happily',
+  'leans into your hand',
+  'flops over for belly rubs',
+  'headbutts your hand',
+  'kneads the floor',
+  'gives a slow, loving blink'
+];
+
+// Pet the follower cat closest to Marice (if one is within reach).
+function petNearbyFollower() {
+  const followers = getFollowers();
+  if (followers.length === 0 || playerTrail.length === 0) return false;
+
+  const p = gameState.player;
+  const px = p.col * TILE_SIZE + TILE_SIZE / 2;
+  const py = p.row * TILE_SIZE + TILE_SIZE / 2;
+
+  let bestName = null, bestX = 0, bestY = 0, bestDist = Infinity;
+  for (let i = 0; i < followers.length; i++) {
+    const idx = Math.min((i + 1) * FOLLOWER_GAP, playerTrail.length - 1);
+    const s = playerTrail[idx];
+    if (!s) continue;
+    const d = Math.hypot(s.x - px, s.y - py);
+    if (d < bestDist) { bestDist = d; bestName = followers[i]; bestX = s.x; bestY = s.y; }
+  }
+
+  // Within ~2 tiles counts as reachable.
+  if (!bestName || bestDist > TILE_SIZE * 2.2) return false;
+
+  gameState.flags.pet_count = (gameState.flags.pet_count || 0) + 1;
+  playSfx('cat_purr');
+  triggerHaptic(15);
+  spawnParticles(bestX, bestY - 6, 6, '#ff69b4');
+  spawnTextParticle(bestX, bestY - 16, '❤', '#ff1493');
+
+  const catName = bestName.charAt(0).toUpperCase() + bestName.slice(1);
+  const line = PET_LINES[Math.floor(Math.random() * PET_LINES.length)];
+  showToast(catName + ' ' + line + '. (Pets: ' + gameState.flags.pet_count + ')', 1800);
+  saveGame();
+  return true;
 }
 
 function handleInteraction(obj) {
@@ -3007,19 +3143,24 @@ function drawInteractables(floor) {
         break;
       case 'cat_alice':
         SPRITES.catTree(x, y);
-        SPRITES.cat(x, y - 4, '#c8722e', '#f0c070'); // richer orange-tan coat from portrait
+        if (!gameState.flags.alice_fed) {
+          SPRITES.cat(x, y - 4, CAT_COLORS.alice[0], CAT_COLORS.alice[1]);
+        }
         break;
       case 'front_door':
         SPRITES.door(x, y, !gameState.flags.front_door_unlocked);
         break;
       case 'cat_olive':
         SPRITES.treadmill(x, y);
-        SPRITES.cat(x, y - 2, '#6b92c8', '#c2d8f0'); // cool blue coat from portrait
+        if (!gameState.flags.olive_fed) {
+          SPRITES.cat(x, y - 2, CAT_COLORS.olive[0], CAT_COLORS.olive[1]);
+        }
         break;
       case 'cat_beatrice':
         SPRITES.bed(x, y, true);
-        // Beatrice is always visible, sitting on top of the bed
-        SPRITES.cat(x + 2, y + 6, '#21211f', '#5d5e53'); // charcoal coat from portrait
+        if (!gameState.flags.beatrice_fed) {
+          SPRITES.cat(x + 2, y + 6, CAT_COLORS.beatrice[0], CAT_COLORS.beatrice[1]);
+        }
         break;
       case 'sofa_blanket':
         // Draw wide 3-seat sofa: interactive tile is the rightmost cushion (col 5),
@@ -3363,7 +3504,30 @@ function drawPlayer() {
     walkFrameTimer = 0;
   }
 
+  // Record the trail (center of the player) so followers can chase it.
+  trailPush(px + TILE_SIZE / 2, py + TILE_SIZE / 2, p.facing);
+
   SPRITES.player(px, py, p.facing, gameState.moving);
+}
+
+// Draw the cats that follow Marice, spaced out along her recent path.
+function drawFollowers() {
+  const followers = getFollowers();
+  if (followers.length === 0 || playerTrail.length === 0) return;
+
+  // Draw farthest cat first so nearer cats overlap on top (depth feel).
+  for (let i = followers.length - 1; i >= 0; i--) {
+    const name = followers[i];
+    const colors = CAT_COLORS[name] || ['#bbb', '#eee'];
+    const idx = Math.min((i + 1) * FOLLOWER_GAP, playerTrail.length - 1);
+    const sample = playerTrail[idx];
+    if (!sample) continue;
+    // Gentle hop while the parade is on the move.
+    const hop = gameState.moving ? Math.abs(Math.sin((animTimer + i * 7) * 0.3)) * 2 : 0;
+    const cx = sample.x - TILE_SIZE / 2;
+    const cy = sample.y - TILE_SIZE / 2 - hop;
+    SPRITES.cat(cx, cy, colors[0], colors[1]);
+  }
 }
 
 function drawRoomLabels(floorId) {
@@ -3606,6 +3770,9 @@ function render() {
   // Draw objective ping (if any)
   drawObjectivePingWorld();
 
+  // Draw the trailing cat parade behind Marice
+  drawFollowers();
+
   // Draw player
   drawPlayer();
 
@@ -3846,6 +4013,85 @@ function setupMobileControls() {
     }
     interactBtn.addEventListener('click', doInteract);
   }
+
+  setupSwipeControls();
+}
+
+// Drag/swipe-to-move directly on the canvas — a touch joystick anchored at the
+// point you press. A quick tap (no drag) acts as INTERACT, so you can pet a cat
+// or open a door without reaching for the buttons.
+function setupSwipeControls() {
+  if (!canvas) return;
+
+  const DEAD_ZONE = 16;   // px of drag before movement kicks in
+  const TAP_SLOP = 12;    // movement under this on release counts as a tap
+  const TAP_TIME = 350;   // ms
+
+  let active = false;
+  let startX = 0, startY = 0, startT = 0;
+  let dragged = false;
+  let curDir = null;
+
+  const codeByDir = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
+
+  function clearDir() {
+    keysDown.ArrowUp = false;
+    keysDown.ArrowDown = false;
+    keysDown.ArrowLeft = false;
+    keysDown.ArrowRight = false;
+    curDir = null;
+  }
+
+  function onDown(e) {
+    if (dialogueActive || gamePaused) return;
+    active = true;
+    dragged = false;
+    var pt = e.touches ? e.touches[0] : e;
+    startX = pt.clientX;
+    startY = pt.clientY;
+    startT = Date.now();
+    markPlayerActivity();
+  }
+
+  function onMove(e) {
+    if (!active) return;
+    var pt = e.touches ? e.touches[0] : e;
+    var dx = pt.clientX - startX;
+    var dy = pt.clientY - startY;
+    if (Math.hypot(dx, dy) < DEAD_ZONE) return;
+    e.preventDefault();
+    dragged = true;
+    var dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    if (dir !== curDir) {
+      clearDir();
+      curDir = dir;
+      keysDown[codeByDir[dir]] = true;
+      if (!gameState.moving) tryMove(dir);
+    }
+  }
+
+  function onUp(e) {
+    if (!active) return;
+    active = false;
+    var wasTap = !dragged && (Date.now() - startT) < TAP_TIME;
+    clearDir();
+    if (wasTap && !dialogueActive && !gamePaused) {
+      if (!checkLaundryInteraction()) tryInteract();
+    }
+  }
+
+  if (window.PointerEvent) {
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerup', onUp);
+    canvas.addEventListener('pointercancel', onUp);
+    canvas.addEventListener('pointerleave', onUp);
+  } else {
+    canvas.addEventListener('touchstart', onDown, { passive: true });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onUp);
+    canvas.addEventListener('touchcancel', onUp);
+  }
 }
 
 // ======================== SAVE / LOAD ========================
@@ -3930,6 +4176,7 @@ function loadGame() {
     mergedFlags.cat_toys_found = Array.isArray(mergedFlags.cat_toys_found)
       ? Array.from(new Set(mergedFlags.cat_toys_found.filter(function (toyId) { return validToyIds.includes(toyId); })))
       : [];
+    mergedFlags.pet_count = Number.isFinite(mergedFlags.pet_count) ? mergedFlags.pet_count : 0;
 
     gameState.currentFloor = floorId;
     gameState.player.row = canStandHere ? savedRow : floorStart.row;

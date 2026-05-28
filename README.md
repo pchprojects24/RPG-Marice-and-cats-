@@ -9,9 +9,9 @@ A Zelda-style 2D top-down prototype. Find Alice, Olive, and Beatrice; feed the c
 
 ## Controls
 
-- **Keyboard:** WASD or Arrow keys to move (grid-based). **E** / **Space** / **Enter** to interact or advance dialogue.
+- **Keyboard:** WASD or Arrow keys to move (grid-based). **E** / **Space** / **Enter** to interact, pet a cat, or advance dialogue.
 - **Helpful keys:** **H** for hint + objective ping, **Q** for Quest Log, **P** to pause.
-- **Mobile:** On-screen D-pad to move; **INTERACT** button to interact or advance dialogue. For the largest view, rotate to landscape.
+- **Mobile:** Swipe/drag anywhere on the game to move (touch joystick), or use the on-screen D-pad. A quick **tap** on the screen interacts/pets — or use the **INTERACT** button. For the largest view, rotate to landscape.
 
 ## How to play
 
@@ -23,7 +23,9 @@ A Zelda-style 2D top-down prototype. Find Alice, Olive, and Beatrice; feed the c
 6. Olive gives you a **Laundry Basket**. Use it on the blocked stairs on the main floor.
 7. Go upstairs and find **Beatrice** under her blanket.
 8. Get a **Shrimp & Salmon Feast** plate from the kitchen and give it to Beatrice.
-9. Enjoy the ending.
+9. Enjoy the ending — then hit **Keep Playing** to free-roam.
+
+Every cat you feed **joins you and trails behind Marice** through the whole house. Walk up to one of your followers and press **INTERACT** (or tap) to **pet it** — purrs, hearts, and an affection counter that's tallied on the ending screen.
 
 Optional: find the three cat toys (jingle ball, feather wand, laser pointer) hidden around the house.
 
