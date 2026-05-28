@@ -22,7 +22,7 @@ const ITEMS = {
 // ======================== GLOBALS ========================
 
 // The front-door code is encoded in the riddle: 3 cats + 1 Marice = 4 → "3141"
-const FRONT_DOOR_CODE = '3141';
+const FRONT_DOOR_CODE = '3134';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
