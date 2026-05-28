@@ -101,10 +101,12 @@ function startNewGame() {
   document.getElementById('quest-panel').classList.remove('active');
   document.getElementById('settings-panel').classList.remove('active');
 
+  freeRoam = false;
   gameState.currentFloor = FLOOR_IDS.OUTSIDE;
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
   gameState.inventory = [];
   gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] });
+  trailReset();
   gameStartTime = Date.now();
   updateFloorLabel();
   updateQuestCounter();
@@ -137,6 +139,9 @@ function continueGame() {
   initAudio();
   markPlayerActivity();
   gameStartTime = Date.now();
+  // A finished save drops you into free-roam with the whole cat parade.
+  freeRoam = !!gameState.flags.game_complete;
+  trailReset();
   renderInventory();
   updateFloorLabel();
   updateQuestCounter();
@@ -168,6 +173,8 @@ function showEnding() {
     if (toysCount === 3) toyText += ' ✨';
     toysEl.textContent = toyText;
   }
+  var petsEl = document.getElementById('stat-pets');
+  if (petsEl) petsEl.textContent = '❤ Pets: ' + (gameState.flags.pet_count || 0);
   document.getElementById('ending-overlay').classList.add('active');
 }
 
@@ -208,6 +215,17 @@ function init() {
   document.getElementById('btn-restart').addEventListener('click', function () {
     restartGame();
   });
+
+  // Ending screen — keep playing (free roam with the cat parade)
+  var btnKeepPlaying = document.getElementById('btn-keep-playing');
+  if (btnKeepPlaying) {
+    btnKeepPlaying.addEventListener('click', function () {
+      hideEnding();
+      freeRoam = true;
+      markPlayerActivity();
+      showToast('Free roam! Your cats are following you. Press INTERACT near a cat to pet it. 🐾', 4500);
+    });
+  }
 
   // Ending screen — back to title
   var btnEndingTitle = document.getElementById('btn-ending-title');
