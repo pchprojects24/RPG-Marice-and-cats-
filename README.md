@@ -11,7 +11,7 @@ A Zelda-style 2D top-down prototype. Find Alice, Olive, and Beatrice; feed the c
 
 - **Keyboard:** WASD or Arrow keys to move (grid-based). **E** / **Space** / **Enter** to interact or advance dialogue.
 - **Helpful keys:** **H** for hint + objective ping, **Q** for Quest Log, **P** to pause.
-- **Mobile:** On-screen D-pad to move; **INTERACT** button to interact or advance dialogue.
+- **Mobile:** On-screen D-pad to move; **INTERACT** button to interact or advance dialogue. For the largest view, rotate to landscape.
 
 ## How to play
 
