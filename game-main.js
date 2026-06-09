@@ -107,6 +107,11 @@ function startNewGame() {
   gameState.inventory = [];
   gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] });
   trailReset();
+  objectivePing = null;
+  objectivePingUntil = 0;
+  particles.length = 0;
+  renderInventory();
+  playTimeOffsetMs = 0;
   gameStartTime = Date.now();
   updateFloorLabel();
   updateQuestCounter();
@@ -158,9 +163,9 @@ function continueGame() {
 // ======================== ENDING SCREEN ========================
 
 function showEnding() {
-  // Populate stats
-  if (gameStartTime) {
-    var elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+  // Populate stats (total play time across sessions, not just this one)
+  var elapsed = Math.floor(getTotalPlayTimeMs() / 1000);
+  if (elapsed > 0) {
     var mins = Math.floor(elapsed / 60);
     var secs = elapsed % 60;
     var timeEl = document.getElementById('stat-time');
