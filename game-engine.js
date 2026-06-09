@@ -173,6 +173,13 @@ let gamePaused = false;
 
 // Game session start time (for stats)
 let gameStartTime = null;
+// Play time carried over from previous sessions (persisted in the save),
+// so the ending screen shows total time, not just the current session.
+let playTimeOffsetMs = 0;
+
+function getTotalPlayTimeMs() {
+  return playTimeOffsetMs + (gameStartTime ? Date.now() - gameStartTime : 0);
+}
 
 // Screen shake state
 let shakeIntensity = 0;
@@ -442,6 +449,7 @@ function sfxTypewriter() {
 // --- MUSIC: simple looping chiptune melodies per floor ---
 
 var musicLoopTimer = null;
+var musicStartTimer = null;
 var musicNoteIndex = 0;
 
 var MUSIC_DATA = {
@@ -470,12 +478,13 @@ function startMusic(floorId) {
 
   if (musicPlaying) {
     // Crossfade: fade out current music then start new
+    stopMusic();
     musicFading = true;
     musicGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
     musicGainNode.gain.setValueAtTime(musicGainNode.gain.value, audioCtx.currentTime);
     musicGainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
-    stopMusic();
-    setTimeout(function () {
+    musicStartTimer = setTimeout(function () {
+      musicStartTimer = null;
       musicFading = false;
       musicNoteIndex = 0;
       currentMusic = floorId;
@@ -518,9 +527,16 @@ function playMusicNote(data) {
 
 function stopMusic() {
   musicPlaying = false;
+  musicFading = false;
   if (musicLoopTimer) {
     clearTimeout(musicLoopTimer);
     musicLoopTimer = null;
+  }
+  // Cancel any crossfade that was about to start the next floor's track,
+  // so quitting to title mid-transition doesn't restart music later.
+  if (musicStartTimer) {
+    clearTimeout(musicStartTimer);
+    musicStartTimer = null;
   }
   currentMusic = null;
 }
@@ -776,7 +792,14 @@ function markPlayerActivity() {
 }
 
 function getNextTaskHint() {
-  if (gameState.flags.game_complete) return null;
+  if (gameState.flags.game_complete) {
+    // Free roam: still point at any unfound toys
+    var toysFound = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found.length : 0;
+    if (toysFound < 3) {
+      return 'Hidden cat toys: ' + toysFound + '/3 found. Check behind furniture!';
+    }
+    return null;
+  }
 
   if (!gameState.flags.front_door_unlocked) {
     return 'Check the house plaque outside for the front door code.';
@@ -832,7 +855,9 @@ function findInteractableByType(floorId, type) {
 }
 
 function getNextTaskTarget() {
-  if (gameState.flags.game_complete) return null;
+  if (gameState.flags.game_complete) {
+    return findNextToyTarget();
+  }
 
   if (!gameState.flags.front_door_unlocked) {
     const plaque = findInteractableByType(FLOOR_IDS.OUTSIDE, 'riddle_board');
@@ -885,18 +910,21 @@ function getNextTaskTarget() {
   }
 
   // Side quest: guide to the next unfound toy, if possible.
-  if (!gameState.flags.cat_toys_found || gameState.flags.cat_toys_found.length < 3) {
-    const found = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found : [];
-    for (const [floorId, floor] of Object.entries(FLOORS)) {
-      for (const obj of floor.interactables) {
-        if (!obj.type || !obj.type.startsWith('cat_toy_')) continue;
-        const toyId = obj.type.replace('cat_toy_', '');
-        if (found.includes(toyId)) continue;
-        return { floorId, row: obj.row, col: obj.col, label: obj.label || 'Hidden Toy' };
-      }
+  return findNextToyTarget();
+}
+
+// First unfound hidden toy across all floors, or null when all are found.
+function findNextToyTarget() {
+  const found = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found : [];
+  if (found.length >= 3) return null;
+  for (const [floorId, floor] of Object.entries(FLOORS)) {
+    for (const obj of floor.interactables) {
+      if (!obj.type || !obj.type.startsWith('cat_toy_')) continue;
+      const toyId = obj.type.replace('cat_toy_', '');
+      if (found.includes(toyId)) continue;
+      return { floorId, row: obj.row, col: obj.col, label: obj.label || 'Hidden Toy' };
     }
   }
-
   return null;
 }
 
@@ -1048,40 +1076,24 @@ function updateQuestCounter() {
 function updateQuestList() {
   const quests = document.querySelectorAll('.quest-item');
 
-  // Alice quest
-  const aliceStatus = quests[0].querySelector('.quest-status');
-  if (gameState.flags.alice_fed) {
-    aliceStatus.textContent = '✅';
-    aliceStatus.classList.remove('pending');
-    aliceStatus.classList.add('complete');
-  } else {
-    aliceStatus.textContent = '⏳';
-    aliceStatus.classList.remove('complete');
-    aliceStatus.classList.add('pending');
-  }
+  // Cat feeding quests (rows 0-2, in CAT_ORDER)
+  CAT_ORDER.forEach(function (catName, i) {
+    if (!quests[i]) return;
+    const status = quests[i].querySelector('.quest-status');
+    const fed = gameState.flags[catName + '_fed'];
+    status.textContent = fed ? '✅' : '⏳';
+    status.classList.toggle('complete', fed);
+    status.classList.toggle('pending', !fed);
+  });
 
-  // Olive quest
-  const oliveStatus = quests[1].querySelector('.quest-status');
-  if (gameState.flags.olive_fed) {
-    oliveStatus.textContent = '✅';
-    oliveStatus.classList.remove('pending');
-    oliveStatus.classList.add('complete');
-  } else {
-    oliveStatus.textContent = '⏳';
-    oliveStatus.classList.remove('complete');
-    oliveStatus.classList.add('pending');
-  }
-
-  // Beatrice quest
-  const beatriceStatus = quests[2].querySelector('.quest-status');
-  if (gameState.flags.beatrice_fed) {
-    beatriceStatus.textContent = '✅';
-    beatriceStatus.classList.remove('pending');
-    beatriceStatus.classList.add('complete');
-  } else {
-    beatriceStatus.textContent = '⏳';
-    beatriceStatus.classList.remove('complete');
-    beatriceStatus.classList.add('pending');
+  // Hidden cat toys side quest
+  const toysItem = document.getElementById('quest-item-toys');
+  if (toysItem) {
+    const status = toysItem.querySelector('.quest-status');
+    const found = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found.length : 0;
+    status.textContent = found >= 3 ? '✅' : found + '/3';
+    status.classList.toggle('complete', found >= 3);
+    status.classList.toggle('pending', found < 3);
   }
 }
 
@@ -1393,10 +1405,11 @@ const PET_LINES = [
   'gives a slow, loving blink'
 ];
 
-// Pet the follower cat closest to Marice (if one is within reach).
-function petNearbyFollower() {
+// Find the follower cat closest to Marice that's within petting reach
+// (~2 tiles). Returns { name, x, y } or null.
+function findPettableFollower() {
   const followers = getFollowers();
-  if (followers.length === 0 || playerTrail.length === 0) return false;
+  if (followers.length === 0 || playerTrail.length === 0) return null;
 
   const p = gameState.player;
   const px = p.col * TILE_SIZE + TILE_SIZE / 2;
@@ -1411,20 +1424,63 @@ function petNearbyFollower() {
     if (d < bestDist) { bestDist = d; bestName = followers[i]; bestX = s.x; bestY = s.y; }
   }
 
-  // Within ~2 tiles counts as reachable.
-  if (!bestName || bestDist > TILE_SIZE * 2.2) return false;
+  if (!bestName || bestDist > TILE_SIZE * 2.2) return null;
+  return { name: bestName, x: bestX, y: bestY };
+}
+
+// Pet the follower cat closest to Marice (if one is within reach).
+function petNearbyFollower() {
+  const cat = findPettableFollower();
+  if (!cat) return false;
 
   gameState.flags.pet_count = (gameState.flags.pet_count || 0) + 1;
   playSfx('cat_purr');
   triggerHaptic(15);
-  spawnParticles(bestX, bestY - 6, 6, '#ff69b4');
-  spawnTextParticle(bestX, bestY - 16, '❤', '#ff1493');
+  spawnParticles(cat.x, cat.y - 6, 6, '#ff69b4');
+  spawnTextParticle(cat.x, cat.y - 16, '❤', '#ff1493');
 
-  const catName = bestName.charAt(0).toUpperCase() + bestName.slice(1);
+  const catName = cat.name.charAt(0).toUpperCase() + cat.name.slice(1);
   const line = PET_LINES[Math.floor(Math.random() * PET_LINES.length)];
   showToast(catName + ' ' + line + '. (Pets: ' + gameState.flags.pet_count + ')', 1800);
   saveGame();
   return true;
+}
+
+// Pick up a hidden cat toy: dialogue, toast with running count,
+// particles/celebration, quest log refresh, and an immediate save.
+function collectCatToy(toyId) {
+  if (!Array.isArray(gameState.flags.cat_toys_found)) gameState.flags.cat_toys_found = [];
+  if (gameState.flags.cat_toys_found.includes(toyId)) {
+    startDialogue('cat_toy_found', null, null);
+    return;
+  }
+  gameState.flags.cat_toys_found.push(toyId);
+  var toyNames = { jingle_ball: 'Jingle Ball', feather_wand: 'Feather Wand', laser_pointer: 'Laser Pointer' };
+  var toyName = toyNames[toyId] || 'Cat Toy';
+  var total = gameState.flags.cat_toys_found.length;
+  updateQuestList();
+  startDialogue('cat_toy_' + toyId, null, function () {
+    var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+    var py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+    if (total === 3) {
+      // All toys found — big celebration!
+      showToast('All 3 cat toys found! ✨', 4000);
+      triggerScreenShake(6, 20);
+      triggerHaptic(60);
+      spawnParticles(px, py, 20, '#ffd700');
+      spawnParticles(px, py, 10, '#ff69b4');
+      spawnTextParticle(px, py - 25, '✨', '#ffd700');
+      spawnTextParticle(px, py - 35, '🐾', '#ff69b4');
+      playSfx('cat_fed');
+    } else {
+      showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
+      triggerScreenShake(3, 10);
+      spawnParticles(px, py, 10, '#ff69b4');
+      spawnTextParticle(px, py - 20, '🐾', '#ff69b4');
+      playSfx('item_pickup');
+    }
+    saveGameImmediate();
+  });
 }
 
 function handleInteraction(obj) {
@@ -1630,28 +1686,9 @@ function handleInteraction(obj) {
 
     // ---- CAT TOY COLLECTIBLES ----
     case 'cat_toy_jingle_ball':
-      if (gameState.flags.cat_toys_found.includes('jingle_ball')) {
-        startDialogue('cat_toy_found', null, null);
-      } else {
-        gameState.flags.cat_toys_found.push('jingle_ball');
-        startDialogue('cat_toy_jingle_ball', null, null);
-      }
-      break;
     case 'cat_toy_feather_wand':
-      if (gameState.flags.cat_toys_found.includes('feather_wand')) {
-        startDialogue('cat_toy_found', null, null);
-      } else {
-        gameState.flags.cat_toys_found.push('feather_wand');
-        startDialogue('cat_toy_feather_wand', null, null);
-      }
-      break;
     case 'cat_toy_laser_pointer':
-      if (gameState.flags.cat_toys_found.includes('laser_pointer')) {
-        startDialogue('cat_toy_found', null, null);
-      } else {
-        gameState.flags.cat_toys_found.push('laser_pointer');
-        startDialogue('cat_toy_laser_pointer', null, null);
-      }
+      collectCatToy(obj.type.replace('cat_toy_', ''));
       break;
 
     // ---- NEW BASEMENT INTERACTABLES ----
@@ -1766,41 +1803,6 @@ function handleInteraction(obj) {
       startDialogue('linen_closet', null, null);
       break;
 
-    // ---- CAT TOYS (collectibles) ----
-    case 'cat_toy':
-      if (gameState.flags.cat_toys_found && gameState.flags.cat_toys_found.includes(obj.toyId)) {
-        startDialogue('cat_toy_found', null, null);
-      } else {
-        if (!gameState.flags.cat_toys_found) gameState.flags.cat_toys_found = [];
-        gameState.flags.cat_toys_found.push(obj.toyId);
-        var toyNames = { jingle_ball: 'Jingle Ball', feather_wand: 'Feather Wand', laser_pointer: 'Laser Pointer' };
-        var toyName = toyNames[obj.toyId] || 'Cat Toy';
-        var total = gameState.flags.cat_toys_found.length;
-        startDialogue('cat_toy_' + obj.toyId, null, function () {
-          var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
-          var py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
-          if (total === 3) {
-            // All toys found — big celebration!
-            showToast('All 3 cat toys found! ✨', 4000);
-            triggerScreenShake(6, 20);
-            triggerHaptic(60);
-            spawnParticles(px, py, 20, '#ffd700');
-            spawnParticles(px, py, 10, '#ff69b4');
-            spawnTextParticle(px, py - 25, '✨', '#ffd700');
-            spawnTextParticle(px, py - 35, '🐾', '#ff69b4');
-            playSfx('cat_fed');
-          } else {
-            showToast('Found ' + toyName + '! (' + total + '/3 cat toys)');
-            triggerScreenShake(3, 10);
-            spawnParticles(px, py, 10, '#ff69b4');
-            spawnTextParticle(px, py - 20, '🐾', '#ff69b4');
-            playSfx('item_pickup');
-          }
-          saveGameImmediate();
-        });
-      }
-      break;
-
     // ---- OUTSIDE INTERACTABLES ----
     case 'welcome_mat':
       startDialogue('welcome_mat', null, null);
@@ -1876,8 +1878,13 @@ function updateInteractPrompt() {
     }
   }
 
-  if (obj || isStairInteract) {
-    const label = obj ? obj.label : 'Stairs';
+  // Nothing in front of us — a follower cat within reach can still be petted
+  const pettable = (!obj && !isStairInteract) ? findPettableFollower() : null;
+
+  if (obj || isStairInteract || pettable) {
+    const label = obj ? obj.label :
+      isStairInteract ? 'Stairs' :
+        ('Pet ' + pettable.name.charAt(0).toUpperCase() + pettable.name.slice(1));
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     prompt.textContent = isTouch ? ('Interact: ' + label) : ('E: ' + label);
     prompt.classList.add('visible');
@@ -3252,16 +3259,29 @@ function drawInteractables(floor) {
         SPRITES.genericItem(x, y, '#654321', '#8b4513');
         break;
 
-      // Cat toy collectibles
+      // Cat toy collectibles — glowing paw print until found, faint print after
       case 'cat_toy_jingle_ball':
-        SPRITES.genericItem(x, y, '#ffd700', '#b8860b');
-        break;
       case 'cat_toy_feather_wand':
-        SPRITES.genericItem(x, y, '#ff69b4', '#ff1493');
+      case 'cat_toy_laser_pointer': {
+        var toyFound = Array.isArray(gameState.flags.cat_toys_found) &&
+          gameState.flags.cat_toys_found.includes(obj.type.replace('cat_toy_', ''));
+        if (!toyFound) {
+          var glowAlpha = 0.4 + Math.sin(animTimer * 0.1) * 0.2;
+          ctx.fillStyle = 'rgba(255,105,180,' + glowAlpha + ')';
+          ctx.fillRect(x + 6, y + 6, 12, 12);
+          ctx.fillStyle = '#ff69b4';
+          ctx.fillRect(x + 8, y + 8, 3, 3);
+          ctx.fillRect(x + 13, y + 8, 3, 3);
+          ctx.fillRect(x + 9, y + 12, 6, 4);
+        } else {
+          // Faint paw print marks an already-searched hiding spot
+          ctx.fillStyle = 'rgba(255,105,180,0.18)';
+          ctx.fillRect(x + 8, y + 8, 3, 3);
+          ctx.fillRect(x + 13, y + 8, 3, 3);
+          ctx.fillRect(x + 9, y + 12, 6, 4);
+        }
         break;
-      case 'cat_toy_laser_pointer':
-        SPRITES.genericItem(x, y, '#dc143c', '#000');
-        break;
+      }
 
       // Basement items
       case 'weights':
@@ -3384,20 +3404,6 @@ function drawInteractables(floor) {
       }
       case 'linen_closet':
         SPRITES.genericItem(x, y, '#fff', '#e6e6fa');
-        break;
-
-      // Cat toy collectible
-      case 'cat_toy':
-        if (!gameState.flags.cat_toys_found || !gameState.flags.cat_toys_found.includes(obj.toyId)) {
-          // Glowing paw print indicator
-          var glowAlpha = 0.4 + Math.sin(animTimer * 0.1) * 0.2;
-          ctx.fillStyle = 'rgba(255,105,180,' + glowAlpha + ')';
-          ctx.fillRect(x + 6, y + 6, 12, 12);
-          ctx.fillStyle = '#ff69b4';
-          ctx.fillRect(x + 8, y + 8, 3, 3);
-          ctx.fillRect(x + 13, y + 8, 3, 3);
-          ctx.fillRect(x + 9, y + 12, 6, 4);
-        }
         break;
 
       // Outside items
@@ -4118,7 +4124,8 @@ function doSaveGame() {
     currentFloor: gameState.currentFloor,
     player: { row: gameState.player.row, col: gameState.player.col, facing: gameState.player.facing },
     inventory: gameState.inventory,
-    flags: gameState.flags
+    flags: gameState.flags,
+    playTimeMs: getTotalPlayTimeMs()
   };
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -4184,6 +4191,7 @@ function loadGame() {
     gameState.player.facing = validFacing.includes(data.player && data.player.facing) ? data.player.facing : 'down';
     gameState.inventory = inventory;
     gameState.flags = mergedFlags;
+    playTimeOffsetMs = Number.isFinite(data.playTimeMs) && data.playTimeMs >= 0 ? data.playTimeMs : 0;
 
     return true;
   } catch (e) {
