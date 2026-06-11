@@ -235,7 +235,7 @@ function init() {
       hideEnding();
       freeRoam = true;
       markPlayerActivity();
-      showToast('Free roam! Your cats are following you. Press INTERACT near a cat to pet it. 🐾', 4500);
+      showToast('Free roam! Your cats are following you — and the dining room sliding door to the backyard is open! 🐾', 4500);
     });
   }
 

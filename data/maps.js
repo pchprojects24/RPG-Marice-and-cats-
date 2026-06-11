@@ -71,6 +71,16 @@ const TILE_COLORS = {
     [T.INTERACT]: '#3d3d3d', // street asphalt
     [T.STAIRS]: '#a0522d',
     [T.COUNTER]: '#4a8c3f'   // lawn green
+  },
+  // Backyard garden (mostly custom-rendered like the outside map)
+  garden: {
+    [T.FLOOR]: '#4a8c3f',    // lawn green
+    [T.WALL]: '#9a7448',     // fence wood
+    [T.FURNITURE]: '#7a5a3a',
+    [T.DOOR]: '#87CEEB',     // sliding glass door
+    [T.INTERACT]: '#4a8c3f',
+    [T.STAIRS]: '#a0522d',
+    [T.COUNTER]: '#6b4a2e'   // garden bed soil
   }
 };
 
@@ -108,6 +118,77 @@ const outsideInteractables = [
 ];
 
 const outsideStart = { row: 12, col: 9 };
+
+// ============================================================
+// BACKYARD GARDEN MAP (20x15)
+// Unlocked after the snuggle-pile ending via the dining room
+// sliding door. Layout:
+//   Top: back of the house with the sliding patio door
+//   Rows 3-4: wooden deck/patio (center)
+//   Left: vegetable patch (raised beds) + garden shed
+//   Right: bird feeder + catio against the fence
+//   Fence all around the lawn
+// ============================================================
+const gardenGrid = [
+  // Row 0: house roof
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  // Row 1: house siding with windows
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  // Row 2: siding + sliding patio door back into the dining room
+  [1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1],
+  // Row 3: deck (patio table at col 12)
+  [1,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,1],
+  // Row 4: deck (garden bench at col 6)
+  [1,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 5: lawn (compost bin col 1, bird feeder col 16)
+  [1,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,1],
+  // Row 6: raised beds cols 2-4 (vegetable patch interact at col 3)
+  [1,0,6,4,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 7: raised beds + bird bath (col 10)
+  [1,0,6,6,6,0,0,0,0,0,4,0,0,0,0,0,0,0,0,1],
+  // Row 8: open lawn
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 9: catio against right fence (interact at col 17)
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,2,1],
+  // Row 10: catio bottom
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,1],
+  // Row 11: shed body cols 2-4 (garden gnome col 8)
+  [1,0,2,2,2,0,0,0,4,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 12: shed front with door (col 3)
+  [1,0,2,4,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  // Row 13: flower beds along the bottom fence
+  [1,0,0,0,0,0,4,0,0,0,0,0,0,4,0,0,0,0,0,1],
+  // Row 14: bottom fence
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+const gardenInteractables = [
+  // Sliding door back into the dining room
+  { row: 2, col: 9, type: 'garden_house_door', label: 'Sliding Door', sprite: 'sliding_door' },
+
+  // Deck / patio
+  { row: 3, col: 12, type: 'patio_table', label: 'Patio Table', sprite: 'generic', dialogueKey: 'patio_table' },
+  { row: 4, col: 6, type: 'garden_bench', label: 'Garden Bench', sprite: 'bench' },
+
+  // Lawn features
+  { row: 5, col: 1, type: 'compost_bin', label: 'Compost Bin', sprite: 'generic', dialogueKey: 'compost_bin' },
+  { row: 5, col: 16, type: 'bird_feeder', label: 'Bird Feeder', sprite: 'generic', dialogueKey: 'bird_feeder' },
+  { row: 6, col: 3, type: 'vegetable_patch', label: 'Vegetable Patch', sprite: 'generic', dialogueKey: 'vegetable_patch' },
+  { row: 7, col: 10, type: 'bird_bath', label: 'Bird Bath', sprite: 'generic' },
+  { row: 11, col: 8, type: 'garden_gnome', label: 'Garden Gnome', sprite: 'gnome' },
+
+  // Catio against the right fence
+  { row: 9, col: 17, type: 'catio', label: 'Catio', sprite: 'generic', dialogueKey: 'catio' },
+
+  // Shed door
+  { row: 12, col: 3, type: 'garden_shed', label: 'Garden Shed', sprite: 'generic', dialogueKey: 'garden_shed' },
+
+  // Flower beds by the bottom fence
+  { row: 13, col: 6, type: 'flower_bed', label: 'Flower Bed', sprite: 'flowers' },
+  { row: 13, col: 13, type: 'flower_bed', label: 'Flower Bed', sprite: 'flowers' },
+];
+
+const gardenStart = { row: 3, col: 9 };
 
 // ============================================================
 // MAIN FLOOR MAP (20x15)
@@ -174,8 +255,9 @@ const mainFloorInteractables = [
   { row: 4, col: 14, type: 'china_cabinet', label: 'China Cabinet', sprite: 'cabinet', dialogueKey: 'china_cabinet' },
   { row: 4, col: 16, type: 'plant', label: 'Potted Plant', sprite: 'plant', dialogueKey: 'plant' },
 
-  // Sliding door (decorative, right side of dining room)
-  { row: 5, col: 18, type: 'sliding_door', label: 'Sliding Door', sprite: 'sliding_door', dialogueKey: 'sliding_door' },
+  // Sliding door (right side of dining room) — opens onto the backyard
+  // garden once the snuggle pile ending has been reached.
+  { row: 5, col: 18, type: 'sliding_door', label: 'Sliding Door', sprite: 'sliding_door' },
 
   // Living room decor - more detailed
   { row: 6, col: 6, type: 'floor_lamp', label: 'Floor Lamp', sprite: 'lamp', dialogueKey: 'floor_lamp' },
@@ -401,6 +483,14 @@ const FLOORS = {
     start: upstairsStart,
     palette: TILE_COLORS.upstairs,
     name: 'Upstairs'
+  },
+  garden: {
+    grid: gardenGrid,
+    interactables: gardenInteractables,
+    stairs: {},
+    start: gardenStart,
+    palette: TILE_COLORS.garden,
+    name: 'Backyard Garden'
   }
 };
 
@@ -427,5 +517,12 @@ const ROOM_LABELS = {
     { text: 'Front Yard', row: 7, col: 3 },
     { text: 'Porch', row: 3, col: 8 },
     { text: 'Street', row: 13, col: 8 },
+  ],
+  garden: [
+    { text: 'Patio', row: 4, col: 8 },
+    { text: 'Veggie Patch', row: 6, col: 3 },
+    { text: 'Backyard', row: 9, col: 9 },
+    { text: 'Catio', row: 9, col: 17 },
+    { text: 'Shed', row: 11, col: 3 },
   ]
 };

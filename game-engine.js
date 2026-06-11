@@ -9,7 +9,8 @@ const FLOOR_IDS = {
   OUTSIDE: 'outside',
   MAIN: 'main',
   BASEMENT: 'basement',
-  UPSTAIRS: 'upstairs'
+  UPSTAIRS: 'upstairs',
+  GARDEN: 'garden'
 };
 
 const ITEMS = {
@@ -93,6 +94,7 @@ const DEFAULT_FLAGS = {
   sofa_searched: false,
   game_complete: false,
   front_door_unlocked: false,
+  garden_visited: false,
   cat_toys_found: [],
   diary_pages_found: [],
   pet_count: 0
@@ -495,6 +497,10 @@ var MUSIC_DATA = {
   upstairs: {
     notes: [392, 440, 494, 523, 494, 440, 392, 349],
     tempo: 380, type: 'triangle'
+  },
+  garden: {
+    notes: [392, 440, 523, 587, 523, 494, 440, 330],
+    tempo: 340, type: 'sine'
   }
 };
 
@@ -572,6 +578,9 @@ function stopMusic() {
 function startAmbient(floorId) {
   stopAmbient();
   if (!audioCtx) return;
+  if (floorId === FLOOR_IDS.GARDEN) {
+    scheduleBirdsong();
+  }
   var cfgs = {
     basement: { freq: 58, type: 'sine', vol: 0.018 },
     main: { freq: 120, type: 'sine', vol: 0.006 } // faint fridge hum
@@ -589,7 +598,45 @@ function startAmbient(floorId) {
   ambientOsc.start(audioCtx.currentTime);
 }
 
+// Occasional bird chirps for the garden — two or three quick rising blips
+// at a random pitch, rescheduled at a random interval.
+var birdsongTimer = null;
+
+function scheduleBirdsong() {
+  if (birdsongTimer) clearTimeout(birdsongTimer);
+  birdsongTimer = setTimeout(function () {
+    playBirdChirp();
+    scheduleBirdsong();
+  }, 2500 + Math.random() * 5000);
+}
+
+function playBirdChirp() {
+  if (!audioCtx) return;
+  var t = audioCtx.currentTime;
+  var chirps = 2 + Math.floor(Math.random() * 2);
+  var baseFreq = 2200 + Math.random() * 900;
+  for (var i = 0; i < chirps; i++) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'sine';
+    var start = t + i * 0.13;
+    osc.frequency.setValueAtTime(baseFreq, start);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.4, start + 0.05);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(0.03, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    osc.start(start);
+    osc.stop(start + 0.12);
+  }
+}
+
 function stopAmbient() {
+  if (birdsongTimer) {
+    clearTimeout(birdsongTimer);
+    birdsongTimer = null;
+  }
   if (ambientOsc) {
     var oscRef = ambientOsc;
     var gainRef = ambientGainNode;
@@ -821,7 +868,10 @@ function markPlayerActivity() {
 
 function getNextTaskHint() {
   if (gameState.flags.game_complete) {
-    // Free roam: still point at any unfound toys or diary pages
+    // Free roam: point at the backyard first, then any unfound toys or diary pages
+    if (!gameState.flags.garden_visited) {
+      return 'The sliding door in the dining room is open now — take the girls out to the backyard!';
+    }
     var toysFound = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found.length : 0;
     if (toysFound < 3) {
       return 'Hidden cat toys: ' + toysFound + '/3 found. Check behind furniture!';
@@ -893,6 +943,10 @@ function findInteractableByType(floorId, type) {
 
 function getNextTaskTarget() {
   if (gameState.flags.game_complete) {
+    if (!gameState.flags.garden_visited) {
+      const slider = findInteractableByType(FLOOR_IDS.MAIN, 'sliding_door');
+      if (slider) return { floorId: FLOOR_IDS.MAIN, row: slider.row, col: slider.col, label: slider.label || 'Sliding Door' };
+    }
     return findNextToyTarget() || findNextDiaryTarget();
   }
 
@@ -1239,7 +1293,8 @@ const FLOOR_NAMES = {
   [FLOOR_IDS.OUTSIDE]: 'Front Entry',
   [FLOOR_IDS.MAIN]: 'Main Floor',
   [FLOOR_IDS.BASEMENT]: 'Basement',
-  [FLOOR_IDS.UPSTAIRS]: 'Upstairs'
+  [FLOOR_IDS.UPSTAIRS]: 'Upstairs',
+  [FLOOR_IDS.GARDEN]: 'Backyard Garden'
 };
 
 function changeFloorTo(newFloor, row, col, facing) {
@@ -1751,7 +1806,29 @@ function handleInteraction(obj) {
       }
       break;
 
-    // ---- LIVING ROOM (dialogueKey used for tv, floor_lamp, coffee_table, bookshelf, sliding_door) ----
+    // ---- SLIDING DOOR / BACKYARD GARDEN ----
+    case 'sliding_door':
+      if (gameState.flags.game_complete) {
+        if (!gameState.flags.garden_visited) {
+          startDialogue('sliding_door_open', null, function () {
+            playSfx('door_unlock');
+            showToast('The backyard garden is open! 🌻');
+            enterGarden();
+          });
+        } else {
+          enterGarden();
+        }
+      } else {
+        startDialogue('sliding_door', null, null);
+      }
+      break;
+
+    case 'garden_house_door':
+      // Step back inside, next to the dining room sliding door
+      changeFloorTo(FLOOR_IDS.MAIN, 5, 17, 'left');
+      break;
+
+    // ---- LIVING ROOM (dialogueKey used for tv, floor_lamp, coffee_table, bookshelf) ----
     case 'futon':
       startDialogue('futon', null, null);
       break;
@@ -1932,6 +2009,15 @@ function handleInteraction(obj) {
       startDialogue('garden_bench', null, null);
       break;
   }
+}
+
+// Head out through the sliding door into the backyard garden.
+function enterGarden() {
+  if (!gameState.flags.garden_visited) {
+    gameState.flags.garden_visited = true;
+    updateQuestList();
+  }
+  changeFloorTo(FLOOR_IDS.GARDEN, undefined, undefined, 'down');
 }
 
 // Check stair-step for laundry clearing (when player tries to go upstairs)
@@ -3062,6 +3148,138 @@ function drawAsphaltTile(x, y, row, col) {
   }
 }
 
+// ============ GARDEN TILE RENDERING ============
+
+// Dispatch backyard garden tile rendering. Reuses the outside renderers
+// (lawn, facade, porch deck) plus garden-specific fence/soil/shed tiles.
+function drawGardenTile(tile, x, y, row, col) {
+  if (tile === T.WALL) {
+    if (row <= 2) {
+      drawFacadeTile(x, y, Math.min(row, 2), col);
+    } else {
+      drawFenceTile(x, y, row, col);
+    }
+  } else if (tile === T.DOOR) {
+    // Siding behind the sliding patio door (door sprite drawn on top)
+    drawFacadeTile(x, y, 2, col);
+  } else if (tile === T.COUNTER) {
+    drawSoilTile(x, y, row, col);
+  } else if (tile === T.FURNITURE) {
+    if (col >= 16) {
+      drawCatioTile(x, y, row, col);
+    } else {
+      drawShedTile(x, y, row, col);
+    }
+  } else if (tile === T.FLOOR || tile === T.INTERACT) {
+    // Wooden deck in front of the house, lawn everywhere else
+    if (row <= 4 && col >= 5 && col <= 14) {
+      drawPorchTile(x, y, row, col);
+    } else {
+      drawLawnTile(x, y, row, col);
+    }
+  } else {
+    ctx.fillStyle = '#888';
+    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.03)';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+}
+
+// Wooden privacy fence tile (lawn peeks through at the bottom)
+function drawFenceTile(x, y, row, col) {
+  drawLawnTile(x, y, row, col);
+  // Planks
+  ctx.fillStyle = '#9a7448';
+  ctx.fillRect(x, y, TILE_SIZE, 19);
+  for (var p = 0; p < TILE_SIZE; p += 6) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(x + p, y, 1, 19);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(x + p + 1, y, 1, 19);
+  }
+  // Top rail
+  ctx.fillStyle = '#7a5a38';
+  ctx.fillRect(x, y, TILE_SIZE, 3);
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(x, y, TILE_SIZE, 1);
+  // Ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fillRect(x, y + 19, TILE_SIZE, 2);
+}
+
+// Raised garden bed: dark soil in a wooden frame, with seeded sprouts
+function drawSoilTile(x, y, row, col) {
+  ctx.fillStyle = '#6b4a2e';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Furrow lines
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  for (var f = 5; f < TILE_SIZE; f += 6) {
+    ctx.fillRect(x + 2, y + f, TILE_SIZE - 4, 1);
+  }
+  // Wooden frame
+  ctx.fillStyle = '#8b6f47';
+  ctx.fillRect(x, y, TILE_SIZE, 2);
+  ctx.fillRect(x, y + TILE_SIZE - 2, TILE_SIZE, 2);
+  ctx.fillRect(x, y, 2, TILE_SIZE);
+  ctx.fillRect(x + TILE_SIZE - 2, y, 2, TILE_SIZE);
+  // A few green sprouts at seeded positions
+  ctx.fillStyle = '#4a9c3f';
+  for (var s = 0; s < 3; s++) {
+    var sx = 4 + Math.floor(tileSeed(row, col, s + 10) * 15);
+    var sy = 5 + Math.floor(tileSeed(row, col, s + 20) * 13);
+    ctx.fillRect(x + sx, y + sy, 2, 3);
+    ctx.fillRect(x + sx - 1, y + sy, 1, 2);
+    ctx.fillRect(x + sx + 2, y + sy, 1, 2);
+  }
+}
+
+// Garden shed body tile — wooden walls with a simple roof strip on top
+function drawShedTile(x, y, row, col) {
+  ctx.fillStyle = '#7a5a3a';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Vertical plank lines
+  for (var p = 4; p < TILE_SIZE; p += 6) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(x + p, y, 1, TILE_SIZE);
+  }
+  // Roof strip on the shed's top row
+  if (row === 11) {
+    ctx.fillStyle = '#5a4030';
+    ctx.fillRect(x, y, TILE_SIZE, 7);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(x, y, TILE_SIZE, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(x, y + 6, TILE_SIZE, 1);
+  }
+}
+
+// Catio frame tile — dark posts with see-through mesh over the lawn
+function drawCatioTile(x, y, row, col) {
+  drawLawnTile(x, y, row, col);
+  ctx.fillStyle = 'rgba(60,50,40,0.35)';
+  ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  // Frame posts
+  ctx.fillStyle = '#4a3a2a';
+  ctx.fillRect(x, y, TILE_SIZE, 2);
+  ctx.fillRect(x, y + TILE_SIZE - 2, TILE_SIZE, 2);
+  ctx.fillRect(x, y, 2, TILE_SIZE);
+  ctx.fillRect(x + TILE_SIZE - 2, y, 2, TILE_SIZE);
+  // Mesh
+  ctx.strokeStyle = 'rgba(220,220,220,0.3)';
+  ctx.lineWidth = 0.5;
+  for (var m = 4; m < TILE_SIZE; m += 4) {
+    ctx.beginPath();
+    ctx.moveTo(x + m, y + 2);
+    ctx.lineTo(x + m, y + TILE_SIZE - 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + m);
+    ctx.lineTo(x + TILE_SIZE - 2, y + m);
+    ctx.stroke();
+  }
+}
+
 // Outside overlay — roof gable, chimney, porch beam, curb
 function drawOutsideOverlay() {
   if (gameState.currentFloor !== FLOOR_IDS.OUTSIDE) return;
@@ -3151,9 +3369,13 @@ function drawTile(floor, row, col) {
   const y = row * TILE_SIZE;
   const palette = floor.palette;
 
-  // Outside floor uses custom detailed rendering
+  // Outside and garden floors use custom detailed rendering
   if (gameState.currentFloor === FLOOR_IDS.OUTSIDE) {
     drawOutsideTile(tile, x, y, row, col);
+    return;
+  }
+  if (gameState.currentFloor === FLOOR_IDS.GARDEN) {
+    drawGardenTile(tile, x, y, row, col);
     return;
   }
 
@@ -3300,6 +3522,15 @@ function drawInteractables(floor) {
         SPRITES.door(x, y, !gameState.flags.basement_unlocked);
         break;
       case 'sliding_door':
+        SPRITES.slidingDoor(x, y);
+        // Soft pulsing glow once the backyard has been unlocked
+        if (gameState.flags.game_complete) {
+          var doorGlow = 0.18 + Math.sin(animTimer * 0.1) * 0.12;
+          ctx.fillStyle = 'rgba(255,235,140,' + doorGlow + ')';
+          ctx.fillRect(x + 2, y + 2, 20, 20);
+        }
+        break;
+      case 'garden_house_door':
         SPRITES.slidingDoor(x, y);
         break;
       case 'tv':
@@ -3616,6 +3847,117 @@ function drawInteractables(floor) {
         ctx.fillStyle = '#8b5a2b';
         ctx.fillRect(x + 3, y + 8, 18, 5);
         break;
+
+      // Backyard garden items
+      case 'patio_table': {
+        // Table top
+        ctx.fillStyle = '#8b6f50';
+        ctx.fillRect(x + 4, y + 12, 16, 8);
+        ctx.fillStyle = '#9d8160';
+        ctx.fillRect(x + 5, y + 13, 14, 6);
+        // Umbrella pole and canopy
+        ctx.fillStyle = '#777';
+        ctx.fillRect(x + 11, y + 4, 2, 10);
+        ctx.fillStyle = '#e05c5c';
+        ctx.fillRect(x + 4, y + 2, 16, 4);
+        ctx.fillStyle = '#f0eeea';
+        ctx.fillRect(x + 8, y + 2, 4, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.fillRect(x + 4, y + 5, 16, 1);
+        break;
+      }
+      case 'compost_bin':
+        // Bin body
+        ctx.fillStyle = '#3a5a30';
+        ctx.fillRect(x + 5, y + 8, 14, 14);
+        ctx.fillStyle = '#46693a';
+        ctx.fillRect(x + 6, y + 9, 12, 12);
+        // Lid
+        ctx.fillStyle = '#2e4a26';
+        ctx.fillRect(x + 4, y + 6, 16, 4);
+        // Vent slits
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(x + 8, y + 13, 8, 1);
+        ctx.fillRect(x + 8, y + 17, 8, 1);
+        break;
+      case 'bird_feeder': {
+        // Post
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(x + 11, y + 8, 2, 14);
+        // Feeder house
+        ctx.fillStyle = '#8b6914';
+        ctx.fillRect(x + 6, y + 4, 12, 6);
+        ctx.fillStyle = '#5a4010';
+        ctx.fillRect(x + 5, y + 2, 14, 3);
+        // Seed tray
+        ctx.fillStyle = '#d4b896';
+        ctx.fillRect(x + 7, y + 8, 10, 2);
+        // A little visiting bird that hops away now and then
+        if (Math.sin(animTimer * 0.02) > -0.3) {
+          ctx.fillStyle = '#cc4444';
+          ctx.fillRect(x + 8, y + 5, 3, 3);
+          ctx.fillStyle = '#333';
+          ctx.fillRect(x + 10, y + 5, 1, 1);
+        }
+        break;
+      }
+      case 'vegetable_patch':
+        // Soil bed matching the neighbouring raised-bed tiles
+        ctx.fillStyle = '#6b4a2e';
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = '#8b6f47';
+        ctx.fillRect(x, y, TILE_SIZE, 2);
+        ctx.fillRect(x, y + TILE_SIZE - 2, TILE_SIZE, 2);
+        // Tomato plant
+        ctx.fillStyle = '#2e7d32';
+        ctx.fillRect(x + 4, y + 6, 2, 12);
+        ctx.fillRect(x + 2, y + 8, 6, 2);
+        ctx.fillStyle = '#e53935';
+        ctx.fillRect(x + 6, y + 10, 4, 4);
+        // Lettuce
+        ctx.fillStyle = '#7cb342';
+        ctx.fillRect(x + 12, y + 14, 6, 5);
+        ctx.fillStyle = '#9ccc65';
+        ctx.fillRect(x + 13, y + 15, 4, 3);
+        // Catnip sprigs
+        ctx.fillStyle = '#4a9c3f';
+        ctx.fillRect(x + 16, y + 5, 2, 5);
+        ctx.fillRect(x + 19, y + 7, 2, 4);
+        break;
+      case 'catio': {
+        // Door panel in the catio mesh, with a cozy cat bed visible inside
+        ctx.fillStyle = '#4a3a2a';
+        ctx.fillRect(x + 2, y + 2, 20, 20);
+        ctx.fillStyle = 'rgba(120,160,110,0.5)';
+        ctx.fillRect(x + 4, y + 4, 16, 16);
+        // Cat bed
+        ctx.fillStyle = '#b06030';
+        ctx.fillRect(x + 7, y + 12, 10, 6);
+        ctx.fillStyle = '#d4956a';
+        ctx.fillRect(x + 8, y + 13, 8, 4);
+        // Dangling toy
+        ctx.fillStyle = '#ddd';
+        ctx.fillRect(x + 11, y + 4, 1, 5);
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(x + 10, y + 9, 3, 3);
+        break;
+      }
+      case 'garden_shed':
+        // Shed front wall with a plank door (sits between shed body tiles)
+        ctx.fillStyle = '#7a5a3a';
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = '#5a4028';
+        ctx.fillRect(x + 5, y + 4, 14, 20);
+        ctx.fillStyle = '#6b4e32';
+        ctx.fillRect(x + 6, y + 5, 12, 18);
+        // Door planks
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(x + 9, y + 5, 1, 18);
+        ctx.fillRect(x + 14, y + 5, 1, 18);
+        // Handle
+        ctx.fillStyle = '#c0c0c0';
+        ctx.fillRect(x + 16, y + 13, 2, 2);
+        break;
     }
   }
 }
@@ -3695,7 +4037,8 @@ var FLOOR_AMBIENT = {
   outside: { r: 255, g: 180, b: 100, a: 0.08 },  // warm sunset
   main: { r: 255, g: 220, b: 170, a: 0.05 },      // warm interior
   basement: { r: 220, g: 230, b: 255, a: 0.12 },     // cool fluorescent
-  upstairs: { r: 255, g: 230, b: 200, a: 0.06 }    // soft warm
+  upstairs: { r: 255, g: 230, b: 200, a: 0.06 },   // soft warm
+  garden: { r: 255, g: 200, b: 120, a: 0.07 }    // golden-hour backyard
 };
 
 // Light source definitions per floor: {row, col, radius, color, flicker}
@@ -3723,6 +4066,10 @@ var FLOOR_LIGHTS = {
     { row: 7, col: 8, radius: 72, color: '255,240,200', flicker: false },  // hallway center light
     { row: 9, col: 3, radius: 64, color: '255,240,200', flicker: false },  // office light
     { row: 3, col: 17, radius: 56, color: '255,240,200', flicker: false }, // upstairs washroom light
+  ],
+  garden: [
+    { row: 2, col: 9, radius: 56, color: '255,240,180', flicker: false },  // patio door light
+    { row: 3, col: 12, radius: 48, color: '255,240,180', flicker: true },  // patio table lantern
   ]
 };
 
@@ -4294,7 +4641,8 @@ function loadGame() {
       outside: outsideStart,
       main: mainFloorStart,
       basement: basementStart,
-      upstairs: upstairsStart
+      upstairs: upstairsStart,
+      garden: gardenStart
     };
     const floorStart = startsByFloor[floorId] || outsideStart;
 
