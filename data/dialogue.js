@@ -186,6 +186,13 @@ const DIALOGUE = {
     { speaker: 'Marice', text: "The sliding door is shut tight for now. The girls stay indoors where it's safe." }
   ],
 
+  // Played once, the first time the sliding door opens after the ending
+  sliding_door_open: [
+    { speaker: 'Marice', text: "All three girls fed, snuggled, and trailing behind me... You know what? It's a beautiful evening." },
+    { speaker: 'Marice', text: "*click* The sliding door glides open. Fresh air at last!" },
+    { speaker: 'Marice', text: "Come on, girls — let's go see the garden. Stay close to me!" }
+  ],
+
   tv: [
     { speaker: 'Marice', text: "Paused on a loop of bird videos. Quality enrichment programming." }
   ],
@@ -458,6 +465,33 @@ const DIALOGUE = {
 
   garden_bench: [
     { speaker: 'Marice', text: "A sturdy bench for taking off shoes before heading inside." }
+  ],
+
+  // ============================
+  // BACKYARD GARDEN INTERACTABLES
+  // ============================
+  patio_table: [
+    { speaker: 'Marice', text: "The patio table. Perfect spot for morning coffee while the girls patrol the lawn." }
+  ],
+
+  compost_bin: [
+    { speaker: 'Marice', text: "The compost bin, hard at work. The cats keep a respectful distance from this one." }
+  ],
+
+  bird_feeder: [
+    { speaker: 'Marice', text: "The bird feeder is busy today. Three cats are now doing their very best statue impressions." }
+  ],
+
+  vegetable_patch: [
+    { speaker: 'Marice', text: "Tomatoes, lettuce, and a row of catnip. Guess which one keeps getting 'harvested' by unauthorized paws." }
+  ],
+
+  catio: [
+    { speaker: 'Marice', text: "The catio! A screened porch just for cats — sunbeams in, birds safely out of reach. Five-star enrichment." }
+  ],
+
+  garden_shed: [
+    { speaker: 'Marice', text: "The garden shed. Trowels, flower pots, and one suspicious stash of toy mice I confiscated last spring." }
   ],
 
   // ============================
