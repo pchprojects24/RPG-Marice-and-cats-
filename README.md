@@ -27,7 +27,12 @@ A Zelda-style 2D top-down prototype. Find Alice, Olive, and Beatrice; feed the c
 
 Every cat you feed **joins you and trails behind Marice** through the whole house. Walk up to one of your followers and press **INTERACT** (or tap) to **pet it** — purrs, hearts, and an affection counter that's tallied on the ending screen.
 
-Optional: find the three cat toys (jingle ball, feather wand, laser pointer) hidden around the house.
+Optional side quests:
+
+- Find the three **cat toys** (jingle ball, feather wand, laser pointer) hidden around the house.
+- Recover the four pages of **Marice's diary** — one softly glowing page on each floor, each with a bit of backstory about how the girls came home.
+
+Each cat also has her own **voice**: Alice's prim meow, Olive's excited double chirp, and Beatrice's low dramatic drawl.
 
 ## Deploy to GitHub Pages
 
