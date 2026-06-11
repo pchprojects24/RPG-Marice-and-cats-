@@ -94,6 +94,7 @@ const DEFAULT_FLAGS = {
   game_complete: false,
   front_door_unlocked: false,
   cat_toys_found: [],
+  diary_pages_found: [],
   pet_count: 0
 };
 
@@ -120,7 +121,7 @@ let gameState = {
   currentFloor: FLOOR_IDS.OUTSIDE,
   player: { row: outsideStart.row, col: outsideStart.col, facing: 'down' },
   inventory: [],          // array of item ID strings
-  flags: Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] }),
+  flags: Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [], diary_pages_found: [] }),
   // Smooth movement animation
   moving: false,
   moveProgress: 0,
@@ -258,7 +259,7 @@ function updateAudioVolumes() {
 
 // --- SFX: procedural chiptune sounds ---
 
-function playSfx(type) {
+function playSfx(type, opt) {
   if (!audioCtx) return;
   updateAudioVolumes();
   switch (type) {
@@ -266,7 +267,7 @@ function playSfx(type) {
     case 'interact': sfxInteract(); break;
     case 'item_pickup': sfxItemPickup(); break;
     case 'door_unlock': sfxDoorUnlock(); break;
-    case 'cat_meow': sfxCatMeow(); break;
+    case 'cat_meow': sfxCatMeow(opt); break;
     case 'cat_purr': sfxCatPurr(); break;
     case 'cat_fed': sfxCatFed(); break;
     case 'numpad_beep': sfxNumpadBeep(); break;
@@ -345,22 +346,48 @@ function sfxDoorUnlock() {
   osc2.stop(audioCtx.currentTime + 0.05);
 }
 
-function sfxCatMeow() {
-  // Frequency sweep mimicking a meow
+// Each cat has her own voice: Alice a prim mid-high meow, Olive two quick
+// excited chirps, Beatrice a low dramatic drawl. No name = generic meow.
+function sfxCatMeow(catName) {
+  var t = audioCtx.currentTime;
+
+  if (catName === 'olive') {
+    // Two quick rising chirps
+    [0, 0.16].forEach(function (delay) {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(720 + Math.random() * 60, t + delay);
+      osc.frequency.linearRampToValueAtTime(1020 + Math.random() * 80, t + delay + 0.08);
+      gain.gain.setValueAtTime(0.13, t + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.12);
+      osc.connect(gain);
+      gain.connect(sfxGainNode);
+      osc.start(t + delay);
+      osc.stop(t + delay + 0.12);
+    });
+    return;
+  }
+
+  var voices = {
+    alice: { start: 620, peak: 880, end: 460, dur: 0.32, vol: 0.15 },
+    beatrice: { start: 320, peak: 470, end: 220, dur: 0.5, vol: 0.16 }
+  };
+  var v = voices[catName] || { start: 500, peak: 720, end: 420, dur: 0.35, vol: 0.15 };
+
   var osc = audioCtx.createOscillator();
   var gain = audioCtx.createGain();
   osc.type = 'sine';
-  var t = audioCtx.currentTime;
-  osc.frequency.setValueAtTime(500 + Math.random() * 100, t);
-  osc.frequency.linearRampToValueAtTime(700 + Math.random() * 150, t + 0.1);
-  osc.frequency.linearRampToValueAtTime(400 + Math.random() * 100, t + 0.3);
-  gain.gain.setValueAtTime(0.15, t);
-  gain.gain.setValueAtTime(0.15, t + 0.15);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+  osc.frequency.setValueAtTime(v.start + Math.random() * 60, t);
+  osc.frequency.linearRampToValueAtTime(v.peak + Math.random() * 80, t + v.dur * 0.3);
+  osc.frequency.linearRampToValueAtTime(v.end + Math.random() * 50, t + v.dur * 0.85);
+  gain.gain.setValueAtTime(v.vol, t);
+  gain.gain.setValueAtTime(v.vol, t + v.dur * 0.45);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + v.dur);
   osc.connect(gain);
   gain.connect(sfxGainNode);
   osc.start(t);
-  osc.stop(t + 0.35);
+  osc.stop(t + v.dur);
 }
 
 function sfxCatPurr() {
@@ -546,7 +573,8 @@ function startAmbient(floorId) {
   stopAmbient();
   if (!audioCtx) return;
   var cfgs = {
-    basement: { freq: 58, type: 'sine', vol: 0.018 }
+    basement: { freq: 58, type: 'sine', vol: 0.018 },
+    main: { freq: 120, type: 'sine', vol: 0.006 } // faint fridge hum
   };
   var cfg = cfgs[floorId];
   if (!cfg) return;
@@ -632,9 +660,9 @@ function startDialogue(dialogueKey, catName, callback) {
   dialogueCallback = callback || null;
   dialogueActive = true;
 
-  // Cat meow when talking to a cat
+  // Cat meow when talking to a cat — each cat has her own voice
   if (catName) {
-    playSfx('cat_meow');
+    playSfx('cat_meow', catName);
   }
 
   showDialogueMessage();
@@ -793,10 +821,14 @@ function markPlayerActivity() {
 
 function getNextTaskHint() {
   if (gameState.flags.game_complete) {
-    // Free roam: still point at any unfound toys
+    // Free roam: still point at any unfound toys or diary pages
     var toysFound = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found.length : 0;
     if (toysFound < 3) {
       return 'Hidden cat toys: ' + toysFound + '/3 found. Check behind furniture!';
+    }
+    var pagesFound = Array.isArray(gameState.flags.diary_pages_found) ? gameState.flags.diary_pages_found.length : 0;
+    if (pagesFound < 4) {
+      return 'Diary pages: ' + pagesFound + '/4 found. They glow softly — one on each floor!';
     }
     return null;
   }
@@ -837,6 +869,11 @@ function getNextTaskHint() {
     var found = gameState.flags.cat_toys_found ? gameState.flags.cat_toys_found.length : 0;
     return 'Hidden cat toys: ' + found + '/3 found. Check behind furniture!';
   }
+  // Side-quest: diary pages
+  if (!gameState.flags.diary_pages_found || gameState.flags.diary_pages_found.length < 4) {
+    var pages = gameState.flags.diary_pages_found ? gameState.flags.diary_pages_found.length : 0;
+    return 'Diary pages: ' + pages + '/4 found. They glow softly — one on each floor!';
+  }
   return null;
 }
 
@@ -856,7 +893,7 @@ function findInteractableByType(floorId, type) {
 
 function getNextTaskTarget() {
   if (gameState.flags.game_complete) {
-    return findNextToyTarget();
+    return findNextToyTarget() || findNextDiaryTarget();
   }
 
   if (!gameState.flags.front_door_unlocked) {
@@ -909,8 +946,8 @@ function getNextTaskTarget() {
     if (cupboard) return { floorId: FLOOR_IDS.MAIN, row: cupboard.row, col: cupboard.col, label: cupboard.label || 'Cupboard' };
   }
 
-  // Side quest: guide to the next unfound toy, if possible.
-  return findNextToyTarget();
+  // Side quests: guide to the next unfound toy, then any missing diary page.
+  return findNextToyTarget() || findNextDiaryTarget();
 }
 
 // First unfound hidden toy across all floors, or null when all are found.
@@ -923,6 +960,21 @@ function findNextToyTarget() {
       const toyId = obj.type.replace('cat_toy_', '');
       if (found.includes(toyId)) continue;
       return { floorId, row: obj.row, col: obj.col, label: obj.label || 'Hidden Toy' };
+    }
+  }
+  return null;
+}
+
+// First unfound diary page across all floors, or null when all are found.
+function findNextDiaryTarget() {
+  const found = Array.isArray(gameState.flags.diary_pages_found) ? gameState.flags.diary_pages_found : [];
+  if (found.length >= DIARY_PAGE_IDS.length) return null;
+  for (const [floorId, floor] of Object.entries(FLOORS)) {
+    for (const obj of floor.interactables) {
+      if (!obj.type || !obj.type.startsWith('diary_page_')) continue;
+      const pageId = obj.type.replace('diary_page_', '');
+      if (found.includes(pageId)) continue;
+      return { floorId, row: obj.row, col: obj.col, label: obj.label || 'Diary Page' };
     }
   }
   return null;
@@ -1095,6 +1147,16 @@ function updateQuestList() {
     status.classList.toggle('complete', found >= 3);
     status.classList.toggle('pending', found < 3);
   }
+
+  // Diary pages side quest
+  const diaryItem = document.getElementById('quest-item-diary');
+  if (diaryItem) {
+    const status = diaryItem.querySelector('.quest-status');
+    const pages = Array.isArray(gameState.flags.diary_pages_found) ? gameState.flags.diary_pages_found.length : 0;
+    status.textContent = pages >= 4 ? '✅' : pages + '/4';
+    status.classList.toggle('complete', pages >= 4);
+    status.classList.toggle('pending', pages < 4);
+  }
 }
 
 // ======================== INVENTORY ========================
@@ -1104,11 +1166,12 @@ function addItem(itemId) {
   renderInventory();
   saveGame();
 
-  // Spawn particles at player location
+  // Spawn particles at player location — float the item's icon up as feedback
   const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
   const py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
   spawnParticles(px, py, 8, '#ffd700');
-  spawnTextParticle(px, py - 20, '+', '#ffd700');
+  const display = ITEM_DISPLAY[itemId];
+  spawnTextParticle(px, py - 20, display ? display.icon : '+', '#ffd700');
 
   // Light screen shake on item pickup
   triggerScreenShake(3, 10);
@@ -1483,6 +1546,41 @@ function collectCatToy(toyId) {
   });
 }
 
+// Hidden diary pages — lore collectibles, one per floor.
+const DIARY_PAGE_IDS = ['home', 'alice', 'olive', 'beatrice'];
+
+// Pick up a diary page: lore dialogue, toast with running count,
+// quest log refresh, and an immediate save. Mirrors collectCatToy.
+function collectDiaryPage(pageId) {
+  if (!Array.isArray(gameState.flags.diary_pages_found)) gameState.flags.diary_pages_found = [];
+  if (gameState.flags.diary_pages_found.includes(pageId)) {
+    startDialogue('diary_page_found', null, null);
+    return;
+  }
+  gameState.flags.diary_pages_found.push(pageId);
+  var total = gameState.flags.diary_pages_found.length;
+  updateQuestList();
+  startDialogue('diary_page_' + pageId, null, function () {
+    var px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+    var py = gameState.player.row * TILE_SIZE + TILE_SIZE / 2;
+    if (total === DIARY_PAGE_IDS.length) {
+      showToast('Diary complete! All ' + total + ' pages recovered. 📖✨', 4000);
+      triggerScreenShake(5, 15);
+      triggerHaptic(50);
+      spawnParticles(px, py, 16, '#ffd700');
+      spawnTextParticle(px, py - 25, '📖', '#ffd700');
+      playSfx('cat_fed');
+    } else {
+      showToast('Diary page recovered! (' + total + '/' + DIARY_PAGE_IDS.length + ')', 2500);
+      triggerScreenShake(3, 10);
+      spawnParticles(px, py, 8, '#ffd700');
+      spawnTextParticle(px, py - 20, '📖', '#ffd700');
+      playSfx('item_pickup');
+    }
+    saveGameImmediate();
+  });
+}
+
 function handleInteraction(obj) {
   // Data-driven: if interactable has dialogueKey and no special logic, show dialogue and return
   if (obj.dialogueKey) {
@@ -1689,6 +1787,14 @@ function handleInteraction(obj) {
     case 'cat_toy_feather_wand':
     case 'cat_toy_laser_pointer':
       collectCatToy(obj.type.replace('cat_toy_', ''));
+      break;
+
+    // ---- DIARY PAGE COLLECTIBLES ----
+    case 'diary_page_home':
+    case 'diary_page_alice':
+    case 'diary_page_olive':
+    case 'diary_page_beatrice':
+      collectDiaryPage(obj.type.replace('diary_page_', ''));
       break;
 
     // ---- NEW BASEMENT INTERACTABLES ----
@@ -2749,6 +2855,9 @@ function drawOutsideTile(tile, x, y, row, col) {
   } else if (tile === T.INTERACT) {
     if (row >= 12) {
       drawAsphaltTile(x, y, row, col);
+    } else if (row >= 6) {
+      // Walkway interactables (e.g. the diary page) sit on concrete
+      drawConcreteTile(x, y, row, col);
     } else {
       drawPorchTile(x, y, row, col);
     }
@@ -3279,6 +3388,32 @@ function drawInteractables(floor) {
           ctx.fillRect(x + 8, y + 8, 3, 3);
           ctx.fillRect(x + 13, y + 8, 3, 3);
           ctx.fillRect(x + 9, y + 12, 6, 4);
+        }
+        break;
+      }
+
+      // Diary page collectibles — softly glowing page until found, faint after
+      case 'diary_page_home':
+      case 'diary_page_alice':
+      case 'diary_page_olive':
+      case 'diary_page_beatrice': {
+        var pageFound = Array.isArray(gameState.flags.diary_pages_found) &&
+          gameState.flags.diary_pages_found.includes(obj.type.replace('diary_page_', ''));
+        if (!pageFound) {
+          var pageGlow = 0.35 + Math.sin(animTimer * 0.08) * 0.2;
+          ctx.fillStyle = 'rgba(255,225,120,' + pageGlow + ')';
+          ctx.fillRect(x + 4, y + 4, 16, 16);
+          // The page itself, with faint lines of handwriting
+          ctx.fillStyle = '#fdf6e3';
+          ctx.fillRect(x + 7, y + 5, 10, 13);
+          ctx.fillStyle = '#b89b6a';
+          ctx.fillRect(x + 9, y + 8, 6, 1);
+          ctx.fillRect(x + 9, y + 11, 6, 1);
+          ctx.fillRect(x + 9, y + 14, 4, 1);
+        } else {
+          // Faint outline marks where the page used to be
+          ctx.fillStyle = 'rgba(253,246,227,0.22)';
+          ctx.fillRect(x + 7, y + 5, 10, 13);
         }
         break;
       }
@@ -4178,10 +4313,13 @@ function loadGame() {
       ? data.inventory.filter(function (item) { return validItems.includes(item); })
       : [];
 
-    const mergedFlags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] }, data.flags || {});
+    const mergedFlags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [], diary_pages_found: [] }, data.flags || {});
     const validToyIds = ['jingle_ball', 'feather_wand', 'laser_pointer'];
     mergedFlags.cat_toys_found = Array.isArray(mergedFlags.cat_toys_found)
       ? Array.from(new Set(mergedFlags.cat_toys_found.filter(function (toyId) { return validToyIds.includes(toyId); })))
+      : [];
+    mergedFlags.diary_pages_found = Array.isArray(mergedFlags.diary_pages_found)
+      ? Array.from(new Set(mergedFlags.diary_pages_found.filter(function (pageId) { return DIARY_PAGE_IDS.includes(pageId); })))
       : [];
     mergedFlags.pet_count = Number.isFinite(mergedFlags.pet_count) ? mergedFlags.pet_count : 0;
 

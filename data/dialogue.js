@@ -480,5 +480,36 @@ const DIALOGUE = {
 
   cat_toy_found: [
     { speaker: 'Marice', text: "I already found a toy here. The cats will be so happy later!" }
+  ],
+
+  // ============================
+  // DIARY PAGE COLLECTIBLES (lore)
+  // ============================
+  diary_page_home: [
+    { speaker: 'Marice', text: "A crumpled page from my old diary! It must have blown out here ages ago." },
+    { speaker: 'Marice', text: "*reading* 'Moving day! The house is too big and too quiet. The lady at the shelter says she has just the fix for that...'" },
+    { speaker: 'Marice', text: "I remember writing this. Little did I know I'd end up with THREE fixes." }
+  ],
+
+  diary_page_alice: [
+    { speaker: 'Marice', text: "A diary page, tucked away in the half-bath of all places." },
+    { speaker: 'Marice', text: "*reading* 'Met a tiny orange kitten today. She inspected the whole house, then sat on the highest shelf like a queen claiming her castle.'" },
+    { speaker: 'Marice', text: "Alice hasn't changed one bit. Still the queen of this house." }
+  ],
+
+  diary_page_olive: [
+    { speaker: 'Marice', text: "Another diary page! How did this end up down in the rec room?" },
+    { speaker: 'Marice', text: "*reading* 'The new kitten Olive discovered the basement today. She zoomed up and down the stairs 14 times. I counted.'" },
+    { speaker: 'Marice', text: "Fourteen zoomies. A personal record she's been trying to beat ever since." }
+  ],
+
+  diary_page_beatrice: [
+    { speaker: 'Marice', text: "A diary page under the pillow. So THAT'S where it went." },
+    { speaker: 'Marice', text: "*reading* 'Beatrice spent her first week hiding under the guest bed. Tonight she finally crept out... and fell asleep on my chest.'" },
+    { speaker: 'Marice', text: "She still pretends she doesn't love us. The purring gives her away every time." }
+  ],
+
+  diary_page_found: [
+    { speaker: 'Marice', text: "I already tucked that diary page safely in my pocket." }
   ]
 };

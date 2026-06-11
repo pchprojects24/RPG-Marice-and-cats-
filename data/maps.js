@@ -90,7 +90,7 @@ const outsideGrid = [
   [6,6,6,6,6,6,6,6,6,0,0,6,6,6,6,6,6,6,6,6],
   [6,6,6,6,6,6,6,6,6,0,0,6,6,6,6,6,6,6,6,6],
   [6,6,6,6,6,6,6,6,6,0,0,6,6,6,6,6,6,6,6,6],
-  [6,6,6,6,6,6,0,0,0,0,0,0,0,0,6,6,6,6,6,6],
+  [6,6,6,6,6,6,0,4,0,0,0,0,0,0,6,6,6,6,6,6],
   [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
   [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
   [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
@@ -104,6 +104,7 @@ const outsideInteractables = [
   { row: 5, col: 7, type: 'flower_bed', label: 'Flower Bed', sprite: 'flowers' },
   { row: 5, col: 12, type: 'flower_bed', label: 'Flower Bed', sprite: 'flowers' },
   { row: 11, col: 14, type: 'mailbox', label: 'Mailbox', sprite: 'mailbox' },
+  { row: 11, col: 7, type: 'diary_page_home', label: 'Crumpled Page', sprite: 'page' },
 ];
 
 const outsideStart = { row: 12, col: 9 };
@@ -137,8 +138,8 @@ const mainFloorGrid = [
   [1,0,4,0,4,4,0,0,0,0,0,0,0,0,0,0,2,0,1,1],
   // Row 9: living room / half-bath divider (door moved to east wall)
   [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  // Row 10: half-bath
-  [1,2,0,0,0,1,0,0,0,0,0,0,2,2,0,0,0,0,0,1],
+  // Row 10: half-bath (col 4 = hidden diary page)
+  [1,2,0,0,4,1,0,0,0,0,0,0,2,2,0,0,0,0,0,1],
   // Row 11: half-bath (door on east wall)
   [1,2,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 12: half-bath bottom + living room
@@ -191,6 +192,7 @@ const mainFloorInteractables = [
   { row: 7, col: 18, type: 'basement_door', label: 'Basement Door', sprite: 'door_locked' },
 
   // Half-bath additional items
+  { row: 10, col: 4, type: 'diary_page_alice', label: 'Diary Page', sprite: 'page' },
 ];
 
 // Stairs position for main floor
@@ -238,8 +240,8 @@ const basementGrid = [
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 11
   [1,2,0,0,0,0,0,2,0,1,0,0,0,0,0,2,0,0,0,1],
-  // Row 12
-  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+  // Row 12 (col 17 = hidden diary page)
+  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,4,0,1],
   // Row 13
   [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 14
@@ -274,6 +276,7 @@ const basementInteractables = [
   { row: 12, col: 4, type: 'tool_bench', label: 'Tool Bench', sprite: 'tools' },
   { row: 13, col: 7, type: 'water_heater', label: 'Water Heater', sprite: 'heater' },
   { row: 10, col: 15, type: 'bookshelf_basement', label: 'Bookshelf', sprite: 'bookshelf' },
+  { row: 12, col: 17, type: 'diary_page_olive', label: 'Diary Page', sprite: 'page' },
 ];
 
 const basementStairs = {
@@ -295,8 +298,8 @@ const basementStart = { row: 3, col: 7 };
 const upstairsGrid = [
   // Row 0
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  // Row 1: main bedroom + guest bedroom
-  [1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+  // Row 1: main bedroom + guest bedroom (col 2 = hidden diary page)
+  [1,0,4,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
   // Row 2: beds
   [1,0,2,2,0,0,0,0,0,1,0,0,0,0,0,4,2,0,0,1],
   // Row 3
@@ -353,6 +356,7 @@ const upstairsInteractables = [
   { row: 7, col: 7, type: 'hallway_table', label: 'Console Table', sprite: 'table' },
   { row: 7, col: 10, type: 'plant_hallway', label: 'Potted Plant', sprite: 'plant' },
   { row: 4, col: 11, type: 'linen_closet', label: 'Linen Closet', sprite: 'closet' },
+  { row: 1, col: 2, type: 'diary_page_beatrice', label: 'Under the Pillow', sprite: 'page' },
 ];
 
 const upstairsStairs = {

@@ -105,7 +105,7 @@ function startNewGame() {
   gameState.currentFloor = FLOOR_IDS.OUTSIDE;
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
   gameState.inventory = [];
-  gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [] });
+  gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [], diary_pages_found: [] });
   trailReset();
   objectivePing = null;
   objectivePingUntil = 0;
@@ -177,6 +177,13 @@ function showEnding() {
     var toyText = '🐾 Toys: ' + toysCount + '/3';
     if (toysCount === 3) toyText += ' ✨';
     toysEl.textContent = toyText;
+  }
+  var diaryEl = document.getElementById('stat-diary');
+  if (diaryEl) {
+    var pagesCount = gameState.flags.diary_pages_found ? gameState.flags.diary_pages_found.length : 0;
+    var diaryText = '📖 Diary: ' + pagesCount + '/4';
+    if (pagesCount === 4) diaryText += ' ✨';
+    diaryEl.textContent = diaryText;
   }
   var petsEl = document.getElementById('stat-pets');
   if (petsEl) petsEl.textContent = '❤ Pets: ' + (gameState.flags.pet_count || 0);
