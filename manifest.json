@@ -1,0 +1,19 @@
+{
+  "name": "Marice & Cats — House Adventure",
+  "short_name": "Marice & Cats",
+  "description": "A cozy Zelda-style top-down adventure. Find Alice, Olive, and Beatrice; feed the cats, explore the house, and get snuggles.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "assets/portraits/marice_portrait_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

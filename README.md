@@ -34,6 +34,15 @@ Optional side quests:
 
 Each cat also has her own **voice**: Alice's prim meow, Olive's excited double chirp, and Beatrice's low dramatic drawl.
 
+## True-to-life details
+
+- **Real time of day:** the front yard and garden follow your actual clock — cool morning light, bright noon, golden-hour evenings, and deep-blue nights when the porch lights glow and outdoor fixtures switch on. During the day the sun does the work and the fixtures stay off.
+- **Wildlife by the clock:** birdsong outside during the day, crickets after dark.
+- **Footsteps match the surface:** grass swishes, the porch deck knocks like wood, the walkway and basement click like concrete, and upstairs carpet muffles your steps.
+- **Hungry cats call out:** an unfed cat on your floor meows now and then (louder when you're close) with a little ♪ over her head — just like real cats asking for dinner.
+- **Pet responsibly:** cats love pets, but pet the same girl too fast and she gets overstimulated — a playful nip and a tail flick, then she needs a moment before purring again.
+- **Auto-pause:** switching apps or locking your phone pauses the game and silences audio.
+
 ## Deploy to GitHub Pages
 
 1. Push this repo to GitHub.
@@ -52,8 +61,14 @@ Each cat also has her own **voice**: Alice's prim meow, Olive's excited double c
 
 If portrait files are missing, dialogue still works; the portrait area is hidden.
 
+## Install on your phone
+
+The game ships a web-app manifest, so you can **Add to Home Screen** (Safari share menu on iOS, Chrome menu on Android) and it launches fullscreen like a native app.
+
 ## Tech
 
 - Vanilla JavaScript, HTML5 Canvas, CSS. No build step.
+- **Fixed-timestep game loop** (60 logic updates/sec) — the game runs at the same speed on 60 Hz, 90 Hz, and 120 Hz displays.
+- **Offscreen-canvas caching** for the static tile layer, minimap, and vignette — instead of procedurally redrawing ~300 tiles every frame, cutting CPU/battery use dramatically on phones.
 - Save/load via `localStorage`. Settings (volume, screen shake, particles) persist.
 - Script load order: `data/maps.js` → `data/dialogue.js` → `game-engine.js` → `game-main.js`.
