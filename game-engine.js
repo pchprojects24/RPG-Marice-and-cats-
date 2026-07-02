@@ -26,7 +26,9 @@ const ITEMS = {
 const FRONT_DOOR_CODE = '3134';
 
 const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
+// Reassignable so static layers (tiles, minimap) can be pre-rendered into
+// offscreen canvases by temporarily pointing the shared ctx at them.
+let ctx = canvas.getContext('2d');
 
 const CANVAS_W = MAP_COLS * TILE_SIZE; // 480
 const CANVAS_H = MAP_ROWS * TILE_SIZE; // 360
@@ -265,7 +267,7 @@ function playSfx(type, opt) {
   if (!audioCtx) return;
   updateAudioVolumes();
   switch (type) {
-    case 'footstep': sfxFootstep(); break;
+    case 'footstep': sfxFootstep(opt); break;
     case 'interact': sfxInteract(); break;
     case 'item_pickup': sfxItemPickup(); break;
     case 'door_unlock': sfxDoorUnlock(); break;
@@ -278,17 +280,92 @@ function playSfx(type, opt) {
   }
 }
 
-function sfxFootstep() {
-  var osc = audioCtx.createOscillator();
+// Shared white-noise buffer for soft footstep textures (grass, carpet).
+var noiseBuffer = null;
+function getNoiseBuffer() {
+  if (!noiseBuffer) {
+    noiseBuffer = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.1), audioCtx.sampleRate);
+    var data = noiseBuffer.getChannelData(0);
+    for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuffer;
+}
+
+// Play a filtered noise burst — the basis for soft organic footsteps.
+function playNoiseStep(filterType, filterFreq, vol, dur) {
+  var t = audioCtx.currentTime;
+  var src = audioCtx.createBufferSource();
+  src.buffer = getNoiseBuffer();
+  var filter = audioCtx.createBiquadFilter();
+  filter.type = filterType;
+  filter.frequency.setValueAtTime(filterFreq + Math.random() * filterFreq * 0.3, t);
   var gain = audioCtx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(120 + Math.random() * 40, audioCtx.currentTime);
-  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
-  osc.connect(gain);
+  gain.gain.setValueAtTime(vol, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(filter);
+  filter.connect(gain);
   gain.connect(sfxGainNode);
-  osc.start(audioCtx.currentTime);
-  osc.stop(audioCtx.currentTime + 0.08);
+  src.start(t);
+  src.stop(t + dur);
+}
+
+// Footsteps sound like the surface underfoot: wood creaks indoors, concrete
+// clicks on the walkway, carpet muffles upstairs, grass swishes in the yard.
+function sfxFootstep(surface) {
+  var t = audioCtx.currentTime;
+  switch (surface) {
+    case 'grass':
+      playNoiseStep('bandpass', 1400, 0.10, 0.07);
+      return;
+    case 'carpet':
+      playNoiseStep('lowpass', 380, 0.14, 0.09);
+      return;
+    case 'concrete': {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(210 + Math.random() * 50, t);
+      gain.gain.setValueAtTime(0.07, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      osc.connect(gain);
+      gain.connect(sfxGainNode);
+      osc.start(t);
+      osc.stop(t + 0.05);
+      return;
+    }
+    default: { // wood
+      var osc2 = audioCtx.createOscillator();
+      var gain2 = audioCtx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(120 + Math.random() * 40, t);
+      gain2.gain.setValueAtTime(0.15, t);
+      gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc2.connect(gain2);
+      gain2.connect(sfxGainNode);
+      osc2.start(t);
+      osc2.stop(t + 0.08);
+    }
+  }
+}
+
+// Which surface is Marice walking on right now?
+function getFootstepSurface() {
+  var fid = gameState.currentFloor;
+  if (fid === FLOOR_IDS.BASEMENT) return 'concrete';
+  if (fid === FLOOR_IDS.UPSTAIRS) return 'carpet';
+  if (fid === FLOOR_IDS.MAIN) return 'wood';
+  var p = gameState.player;
+  if (fid === FLOOR_IDS.OUTSIDE) {
+    // Porch deck is wood; walkway and street are hard surfaces.
+    if (p.row < 6) return 'wood';
+    return 'concrete';
+  }
+  if (fid === FLOOR_IDS.GARDEN) {
+    // Wooden deck by the house; lawn everywhere else.
+    if (p.row <= 4 && p.col >= 5 && p.col <= 14) return 'wood';
+    return 'grass';
+  }
+  return 'wood';
 }
 
 function sfxInteract() {
@@ -350,7 +427,11 @@ function sfxDoorUnlock() {
 
 // Each cat has her own voice: Alice a prim mid-high meow, Olive two quick
 // excited chirps, Beatrice a low dramatic drawl. No name = generic meow.
-function sfxCatMeow(catName) {
+// Accepts a cat name string, or { name, volume } — volume (0..1) lets a
+// far-away cat sound fainter than one right next to Marice.
+function sfxCatMeow(opt) {
+  var catName = typeof opt === 'string' ? opt : (opt && opt.name);
+  var volMul = (opt && typeof opt === 'object' && opt.volume != null) ? opt.volume : 1;
   var t = audioCtx.currentTime;
 
   if (catName === 'olive') {
@@ -361,7 +442,7 @@ function sfxCatMeow(catName) {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(720 + Math.random() * 60, t + delay);
       osc.frequency.linearRampToValueAtTime(1020 + Math.random() * 80, t + delay + 0.08);
-      gain.gain.setValueAtTime(0.13, t + delay);
+      gain.gain.setValueAtTime(0.13 * volMul, t + delay);
       gain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.12);
       osc.connect(gain);
       gain.connect(sfxGainNode);
@@ -383,8 +464,8 @@ function sfxCatMeow(catName) {
   osc.frequency.setValueAtTime(v.start + Math.random() * 60, t);
   osc.frequency.linearRampToValueAtTime(v.peak + Math.random() * 80, t + v.dur * 0.3);
   osc.frequency.linearRampToValueAtTime(v.end + Math.random() * 50, t + v.dur * 0.85);
-  gain.gain.setValueAtTime(v.vol, t);
-  gain.gain.setValueAtTime(v.vol, t + v.dur * 0.45);
+  gain.gain.setValueAtTime(v.vol * volMul, t);
+  gain.gain.setValueAtTime(v.vol * volMul, t + v.dur * 0.45);
   gain.gain.exponentialRampToValueAtTime(0.001, t + v.dur);
   osc.connect(gain);
   gain.connect(sfxGainNode);
@@ -574,11 +655,22 @@ function stopMusic() {
   currentMusic = null;
 }
 
+// ---- Real time of day ----
+// The world outside follows the player's actual clock: bright at noon,
+// golden in the evening, dark with porch lights and crickets at night.
+function getDaypart() {
+  var h = new Date().getHours();
+  if (h >= 21 || h < 5) return 'night';
+  if (h < 10) return 'morning';
+  if (h < 17) return 'day';
+  return 'evening';
+}
+
 // --- Ambient sound (low drone per floor) ---
 function startAmbient(floorId) {
   stopAmbient();
   if (!audioCtx) return;
-  if (floorId === FLOOR_IDS.GARDEN) {
+  if (floorId === FLOOR_IDS.GARDEN || floorId === FLOOR_IDS.OUTSIDE) {
     scheduleBirdsong();
   }
   var cfgs = {
@@ -598,16 +690,43 @@ function startAmbient(floorId) {
   ambientOsc.start(audioCtx.currentTime);
 }
 
-// Occasional bird chirps for the garden — two or three quick rising blips
-// at a random pitch, rescheduled at a random interval.
+// Occasional outdoor wildlife — birdsong by day, crickets after dark —
+// rescheduled at a random interval so it never sounds looped.
 var birdsongTimer = null;
 
 function scheduleBirdsong() {
   if (birdsongTimer) clearTimeout(birdsongTimer);
   birdsongTimer = setTimeout(function () {
-    playBirdChirp();
+    if (getDaypart() === 'night') {
+      playCricketChirp();
+    } else {
+      playBirdChirp();
+    }
     scheduleBirdsong();
   }, 2500 + Math.random() * 5000);
+}
+
+// Cricket chirp — a rapid pulse train of soft high blips, the sound of a
+// real backyard after dark.
+function playCricketChirp() {
+  if (!audioCtx) return;
+  var t = audioCtx.currentTime;
+  var pulses = 4 + Math.floor(Math.random() * 4);
+  var freq = 4200 + Math.random() * 600;
+  for (var i = 0; i < pulses; i++) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'sine';
+    var start = t + i * 0.045;
+    osc.frequency.setValueAtTime(freq, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(0.02, start + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.035);
+    osc.connect(gain);
+    gain.connect(sfxGainNode);
+    osc.start(start);
+    osc.stop(start + 0.04);
+  }
 }
 
 function playBirdChirp() {
@@ -1427,7 +1546,7 @@ function tryMove(dir) {
   gameState.moveTo = { row: nr, col: nc };
   gameState.moveProgress = 0;
   triggerHaptic(8);
-  playSfx('footstep');
+  playSfx('footstep', getFootstepSurface());
   checkHideControlsHint();
 }
 
@@ -1477,7 +1596,17 @@ function handleStairTransition(row, col) {
 }
 
 function updateMovement() {
-  if (!gameState.moving) return;
+  if (!gameState.moving) {
+    walkFrameTimer = 0;
+    return;
+  }
+
+  // Advance the walk animation at logic rate (not render rate)
+  walkFrameTimer++;
+  if (walkFrameTimer >= WALK_FRAME_INTERVAL) {
+    walkFrameTimer = 0;
+    walkFrame++;
+  }
 
   gameState.moveProgress += MOVE_SPEED;
   if (gameState.moveProgress >= TILE_SIZE) {
@@ -1546,21 +1675,101 @@ function findPettableFollower() {
   return { name: bestName, x: bestX, y: bestY };
 }
 
+// Like a real cat, each girl can only take so much petting in one go.
+// Rapid-fire pets build a streak; push it too far and she gets
+// overstimulated and needs a little space before purring again.
+const PET_STREAK_LIMIT = 6;
+const PET_STREAK_WINDOW_MS = 4000;
+const PET_COOLDOWN_MS = 8000;
+let petStreak = { name: null, count: 0, lastTime: 0 };
+let petCooldowns = {}; // catName -> timestamp when she's ready for pets again
+
 // Pet the follower cat closest to Marice (if one is within reach).
 function petNearbyFollower() {
   const cat = findPettableFollower();
   if (!cat) return false;
 
+  const now = Date.now();
+  const catName = cat.name.charAt(0).toUpperCase() + cat.name.slice(1);
+
+  // She's still overstimulated — a tail flick instead of a purr.
+  if (petCooldowns[cat.name] && now < petCooldowns[cat.name]) {
+    playSfx('cat_meow', { name: cat.name, volume: 0.6 });
+    spawnTextParticle(cat.x, cat.y - 16, '💢', '#ff8c69');
+    showToast(catName + ' flicks her tail — she needs a moment.', 1800);
+    return true;
+  }
+
+  // Track the petting streak on this cat.
+  if (petStreak.name === cat.name && now - petStreak.lastTime < PET_STREAK_WINDOW_MS) {
+    petStreak.count++;
+  } else {
+    petStreak = { name: cat.name, count: 1, lastTime: now };
+  }
+  petStreak.lastTime = now;
+
   gameState.flags.pet_count = (gameState.flags.pet_count || 0) + 1;
+
+  if (petStreak.count >= PET_STREAK_LIMIT) {
+    // Overstimulated! A playful nip and she wants some space.
+    petCooldowns[cat.name] = now + PET_COOLDOWN_MS;
+    petStreak = { name: null, count: 0, lastTime: 0 };
+    playSfx('cat_meow', cat.name);
+    triggerHaptic(25);
+    spawnTextParticle(cat.x, cat.y - 16, '💢', '#ff6347');
+    showToast(catName + ' gives you a playful nip — too many pets at once! (Pets: ' + gameState.flags.pet_count + ')', 2500);
+    saveGame();
+    return true;
+  }
+
   playSfx('cat_purr');
   triggerHaptic(15);
   spawnParticles(cat.x, cat.y - 6, 6, '#ff69b4');
   spawnTextParticle(cat.x, cat.y - 16, '❤', '#ff1493');
 
-  const catName = cat.name.charAt(0).toUpperCase() + cat.name.slice(1);
   const line = PET_LINES[Math.floor(Math.random() * PET_LINES.length)];
   showToast(catName + ' ' + line + '. (Pets: ' + gameState.flags.pet_count + ')', 1800);
   saveGame();
+  return true;
+}
+
+// ---- Hungry cat calls ----
+// Unfed cats on the current floor call out now and then, just like real cats
+// asking for dinner — a soft locator meow (louder when Marice is close) plus
+// a music note so muted players can spot them too.
+let catCallCooldown = 300; // frames until the next possible call
+
+function updateCatCalls() {
+  if (dialogueActive || !isGamePlayActive()) return;
+  if (catCallCooldown > 0) { catCallCooldown--; return; }
+  catCallCooldown = 480 + Math.floor(Math.random() * 420); // ~8-15s
+
+  const floor = getCurrentFloor();
+  const hungry = [];
+  for (const obj of floor.interactables) {
+    if (obj.type && obj.type.indexOf('cat_') === 0) {
+      const name = obj.type.replace('cat_', '');
+      if (CAT_ORDER.includes(name) && !gameState.flags[name + '_fed']) {
+        hungry.push({ name: name, row: obj.row, col: obj.col });
+      }
+    }
+  }
+  if (hungry.length === 0) return;
+
+  const c = hungry[Math.floor(Math.random() * hungry.length)];
+  const p = gameState.player;
+  const dist = Math.hypot(c.row - p.row, c.col - p.col);
+  const vol = Math.max(0.25, 1 - dist / 20);
+  playSfx('cat_meow', { name: c.name, volume: vol });
+  spawnTextParticle(c.col * TILE_SIZE + TILE_SIZE / 2, c.row * TILE_SIZE - 4, '♪', '#ffd700');
+}
+
+// True while actual gameplay is on screen (not the title or ending overlay).
+function isGamePlayActive() {
+  const title = document.getElementById('title-screen');
+  if (title && title.style.display !== 'none') return false;
+  const ending = document.getElementById('ending-overlay');
+  if (ending && ending.classList.contains('active')) return false;
   return true;
 }
 
@@ -3974,17 +4183,9 @@ function drawPlayer() {
     const t = gameState.moveProgress / TILE_SIZE;
     px = fromX + (toX - fromX) * t;
     py = fromY + (toY - fromY) * t;
-
-    // Advance walk animation frame
-    walkFrameTimer++;
-    if (walkFrameTimer >= WALK_FRAME_INTERVAL) {
-      walkFrameTimer = 0;
-      walkFrame++;
-    }
   } else {
     px = p.col * TILE_SIZE;
     py = p.row * TILE_SIZE;
-    walkFrameTimer = 0;
   }
 
   // Record the trail (center of the player) so followers can chase it.
@@ -4073,23 +4274,42 @@ var FLOOR_LIGHTS = {
   ]
 };
 
-var lightFlickerTime = 0;
+// Outdoor ambient tint by real time of day — the yard matches the player's
+// actual clock. Night also darkens the scene and turns the porch lights up.
+var OUTDOOR_AMBIENT = {
+  morning: { r: 205, g: 225, b: 255, a: 0.10 }, // cool early light
+  day: { r: 255, g: 250, b: 220, a: 0.04 },     // bright neutral noon
+  evening: { r: 255, g: 180, b: 100, a: 0.13 }, // golden hour
+  night: { r: 25, g: 35, b: 90, a: 0.32 }       // deep blue night
+};
 
 function drawLighting(floor) {
   var floorId = gameState.currentFloor;
-  lightFlickerTime++;
+  var outdoors = floorId === FLOOR_IDS.OUTSIDE || floorId === FLOOR_IDS.GARDEN;
+  var daypart = outdoors ? getDaypart() : null;
   var lightCoreAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.22 : 0.12;
   var lightMidAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.12 : 0.06;
+  if (daypart === 'night') {
+    // Porch and patio lights glow much brighter after dark.
+    lightCoreAlpha = 0.3;
+    lightMidAlpha = 0.16;
+  }
 
-  // 1. Apply ambient tint
-  var ambient = FLOOR_AMBIENT[floorId];
+  // 1. Apply ambient tint (outdoors follows the real clock)
+  var ambient = outdoors ? OUTDOOR_AMBIENT[daypart] : FLOOR_AMBIENT[floorId];
   if (ambient) {
     ctx.fillStyle = 'rgba(' + ambient.r + ',' + ambient.g + ',' + ambient.b + ',' + ambient.a + ')';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }
+  if (daypart === 'night') {
+    // Extra darkness layer so night genuinely reads as night.
+    ctx.fillStyle = 'rgba(5, 8, 30, 0.22)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
 
-  // 2. Draw light sources using additive-style radial gradients
-  var lights = FLOOR_LIGHTS[floorId];
+  // 2. Draw light sources using additive-style radial gradients.
+  // In full daylight the outdoor fixtures are off — sunlight does the work.
+  var lights = (outdoors && daypart === 'day') ? null : FLOOR_LIGHTS[floorId];
   if (lights && lights.length > 0) {
     ctx.globalCompositeOperation = 'lighter';
     for (var i = 0; i < lights.length; i++) {
@@ -4100,7 +4320,7 @@ function drawLighting(floor) {
 
       // Subtle flicker
       if (light.flicker) {
-        radius += Math.sin(lightFlickerTime * 0.15 + i * 2) * 4;
+        radius += Math.sin(animTimer * 0.15 + i * 2) * 4;
       }
 
       var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
@@ -4117,9 +4337,55 @@ function drawLighting(floor) {
 
 // ======================== MINIMAP ========================
 
+// Minimap static part (frame + tile dots) pre-rendered per floor.
+var minimapCacheCanvas = null;
+var minimapCacheKey = null;
+
+function ensureMinimapCache(floor, offsetX, offsetY, mapW, mapH, dotSize) {
+  if (minimapCacheKey === gameState.currentFloor && minimapCacheCanvas) return;
+  if (!minimapCacheCanvas) {
+    minimapCacheCanvas = document.createElement('canvas');
+    minimapCacheCanvas.width = mapW + 4;
+    minimapCacheCanvas.height = mapH + 16;
+  }
+  var mctx = minimapCacheCanvas.getContext('2d');
+  mctx.clearRect(0, 0, minimapCacheCanvas.width, minimapCacheCanvas.height);
+  // Local coordinates: cache origin corresponds to (offsetX - 2, offsetY - 12)
+  mctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  mctx.fillRect(0, 0, mapW + 4, mapH + 16);
+  mctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+  mctx.lineWidth = 1;
+  mctx.strokeRect(0.5, 0.5, mapW + 3, mapH + 15);
+  // "MAP" label
+  mctx.fillStyle = 'rgba(255,215,0,0.7)';
+  mctx.font = '6px monospace';
+  mctx.textAlign = 'center';
+  mctx.fillText('MAP', 2 + mapW / 2, 9);
+  mctx.textAlign = 'left';
+
+  var grid = floor.grid;
+  for (var r = 0; r < MAP_ROWS; r++) {
+    for (var c = 0; c < MAP_COLS; c++) {
+      var tile = grid[r][c];
+      if (tile === T.WALL) {
+        mctx.fillStyle = 'rgba(100, 80, 60, 0.9)';
+      } else if (tile === T.FURNITURE || tile === T.COUNTER) {
+        mctx.fillStyle = 'rgba(139, 105, 20, 0.6)';
+      } else if (tile === T.DOOR) {
+        mctx.fillStyle = 'rgba(74, 124, 89, 0.8)';
+      } else if (tile === T.STAIRS) {
+        mctx.fillStyle = 'rgba(160, 82, 45, 0.8)';
+      } else {
+        mctx.fillStyle = 'rgba(180, 160, 130, 0.3)';
+      }
+      mctx.fillRect(2 + c * dotSize, 12 + r * dotSize, dotSize, dotSize);
+    }
+  }
+  minimapCacheKey = gameState.currentFloor;
+}
+
 function drawMinimap() {
   var floor = getCurrentFloor();
-  var grid = floor.grid;
   var dotSize = 2;
   var catDotSize = 4; // cats rendered larger for visibility
   var padding = 4;
@@ -4128,39 +4394,9 @@ function drawMinimap() {
   var offsetX = CANVAS_W - mapW - padding - 2;
   var offsetY = padding + 2;
 
-  // Background
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-  ctx.fillRect(offsetX - 2, offsetY - 12, mapW + 4, mapH + 16);
-  ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(offsetX - 2, offsetY - 12, mapW + 4, mapH + 16);
-  // "MAP" label
-  ctx.fillStyle = 'rgba(255,215,0,0.7)';
-  ctx.font = '6px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('MAP', offsetX + mapW / 2, offsetY - 3);
-  ctx.textAlign = 'left';
-
-  // Draw tiles
-  for (var r = 0; r < MAP_ROWS; r++) {
-    for (var c = 0; c < MAP_COLS; c++) {
-      var tile = grid[r][c];
-      var dx = offsetX + c * dotSize;
-      var dy = offsetY + r * dotSize;
-      if (tile === T.WALL) {
-        ctx.fillStyle = 'rgba(100, 80, 60, 0.9)';
-      } else if (tile === T.FURNITURE || tile === T.COUNTER) {
-        ctx.fillStyle = 'rgba(139, 105, 20, 0.6)';
-      } else if (tile === T.DOOR) {
-        ctx.fillStyle = 'rgba(74, 124, 89, 0.8)';
-      } else if (tile === T.STAIRS) {
-        ctx.fillStyle = 'rgba(160, 82, 45, 0.8)';
-      } else {
-        ctx.fillStyle = 'rgba(180, 160, 130, 0.3)';
-      }
-      ctx.fillRect(dx, dy, dotSize, dotSize);
-    }
-  }
+  // Static frame + tiles from the per-floor cache
+  ensureMinimapCache(floor, offsetX, offsetY, mapW, mapH, dotSize);
+  ctx.drawImage(minimapCacheCanvas, offsetX - 2, offsetY - 12);
 
   // Draw interactable markers (cats shown as larger, distinct dots)
   // Fed cats get a gold ring; unfed cats get a white ring.
@@ -4228,6 +4464,56 @@ function drawObjectivePingWorld() {
   ctx.restore();
 }
 
+// ---- Static layer caches ----
+// The tile grid, room labels, and outside overlay are fully deterministic,
+// so they're pre-rendered once per floor into an offscreen canvas instead of
+// procedurally redrawing ~300 tiles every frame — a large CPU/battery win on
+// phones. The cache rebuilds when the floor (or the laundry pile) changes.
+var floorCacheCanvas = document.createElement('canvas');
+floorCacheCanvas.width = CANVAS_W;
+floorCacheCanvas.height = CANVAS_H;
+var floorCacheKey = null;
+
+function ensureFloorCache() {
+  var key = gameState.currentFloor + '|' + (gameState.flags.laundry_cleared ? 1 : 0);
+  if (key === floorCacheKey) return;
+  var mainCtx = ctx;
+  ctx = floorCacheCanvas.getContext('2d');
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  var floor = getCurrentFloor();
+  for (var r = 0; r < MAP_ROWS; r++) {
+    for (var c = 0; c < MAP_COLS; c++) {
+      drawTile(floor, r, c);
+    }
+  }
+  drawRoomLabels(gameState.currentFloor);
+  drawOutsideOverlay();
+  ctx = mainCtx;
+  floorCacheKey = key;
+}
+
+// Vignette overlays are static per darkness level — pre-render each variant.
+var vignetteCache = {};
+
+function getVignetteCanvas(outerAlpha) {
+  var key = String(outerAlpha);
+  if (vignetteCache[key]) return vignetteCache[key];
+  var cv = document.createElement('canvas');
+  cv.width = CANVAS_W;
+  cv.height = CANVAS_H;
+  var vctx = cv.getContext('2d');
+  var gradient = vctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
+  );
+  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  gradient.addColorStop(1, 'rgba(0, 0, 0, ' + outerAlpha + ')');
+  vctx.fillStyle = gradient;
+  vctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  vignetteCache[key] = cv;
+  return cv;
+}
+
 function render() {
   const floor = getCurrentFloor();
 
@@ -4239,18 +4525,9 @@ function render() {
   ctx.save();
   ctx.translate(shake.x, shake.y);
 
-  // Draw tiles
-  for (let r = 0; r < MAP_ROWS; r++) {
-    for (let c = 0; c < MAP_COLS; c++) {
-      drawTile(floor, r, c);
-    }
-  }
-
-  // Draw room labels
-  drawRoomLabels(gameState.currentFloor);
-
-  // Draw outside overlay (roof, chimney, porch beam, curb)
-  drawOutsideOverlay();
+  // Draw the pre-rendered static layer (tiles, room labels, outside overlay)
+  ensureFloorCache();
+  ctx.drawImage(floorCacheCanvas, 0, 0);
 
   // Draw interactables
   drawInteractables(floor);
@@ -4296,16 +4573,9 @@ function render() {
   // Restore from screen shake before vignette
   ctx.restore();
 
-  // Draw subtle vignette effect (not affected by shake)
+  // Draw subtle vignette effect (not affected by shake) from the cache
   const vignetteOuterAlpha = gameState.currentFloor === FLOOR_IDS.BASEMENT ? 0.18 : 0.3;
-  const gradient = ctx.createRadialGradient(
-    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.3,
-    CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.7
-  );
-  gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  gradient.addColorStop(1, 'rgba(0, 0, 0, ' + vignetteOuterAlpha + ')');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.drawImage(getVignetteCanvas(vignetteOuterAlpha), 0, 0);
 }
 
 // ======================== GAME LOOP ========================
@@ -4322,7 +4592,16 @@ function togglePause() {
   document.getElementById('pause-overlay').classList.toggle('active', gamePaused);
 }
 
-function gameLoop() {
+// Fixed-timestep loop: game logic always advances at 60 updates/second no
+// matter the display's refresh rate, so the game runs at the same speed on a
+// 60Hz laptop, a 120Hz phone, or a slow device. Rendering happens once per
+// animation frame.
+var UPDATE_STEP_MS = 1000 / 60;
+var MAX_UPDATE_STEPS = 5; // cap catch-up work after a long stall
+var lastFrameTime = 0;
+var updateAccumulator = 0;
+
+function updateStep() {
   if (!gamePaused) {
     // Handle continuous input
     if (!dialogueActive && !gameState.moving) {
@@ -4335,8 +4614,27 @@ function gameLoop() {
     updateParticles();
     updateScreenShake();
     updateInteractPrompt();
+    updateCatCalls();
   }
   animTimer++;
+}
+
+function gameLoop(now) {
+  if (!lastFrameTime) lastFrameTime = now;
+  var elapsed = now - lastFrameTime;
+  lastFrameTime = now;
+  // Clamp huge gaps (tab was backgrounded) so we don't fast-forward the world.
+  if (elapsed > 250) elapsed = 250;
+  updateAccumulator += elapsed;
+
+  var steps = 0;
+  while (updateAccumulator >= UPDATE_STEP_MS && steps < MAX_UPDATE_STEPS) {
+    updateStep();
+    updateAccumulator -= UPDATE_STEP_MS;
+    steps++;
+  }
+  if (steps === MAX_UPDATE_STEPS) updateAccumulator = 0;
+
   render();
   requestAnimationFrame(gameLoop);
 }
@@ -4403,6 +4701,24 @@ document.addEventListener('keydown', function (e) {
 
 document.addEventListener('keyup', function (e) {
   keysDown[e.code] = false;
+});
+
+// Auto-pause when the app/tab goes to the background (switching apps on a
+// phone, locking the screen) and suspend audio to save battery. The game
+// stays paused on return so nothing happens while the player wasn't looking.
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) {
+    if (!gamePaused && !dialogueActive && isGamePlayActive()) {
+      togglePause();
+    }
+    if (audioCtx && audioCtx.state === 'running') {
+      try { audioCtx.suspend(); } catch (e) {}
+    }
+  } else {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      try { audioCtx.resume(); } catch (e) {}
+    }
+  }
 });
 
 window.addEventListener('blur', function () {
