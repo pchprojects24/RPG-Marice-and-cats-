@@ -1,5 +1,5 @@
 /*
- * maps.js — Map data for Marice & Cats House Adventure
+ * maps.js — Map data for Marice & Cats: The Great Treat Heist
  *
  * Each floor is a 2D tile grid.
  * Tile legend:

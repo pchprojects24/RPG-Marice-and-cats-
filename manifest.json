@@ -1,7 +1,7 @@
 {
-  "name": "Marice & Cats — House Adventure",
+  "name": "Marice & Cats — The Great Treat Heist",
   "short_name": "Marice & Cats",
-  "description": "A cozy Zelda-style top-down adventure. Find Alice, Olive, and Beatrice; feed the cats, explore the house, and get snuggles.",
+  "description": "A cozy Zelda-style detective adventure. The treat jar has been burgled — interrogate Alice, Olive, and Beatrice, follow the crumbs, and crack the case.",
   "start_url": ".",
   "scope": ".",
   "display": "fullscreen",

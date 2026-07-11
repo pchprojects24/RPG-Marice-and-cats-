@@ -1,6 +1,14 @@
-# Marice & Cats — House Adventure
+# Marice & Cats — The Great Treat Heist
 
-A Zelda-style 2D top-down prototype. Find Alice, Olive, and Beatrice; feed the cats, explore the house, and get snuggles.
+A cozy Zelda-style 2D top-down **detective adventure**.
+
+**The premise:** Marice was gone for twenty minutes. She came home to a crime scene — the treat jar knocked on its side, empty, a trail of crumbs... and all three cats mysteriously "hiding" in different corners of the house, each acting *very* innocent. Put on your detective coat and crack the case:
+
+- **Alice** — *the Witness.* Saw everything from her cat tree. Bills by the Purrpop.
+- **Olive** — *the Muscle.* Found under the treadmill at the scene of the crumbs. Claims she was "doing zoomies."
+- **Beatrice** — *the Mastermind.* Currently disguised as a blanket. Will trade a full confession for a Shrimp & Salmon Feast.
+
+Interrogate the suspects, follow the clues floor by floor, and deliver the only possible verdict: **guilty of being adorable** — sentenced to dinner on time and a lifetime of snuggles.
 
 ## How to run
 
@@ -10,27 +18,25 @@ A Zelda-style 2D top-down prototype. Find Alice, Olive, and Beatrice; feed the c
 ## Controls
 
 - **Keyboard:** WASD or Arrow keys to move (grid-based). **E** / **Space** / **Enter** to interact, pet a cat, or advance dialogue.
-- **Helpful keys:** **H** for hint + objective ping, **Q** for Quest Log, **P** to pause.
+- **Helpful keys:** **H** for hint + objective ping, **Q** for the Case Log, **P** to pause.
 - **Mobile:** Swipe/drag anywhere on the game to move (touch joystick), or use the on-screen D-pad. A quick **tap** on the screen interacts/pets — or use the **INTERACT** button. For the largest view, rotate to landscape.
 
-## How to play
+## How to crack the case
 
-1. Start outside. Check the house plaque for a hint, then enter the front door code to get inside.
-2. Explore the main floor. Talk to **Alice** on her cat tree.
-3. Find **Purrpops** in the kitchen cupboards and give them to Alice.
-4. Alice hints about the **Basement Key** under the sofa blanket. Search the sofa, then unlock the basement door.
-5. Find **Olive** under the treadmill in the basement. Give her Purrpops too.
-6. Olive gives you a **Laundry Basket**. Use it on the blocked stairs on the main floor.
-7. Go upstairs and find **Beatrice** under her blanket.
-8. Get a **Shrimp & Salmon Feast** plate from the kitchen and give it to Beatrice.
-9. Enjoy the ending — then hit **Keep Playing** to free-roam.
+1. Start outside. The front door code is hidden in the house plaque riddle.
+2. Survey the kitchen crime scene, then interview **Alice** the witness on her cat tree. Her consulting fee: **Purrpops** from the kitchen cupboards.
+3. Alice's tip leads to the **Basement Key** under the sofa blanket. The trail leads down.
+4. Confront **Olive** under the treadmill — caught red-pawed in a pile of crumbs. Interrogation snacks (more Purrpops) make her talk.
+5. Olive flips on the mastermind and hands over a **Laundry Basket** — use it to clear the staged laundry avalanche blocking the stairs.
+6. Upstairs, the mastermind **Beatrice** ("I am a blanket") trades her full confession for a **Shrimp & Salmon Feast** from the kitchen.
+7. Hear the confession, deliver the verdict, and enjoy the **Case Closed** ending — then hit **Keep Playing** to free-roam with your three convicted felons.
 
-Every cat you feed **joins you and trails behind Marice** through the whole house. Walk up to one of your followers and press **INTERACT** (or tap) to **pet it** — purrs, hearts, and an affection counter that's tallied on the ending screen.
+Every cat you win over **joins you and trails behind Marice** through the whole house. Walk up to one of your followers and press **INTERACT** (or tap) to **pet it** — purrs, hearts, and an affection counter tallied on the ending screen.
 
-Optional side quests:
+Optional side cases:
 
-- Find the three **cat toys** (jingle ball, feather wand, laser pointer) hidden around the house.
-- Recover the four pages of **Marice's diary** — one softly glowing page on each floor, each with a bit of backstory about how the girls came home.
+- Recover the heist crew's **stashed toy loot** — three "confiscated" toys (jingle ball, feather wand, laser pointer) hidden around the house from previous, unprosecuted crimes.
+- Find the four pages of **Marice's diary** — one softly glowing page on each floor, each with a bit of backstory about how the girls came home.
 
 Each cat also has her own **voice**: Alice's prim meow, Olive's excited double chirp, and Beatrice's low dramatic drawl.
 
@@ -39,7 +45,7 @@ Each cat also has her own **voice**: Alice's prim meow, Olive's excited double c
 - **Real time of day:** the front yard and garden follow your actual clock — cool morning light, bright noon, golden-hour evenings, and deep-blue nights when the porch lights glow and outdoor fixtures switch on. During the day the sun does the work and the fixtures stay off.
 - **Wildlife by the clock:** birdsong outside during the day, crickets after dark.
 - **Footsteps match the surface:** grass swishes, the porch deck knocks like wood, the walkway and basement click like concrete, and upstairs carpet muffles your steps.
-- **Hungry cats call out:** an unfed cat on your floor meows now and then (louder when you're close) with a little ♪ over her head — just like real cats asking for dinner.
+- **Hungry cats call out:** a cat you haven't won over yet meows now and then on your floor (louder when you're close) with a little ♪ over her head — suspects getting impatient for their snack bribes.
 - **Pet responsibly:** cats love pets, but pet the same girl too fast and she gets overstimulated — a playful nip and a tail flick, then she needs a moment before purring again.
 - **Auto-pause:** switching apps or locking your phone pauses the game and silences audio.
 
