@@ -1,5 +1,5 @@
 /*
- * game-engine.js — Marice & Cats House Adventure — Core engine
+ * game-engine.js — Marice & Cats: The Great Treat Heist — Core engine
  * State, audio, dialogue, world, rendering, save/load.
  * Load after data/maps.js and data/dialogue.js.
  */
@@ -993,7 +993,7 @@ function getNextTaskHint() {
     }
     var toysFound = Array.isArray(gameState.flags.cat_toys_found) ? gameState.flags.cat_toys_found.length : 0;
     if (toysFound < 3) {
-      return 'Hidden cat toys: ' + toysFound + '/3 found. Check behind furniture!';
+      return 'Stashed toy loot: ' + toysFound + '/3 recovered. Check behind furniture!';
     }
     var pagesFound = Array.isArray(gameState.flags.diary_pages_found) ? gameState.flags.diary_pages_found.length : 0;
     if (pagesFound < 4) {
@@ -1003,40 +1003,40 @@ function getNextTaskHint() {
   }
 
   if (!gameState.flags.front_door_unlocked) {
-    return 'Check the house plaque outside for the front door code.';
+    return 'The front door code is hidden in the house plaque riddle outside.';
   }
   if (!gameState.flags.alice_fed) {
     return hasItem(ITEMS.PURRPOPS)
-      ? 'Find Alice and give her the Purrpops.'
-      : 'Search the kitchen cupboards for Purrpops for Alice.';
+      ? 'Pay the witness: bring Alice her Purrpops consulting fee.'
+      : 'Witness Alice won’t talk for free — grab Purrpops from the kitchen cupboards.';
   }
   if (!gameState.flags.has_basement_key && !gameState.flags.basement_unlocked) {
-    return 'Alice gave a clue—check under the sofa blanket.';
+    return 'Alice’s tip: the Basement Key is under the sofa blanket.';
   }
   if (!gameState.flags.basement_unlocked) {
     return hasItem(ITEMS.BASEMENT_KEY)
-      ? 'Use the Basement Key on the basement door.'
+      ? 'The trail leads down — unlock the basement door.'
       : 'Look for the Basement Key near the sofa.';
   }
   if (!gameState.flags.olive_fed) {
     return hasItem(ITEMS.PURRPOPS)
-      ? 'Find Olive in the basement and feed her.'
-      : 'Grab more Purrpops from the kitchen, then visit Olive downstairs.';
+      ? 'Interrogate Olive in the basement — she talks for Purrpops.'
+      : 'Suspect Olive demands interrogation snacks — more Purrpops from the kitchen.';
   }
   if (!gameState.flags.laundry_cleared) {
     return hasItem(ITEMS.LAUNDRY_BASKET)
-      ? 'Take the Laundry Basket to the blocked stairs on the main floor.'
-      : 'Talk to Olive in the basement to get help with the blocked stairs.';
+      ? 'Clear the staged laundry avalanche on the main-floor stairs.'
+      : 'Talk to Olive in the basement — you need her help to clear the stairs.';
   }
   if (!gameState.flags.beatrice_fed) {
     return hasItem(ITEMS.FEAST_PLATE)
-      ? 'Find Beatrice upstairs and give her the feast plate.'
-      : 'Find a Shrimp & Salmon Feast plate in the kitchen cupboards.';
+      ? 'Confront the mastermind: Beatrice trades her confession for the feast.'
+      : 'Beatrice’s price for a confession: a Shrimp & Salmon Feast from the kitchen cupboards.';
   }
-  // Side-quest: cat toys
+  // Side-quest: stashed toy loot
   if (!gameState.flags.cat_toys_found || gameState.flags.cat_toys_found.length < 3) {
     var found = gameState.flags.cat_toys_found ? gameState.flags.cat_toys_found.length : 0;
-    return 'Hidden cat toys: ' + found + '/3 found. Check behind furniture!';
+    return 'Stashed toy loot: ' + found + '/3 recovered. Check behind furniture!';
   }
   // Side-quest: diary pages
   if (!gameState.flags.diary_pages_found || gameState.flags.diary_pages_found.length < 4) {
@@ -1295,7 +1295,7 @@ function updateQuestCounter() {
     gameState.flags.olive_fed,
     gameState.flags.beatrice_fed
   ].filter(Boolean).length;
-  counter.textContent = `Objectives: ${fed}/3 cats fed`;
+  counter.textContent = `Case: ${fed}/3 cats cracked`;
 }
 
 function updateQuestList() {
@@ -1893,7 +1893,7 @@ function handleInteraction(obj) {
       } else {
         startDialogue('cupboard_purrpops', null, function () {
           addItem(ITEMS.PURRPOPS);
-          showToast('Got Purrpops!');
+          showToast('Got Purrpops — witness-bribing material secured!');
         });
       }
       break;
@@ -1905,7 +1905,7 @@ function handleInteraction(obj) {
       } else {
         startDialogue('cupboard_feast', null, function () {
           addItem(ITEMS.FEAST_PLATE);
-          showToast('Got Shrimp & Salmon Feast plate!');
+          showToast('Got the Shrimp & Salmon Feast — mastermind bait!');
         });
       }
       break;
@@ -1922,7 +1922,7 @@ function handleInteraction(obj) {
         removeItem(ITEMS.PURRPOPS);
         gameState.flags.alice_fed = true;
         startDialogue('alice_after', 'alice', function () {
-          showToast('Alice hints about the sofa!');
+          showToast('New clue: check under the sofa blanket!');
           markCatFed('alice');
           saveGameImmediate();
         });
@@ -1942,7 +1942,7 @@ function handleInteraction(obj) {
         gameState.flags.has_basement_key = true;
         startDialogue('sofa_blanket', null, function () {
           addItem(ITEMS.BASEMENT_KEY);
-          showToast('Got Basement Key!');
+          showToast('Got the Basement Key — the trail leads down!');
         });
       }
       break;
@@ -1957,7 +1957,7 @@ function handleInteraction(obj) {
         startDialogue('basement_door_unlock', null, function () {
           triggerScreenShake(5, 15);
           playSfx('door_unlock');
-          showToast('Basement unlocked!');
+          showToast('Basement unlocked — after them, detective!');
           changeFloor('basement');
         });
       } else {
@@ -1977,7 +1977,7 @@ function handleInteraction(obj) {
         startDialogue('olive_after', 'olive', function () {
           addItem(ITEMS.LAUNDRY_BASKET);
           gameState.flags.has_laundry_basket = true;
-          showToast('Got Laundry Basket!');
+          showToast('Olive flipped! Got the Laundry Basket — clear those stairs!');
           markCatFed('olive');
           saveGameImmediate();
         });
@@ -2244,7 +2244,7 @@ function checkLaundryInteraction() {
       removeItem(ITEMS.LAUNDRY_BASKET);
       gameState.flags.laundry_cleared = true;
       startDialogue('laundry_pile_clear', null, function () {
-        showToast('Stairway cleared!');
+        showToast('Avalanche cleared — the trail leads up!');
         saveGame();
       });
       return true;

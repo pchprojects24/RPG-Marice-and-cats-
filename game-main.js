@@ -1,5 +1,5 @@
 /*
- * game-main.js — Marice & Cats House Adventure — UI and entry
+ * game-main.js — Marice & Cats: The Great Treat Heist — UI and entry
  * Numpad, title screen, ending, init. Depends on game-engine.js.
  */
 
@@ -235,7 +235,7 @@ function init() {
       hideEnding();
       freeRoam = true;
       markPlayerActivity();
-      showToast('Free roam! Your cats are following you — and the dining room sliding door to the backyard is open! 🐾', 4500);
+      showToast('Case closed — free roam! Your three convicted felons are trailing behind you, and the backyard sliding door is open! 🐾', 4500);
     });
   }
 

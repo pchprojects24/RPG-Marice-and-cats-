@@ -3,12 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <title>Marice &amp; Cats — House Adventure</title>
+  <title>Marice &amp; Cats — The Great Treat Heist</title>
   <!--
     ===================================================
-    Marice & Cats — House Adventure
-    A Zelda-style 2D top-down prototype
+    Marice & Cats — The Great Treat Heist
+    A cozy Zelda-style top-down detective adventure
     ===================================================
+
+    THE PREMISE:
+      Marice was gone for twenty minutes. The treat jar is now empty,
+      knocked on its side, crumbs everywhere — and all three cats have
+      vanished to different corners of the house, acting VERY innocent.
+      Play as Detective Marice: interview the witness, crack the
+      suspect's alibi, and extract a confession from the mastermind.
 
     CONTROLS:
       Keyboard:
@@ -19,15 +26,17 @@
         - INTERACT button: Interact / Advance dialogue
 
     HOW TO PLAY:
-      1. Explore the main floor. Talk to Alice on her cat tree.
-      2. Find Purrpops in the kitchen cupboards and give them to Alice.
-      3. Alice hints about the Basement Key under the sofa blanket.
-      4. Unlock the basement door and go downstairs.
-      5. Find Olive under the treadmill. Give her Purrpops too.
-      6. Olive gives you a Laundry Basket — clear the stairs.
-      7. Go upstairs, find Beatrice under her blanket.
-      8. Give Beatrice a plate of Shrimp & Salmon Feast.
-      9. Enjoy the ending!
+      1. Crack the front door code (the plaque riddle has the answer).
+      2. Survey the kitchen crime scene, then interview Alice (the
+         witness) on her cat tree — her fee is Purrpops from the cupboard.
+      3. Alice's tip: the Basement Key is under the sofa blanket.
+      4. Unlock the basement and confront Olive (the muscle) at the
+         scene of the crumbs. Interrogation snacks: more Purrpops.
+      5. Olive flips on the mastermind and hands over a Laundry Basket —
+         clear the staged laundry avalanche on the stairs.
+      6. Upstairs, the mastermind Beatrice trades a full confession
+         for a Shrimp & Salmon Feast (from the kitchen cupboard).
+      7. Deliver the verdict: guilty of being adorable. Case closed!
 
     DEPLOY VIA GITHUB PAGES:
       1. Push this repo to GitHub.
@@ -42,7 +51,7 @@
         - olive_portrait_512.png
         - beatrice_portrait_512.png
   -->
-  <meta name="description" content="A cozy Zelda-style top-down adventure. Find Alice, Olive, and Beatrice; feed the cats, explore the house, and get snuggles.">
+  <meta name="description" content="A cozy Zelda-style detective adventure. The treat jar has been burgled — interrogate Alice, Olive, and Beatrice, follow the crumbs, and crack the case of the Great Treat Heist.">
   <meta name="theme-color" content="#1a1a2e">
   <!-- Installable web app: Add to Home Screen gives a fullscreen game -->
   <link rel="manifest" href="manifest.json">
@@ -64,7 +73,7 @@
     <!-- HUD -->
     <div id="hud">
       <span id="floor-label">Main Floor</span>
-      <span id="quest-counter">Objectives: 0/3 cats fed</span>
+      <span id="quest-counter">Case: 0/3 cats cracked</span>
       <span id="interact-prompt">E: Interact</span>
     </div>
 
@@ -75,7 +84,7 @@
     <div id="controls-hint">
       <div>WASD / Arrows: Move</div>
       <div>E / Space: Interact</div>
-      <div>H: Hint &nbsp; Q: Quest Log &nbsp; P: Pause</div>
+      <div>H: Hint &nbsp; Q: Case Log &nbsp; P: Pause</div>
     </div>
 
     <!-- Floor transition fade overlay -->
@@ -131,10 +140,10 @@
     <!-- Title Screen -->
     <div id="title-screen">
       <h1>Marice &amp; Cats</h1>
-      <h2>House Adventure</h2>
+      <h2>The Great Treat Heist</h2>
       <div class="subtitle">
-        Find Alice, Olive, and Beatrice!<br>
-        Feed the cats. Explore the house. Get snuggles.
+        The treat jar is empty. Three suspects. Zero remorse.<br>
+        Interrogate the cats. Follow the crumbs. Crack the case.
       </div>
       <button id="btn-new-game" class="title-btn">New Game</button>
       <button id="btn-continue" class="title-btn">Continue</button>
@@ -153,7 +162,7 @@
 
     <!-- Ending Overlay -->
     <div id="ending-overlay">
-      <h1>Snuggle Pile Achieved</h1>
+      <h1>Case Closed!</h1>
       <div id="ending-bed">
         <div class="bed-headboard"></div>
         <div class="bed-pillow marice"><img src="assets/portraits/marice_portrait_512.png" alt="Marice"></div>
@@ -162,10 +171,10 @@
         <div class="bed-pillow beatrice"><img src="assets/portraits/beatrice_portrait_512.png" alt="Beatrice"></div>
         <div class="bed-blanket"></div>
       </div>
-      <p id="ending-line">Marice: "This is what I've wanted. My three girls snuggling with me."</p>
+      <p id="ending-line">Marice: "Verdict: guilty on three counts of being adorable. Sentence: dinner on time, forever — and snuggles, effective immediately."</p>
       <p class="ending-sub">
-        Marice finally settles into bed with Alice, Olive, and Beatrice curled close — a cozy house,
-        full hearts, and a perfect snuggle pile.
+        The Great Treat Heist is solved. Detective Marice settles into bed with the witness, the muscle,
+        and the mastermind curled close — all three serving their snuggle sentence, purring without remorse.
       </p>
       <div id="ending-stats">
         <span id="stat-time">⏱ --:--</span>
@@ -190,28 +199,28 @@
     <!-- Quest Log Panel -->
     <div id="quest-panel">
       <div class="quest-panel-header">
-        <h3>📋 Quest Log</h3>
+        <h3>🕵️ Case Log</h3>
         <button id="btn-close-quest" class="close-btn">✕</button>
       </div>
       <div id="quest-list">
         <div class="quest-item">
-          <span class="quest-icon">🐱</span>
-          <span class="quest-text">Find and feed Alice</span>
+          <span class="quest-icon">🔍</span>
+          <span class="quest-text">Interview the witness: Alice</span>
           <span class="quest-status pending">⏳</span>
         </div>
         <div class="quest-item">
-          <span class="quest-icon">🐱</span>
-          <span class="quest-text">Find and feed Olive</span>
+          <span class="quest-icon">🍪</span>
+          <span class="quest-text">Crack Olive's alibi</span>
           <span class="quest-status pending">⏳</span>
         </div>
         <div class="quest-item">
-          <span class="quest-icon">🐱</span>
-          <span class="quest-text">Find and feed Beatrice</span>
+          <span class="quest-icon">⚖️</span>
+          <span class="quest-text">Get Beatrice's confession</span>
           <span class="quest-status pending">⏳</span>
         </div>
         <div class="quest-item" id="quest-item-toys">
           <span class="quest-icon">🧶</span>
-          <span class="quest-text">Find the hidden cat toys</span>
+          <span class="quest-text">Recover the stashed toy loot</span>
           <span class="quest-status pending">0/3</span>
         </div>
         <div class="quest-item" id="quest-item-diary">
@@ -282,7 +291,7 @@
     <!-- Bottom Action Buttons -->
     <div id="bottom-buttons">
       <button id="btn-hint" class="hud-btn" aria-label="Get hint" title="Hint (💡)">💡</button>
-      <button id="btn-toggle-quest" class="hud-btn" aria-label="Quest log" title="Quest Log (Q)">📋</button>
+      <button id="btn-toggle-quest" class="hud-btn" aria-label="Case log" title="Case Log (Q)">📋</button>
       <button id="btn-toggle-settings" class="hud-btn" aria-label="Settings" title="Settings">⚙️</button>
     </div>
 
