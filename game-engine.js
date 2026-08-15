@@ -793,6 +793,39 @@ function preloadPortraits() {
 }
 preloadPortraits();
 
+// Hand-painted top-down character art. The procedural sprites below remain as
+// a resilient fallback while the atlas is loading or if an asset is missing.
+const characterAtlas = new Image();
+characterAtlas.src = 'assets/art/character-atlas.png';
+
+function drawCharacterArt(spriteIndex, x, y, isMoving, isCat) {
+  if (!characterAtlas.complete || !characterAtlas.naturalWidth) return false;
+
+  const cellW = characterAtlas.naturalWidth / 4;
+  const sourceY = isCat ? characterAtlas.naturalHeight * 0.17 : characterAtlas.naturalHeight * 0.09;
+  const sourceH = isCat ? characterAtlas.naturalHeight * 0.68 : characterAtlas.naturalHeight * 0.77;
+  const bob = isMoving ? Math.sin(animTimer * 0.46) * 1.3 : 0;
+  const destW = isCat ? 29 : 29;
+  const destH = isCat ? 34 : 43;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(
+    characterAtlas,
+    spriteIndex * cellW,
+    sourceY,
+    cellW,
+    sourceH,
+    x + (TILE_SIZE - destW) / 2,
+    y + TILE_SIZE - destH + bob,
+    destW,
+    destH
+  );
+  ctx.restore();
+  return true;
+}
+
 // ======================== DIALOGUE SYSTEM ========================
 
 let dialogueActive = false;
@@ -840,13 +873,18 @@ function showDialogueMessage() {
   const msg = dialogueQueue[dialogueIndex];
   if (!msg) return;
 
-  // Show cat + Marice portraits together during cat dialogues (hide if any failed to load)
+  // Show the cast for every conversation. Solo Marice narration gets her own
+  // portrait; interrogations stage Marice and the current suspect together.
   const catImg = dialogueCat && portraits[dialogueCat];
   const mariceImg = portraits.marice;
-  const showPortraits = catImg && mariceImg && !catImg._loadFailed && !mariceImg._loadFailed;
-  if (showPortraits) {
-    dialoguePortraitCat.src = catImg.src;
-    dialoguePortraitMarice.src = mariceImg.src;
+  const showMarice = mariceImg && !mariceImg._loadFailed;
+  const showCat = catImg && !catImg._loadFailed;
+  if (showMarice || showCat) {
+    dialoguePortraits.classList.toggle('solo', !showCat);
+    dialoguePortraitCat.style.display = showCat ? 'block' : 'none';
+    dialoguePortraitMarice.style.display = showMarice ? 'block' : 'none';
+    if (showCat) dialoguePortraitCat.src = catImg.src;
+    if (showMarice) dialoguePortraitMarice.src = mariceImg.src;
     dialoguePortraits.style.display = 'flex';
   } else {
     dialoguePortraits.style.display = 'none';
@@ -1295,7 +1333,15 @@ function updateQuestCounter() {
     gameState.flags.olive_fed,
     gameState.flags.beatrice_fed
   ].filter(Boolean).length;
-  counter.textContent = `Case: ${fed}/3 cats cracked`;
+  counter.textContent = `Case: ${fed} / 3`;
+  ['alice', 'olive', 'beatrice'].forEach(function (catName) {
+    var portrait = document.getElementById('hud-cat-' + catName);
+    if (portrait) portrait.classList.toggle('solved', !!gameState.flags[catName + '_fed']);
+  });
+  var objective = document.getElementById('hud-objective');
+  if (objective) {
+    objective.textContent = getNextTaskHint() || 'Free roam with the whole cat crew';
+  }
 }
 
 function updateQuestList() {
@@ -2304,6 +2350,7 @@ function updateInteractPrompt() {
 const SPRITES = {
   // Player (Marice) - animated character
   player: function (x, y, facing, isMoving) {
+    if (drawCharacterArt(0, x, y, isMoving, false)) return;
     // Walking bob offset
     var bobY = 0;
     if (isMoving) {
@@ -2357,7 +2404,9 @@ const SPRITES = {
   },
 
   // Cat sprite (generic, colored per cat) — with idle animations
-  cat: function (x, y, color, accentColor) {
+  cat: function (x, y, color, accentColor, catName) {
+    var catSpriteIndex = { alice: 1, olive: 2, beatrice: 3 }[catName];
+    if (catSpriteIndex && drawCharacterArt(catSpriteIndex, x, y, false, true)) return;
     // Idle animation state
     var blinkCycle = animTimer % 180; // blink every ~3 seconds at 60fps
     var isBlinking = blinkCycle > 170;
@@ -3592,6 +3641,24 @@ function drawTile(floor, row, col) {
   ctx.fillStyle = palette[tile] || palette[T.FLOOR];
   ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
+  // Material pass: break up the old square-grid look with floor-specific grain.
+  if (tile === T.FLOOR || tile === T.INTERACT || tile === T.DOOR) {
+    var grain = tileSeed(row, col, 9);
+    if (gameState.currentFloor === FLOOR_IDS.MAIN || gameState.currentFloor === FLOOR_IDS.UPSTAIRS) {
+      ctx.fillStyle = 'rgba(255,236,205,' + (0.025 + grain * 0.035) + ')';
+      ctx.fillRect(x, y + 1, TILE_SIZE, 1);
+      ctx.fillStyle = 'rgba(45,25,24,0.10)';
+      ctx.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+      ctx.fillRect(x + (row % 2 ? 7 : 17), y + TILE_SIZE - 3, 1, 2);
+    } else if (gameState.currentFloor === FLOOR_IDS.BASEMENT) {
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.fillRect(x + 4 + Math.floor(grain * 12), y + 5, 1, 1);
+      ctx.fillRect(x + 16, y + 15 + Math.floor(grain * 4), 1, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(x, y + TILE_SIZE - 1, TILE_SIZE, 1);
+    }
+  }
+
   // Draw wall detail
   if (tile === T.WALL) {
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -3617,8 +3684,8 @@ function drawTile(floor, row, col) {
     SPRITES.stairs(x, y, hasLaundry);
   }
 
-  // Grid lines (subtle)
-  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  // Fine join lines retain navigation clarity without reading as graph paper.
+  ctx.strokeStyle = 'rgba(0,0,0,0.045)';
   ctx.lineWidth = 0.5;
   ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
 }
@@ -3691,7 +3758,7 @@ function drawInteractables(floor) {
       case 'cat_alice':
         SPRITES.catTree(x, y);
         if (!gameState.flags.alice_fed) {
-          SPRITES.cat(x, y - 4, CAT_COLORS.alice[0], CAT_COLORS.alice[1]);
+          SPRITES.cat(x, y - 4, CAT_COLORS.alice[0], CAT_COLORS.alice[1], 'alice');
         }
         break;
       case 'front_door':
@@ -3700,13 +3767,13 @@ function drawInteractables(floor) {
       case 'cat_olive':
         SPRITES.treadmill(x, y);
         if (!gameState.flags.olive_fed) {
-          SPRITES.cat(x, y - 2, CAT_COLORS.olive[0], CAT_COLORS.olive[1]);
+          SPRITES.cat(x, y - 2, CAT_COLORS.olive[0], CAT_COLORS.olive[1], 'olive');
         }
         break;
       case 'cat_beatrice':
         SPRITES.bed(x, y, true);
         if (!gameState.flags.beatrice_fed) {
-          SPRITES.cat(x + 2, y + 6, CAT_COLORS.beatrice[0], CAT_COLORS.beatrice[1]);
+          SPRITES.cat(x + 2, y + 6, CAT_COLORS.beatrice[0], CAT_COLORS.beatrice[1], 'beatrice');
         }
         break;
       case 'sofa_blanket':
@@ -4210,7 +4277,7 @@ function drawFollowers() {
     const hop = gameState.moving ? Math.abs(Math.sin((animTimer + i * 7) * 0.3)) * 2 : 0;
     const cx = sample.x - TILE_SIZE / 2;
     const cy = sample.y - TILE_SIZE / 2 - hop;
-    SPRITES.cat(cx, cy, colors[0], colors[1]);
+    SPRITES.cat(cx, cy, colors[0], colors[1], name);
   }
 }
 
@@ -4574,7 +4641,7 @@ function render() {
   ctx.restore();
 
   // Draw subtle vignette effect (not affected by shake) from the cache
-  const vignetteOuterAlpha = gameState.currentFloor === FLOOR_IDS.BASEMENT ? 0.18 : 0.3;
+  const vignetteOuterAlpha = gameState.currentFloor === FLOOR_IDS.BASEMENT ? 0.12 : 0.18;
   ctx.drawImage(getVignetteCanvas(vignetteOuterAlpha), 0, 0);
 }
 
