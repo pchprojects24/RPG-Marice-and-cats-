@@ -52,7 +52,7 @@
         - beatrice_portrait_512.png
   -->
   <meta name="description" content="A cozy Zelda-style detective adventure. The treat jar has been burgled — interrogate Alice, Olive, and Beatrice, follow the crumbs, and crack the case of the Great Treat Heist.">
-  <meta name="theme-color" content="#1a1a2e">
+  <meta name="theme-color" content="#160f17">
   <!-- Installable web app: Add to Home Screen gives a fullscreen game -->
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -72,8 +72,19 @@
 
     <!-- HUD -->
     <div id="hud">
-      <span id="floor-label">Main Floor</span>
-      <span id="quest-counter">Case: 0/3 cats cracked</span>
+      <div class="hud-location">
+        <span class="hud-label">Current location</span>
+        <span id="floor-label">Main Floor</span>
+        <span id="hud-objective">Find out who raided the treat jar</span>
+      </div>
+      <div class="hud-case">
+        <span id="quest-counter">Case: 0 / 3</span>
+        <div class="suspect-portraits" aria-label="Suspect progress">
+          <img id="hud-cat-alice" src="assets/portraits/alice_portrait_512.png" alt="Alice">
+          <img id="hud-cat-olive" src="assets/portraits/olive_portrait_512.png" alt="Olive">
+          <img id="hud-cat-beatrice" src="assets/portraits/beatrice_portrait_512.png" alt="Beatrice">
+        </div>
+      </div>
       <span id="interact-prompt">E: Interact</span>
     </div>
 
@@ -139,14 +150,21 @@
 
     <!-- Title Screen -->
     <div id="title-screen">
-      <h1>Marice &amp; Cats</h1>
-      <h2>The Great Treat Heist</h2>
-      <div class="subtitle">
-        The treat jar is empty. Three suspects. Zero remorse.<br>
-        Interrogate the cats. Follow the crumbs. Crack the case.
+      <div class="title-art" aria-hidden="true"></div>
+      <div class="title-copy">
+        <h1>Marice <span>&amp; Cats</span></h1>
+        <h2>The Great Treat Heist</h2>
+        <div class="title-rule"></div>
+        <div class="subtitle">
+          The treat jar is empty. Three suspects. Zero remorse.<br>
+          Interrogate the cats. Follow the crumbs. Crack the case.
+        </div>
+        <div class="title-actions">
+          <button id="btn-new-game" class="title-btn">Begin the Investigation</button>
+          <button id="btn-continue" class="title-btn secondary">Continue Case</button>
+        </div>
+        <div class="title-controls">Move with WASD or arrow keys &nbsp;•&nbsp; Press E to investigate</div>
       </div>
-      <button id="btn-new-game" class="title-btn">New Game</button>
-      <button id="btn-continue" class="title-btn">Continue</button>
     </div>
 
     <!-- Code Entry Overlay -->

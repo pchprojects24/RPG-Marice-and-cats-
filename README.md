@@ -74,6 +74,8 @@ The game ships a web-app manifest, so you can **Add to Home Screen** (Safari sha
 ## Tech
 
 - Vanilla JavaScript, HTML5 Canvas, CSS. No build step.
+- Hand-painted storybook key art and transparent character atlas live in `assets/art/`; gameplay falls back to the original procedural sprites if the atlas cannot load.
+- Responsive investigation HUD, suspect portraits, redesigned dialogue staging, evidence satchel, and a mobile-specific title composition.
 - **Fixed-timestep game loop** (60 logic updates/sec) — the game runs at the same speed on 60 Hz, 90 Hz, and 120 Hz displays.
 - **Offscreen-canvas caching** for the static tile layer, minimap, and vignette — instead of procedurally redrawing ~300 tiles every frame, cutting CPU/battery use dramatically on phones.
 - Save/load via `localStorage`. Settings (volume, screen shake, particles) persist.
