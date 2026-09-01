@@ -70,12 +70,21 @@ function setupNumpad() {
 
 // ======================== TITLE SCREEN ========================
 
+function hasSavedGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return !!raw && raw.trim().length > 0;
+  } catch (e) {
+    return false;
+  }
+}
+
 function showTitleScreen() {
   document.getElementById('title-screen').style.display = 'flex';
-  // Re-evaluate whether a save exists so Continue button reflects current state
+  // Re-evaluate whether a save exists without mutating the live game state.
   var continueBtn = document.getElementById('btn-continue');
   if (continueBtn) {
-    continueBtn.style.display = loadGame() ? 'inline-block' : 'none';
+    continueBtn.style.display = hasSavedGame() ? 'inline-block' : 'none';
   }
 }
 
@@ -141,6 +150,11 @@ function checkHideControlsHint() {
 }
 
 function continueGame() {
+  if (!loadGame()) {
+    showToast(hasSavedGame() ? 'Could not load saved game.' : 'No save to continue.', 2000);
+    return;
+  }
+
   initAudio();
   markPlayerActivity();
   gameStartTime = Date.now();
@@ -214,7 +228,7 @@ function init() {
   });
 
   const continueBtn = document.getElementById('btn-continue');
-  if (loadGame()) {
+  if (hasSavedGame()) {
     continueBtn.style.display = 'inline-block';
     continueBtn.addEventListener('click', function () {
       continueGame();
