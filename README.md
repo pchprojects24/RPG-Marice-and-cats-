@@ -4,9 +4,9 @@ A cozy Zelda-style 2D top-down **detective adventure**.
 
 **The premise:** Marice was gone for twenty minutes. She came home to a crime scene — the treat jar knocked on its side, empty, a trail of crumbs... and all three cats mysteriously "hiding" in different corners of the house, each acting *very* innocent. Put on your detective coat and crack the case:
 
-- **Alice** — *the Witness.* Saw everything from her cat tree. Bills by the Purrpop.
-- **Olive** — *the Muscle.* Found under the treadmill at the scene of the crumbs. Claims she was "doing zoomies."
-- **Beatrice** — *the Mastermind.* Currently disguised as a blanket. Will trade a full confession for a Shrimp & Salmon Feast.
+- **Alice** — *the Witness.* A sleek black-and-white tuxedo who saw everything from her cat tree. Bills by the Purrpop.
+- **Olive** — *the Muscle.* A big fluffy white girl, found on the treadmill at the end of the crumb trail. Claims she was "doing zoomies."
+- **Beatrice** — *the Mastermind.* A long-haired black cat, currently disguised as a blanket. Will trade a full confession for a Shrimp & Salmon Feast — if you can prove you've cracked the case.
 
 Interrogate the suspects, follow the clues floor by floor, and deliver the only possible verdict: **guilty of being adorable** — sentenced to dinner on time and a lifetime of snuggles.
 
@@ -19,7 +19,8 @@ Interrogate the suspects, follow the clues floor by floor, and deliver the only 
 
 - **Keyboard:** WASD or Arrow keys to move (grid-based). **E** / **Space** / **Enter** to interact, pet a cat, or advance dialogue.
 - **Helpful keys:** **H** for hint + objective ping, **Q** for the Case Log, **P** to pause.
-- **Mobile:** Swipe/drag anywhere on the game to move (touch joystick), or use the on-screen D-pad. A quick **tap** on the screen interacts/pets — or use the **INTERACT** button. For the largest view, rotate to landscape.
+- **Mobile:** Swipe/drag anywhere on the game to move (touch joystick), or use the on-screen D-pad. A quick **tap** on the screen interacts/pets — or use the **INTERACT** button. In landscape the controls move to the side gutters so the game fills the screen height.
+- **Choices:** when a question appears, pick with **1–3**, the arrow keys + **Enter**, or tap an answer.
 
 ## How to crack the case
 
@@ -28,8 +29,15 @@ Interrogate the suspects, follow the clues floor by floor, and deliver the only 
 3. Alice's tip leads to the **Basement Key** under the sofa blanket. The trail leads down.
 4. Confront **Olive** under the treadmill — caught red-pawed in a pile of crumbs. Interrogation snacks (more Purrpops) make her talk.
 5. Olive flips on the mastermind and hands over a **Laundry Basket** — use it to clear the staged laundry avalanche blocking the stairs.
-6. Upstairs, the mastermind **Beatrice** ("I am a blanket") trades her full confession for a **Shrimp & Salmon Feast** from the kitchen.
-7. Hear the confession, deliver the verdict, and enjoy the **Case Closed** ending — then hit **Keep Playing** to free-roam with your three convicted felons.
+6. Upstairs, follow the trail of long black fur to the mastermind **Beatrice** ("I am a blanket") and bring her a **Shrimp & Salmon Feast** from the kitchen.
+7. **Lay out the case:** Beatrice won't confess until you name the lookout, the muscle, and the brains. Wrong guesses earn some sass and another try.
+8. Hear the confession (and what they left on your pillow), then **choose the verdict** — each sentence changes the **Case Closed** ending. Hit **Keep Playing** to free-roam with your three convicted felons.
+
+The case unfolds in chapters — *Prologue: Twenty Minutes*, *The Scene of the Crime*, *The Muscle*, *The Blanket*, and an *Epilogue* in the garden.
+
+### Evidence board
+
+Seven pieces of evidence fill the **Case Log** (Q) as you investigate: the tipped treat jar on the kitchen island, the pet cam someone turned to face the wall, the crumb trail to the basement, both suspects' statements, the staged laundry avalanche, and the signed confession. Inspecting the crime scene is optional, but it's how you know the answers before Beatrice asks.
 
 Every cat you win over **joins you and trails behind Marice** through the whole house. Walk up to one of your followers and press **INTERACT** (or tap) to **pet it** — purrs, hearts, and an affection counter tallied on the ending screen.
 
@@ -75,8 +83,11 @@ The game ships a web-app manifest, so you can **Add to Home Screen** (Safari sha
 
 - Vanilla JavaScript, HTML5 Canvas, CSS. No build step.
 - Hand-painted storybook key art and transparent character atlas live in `assets/art/`; gameplay falls back to the original procedural sprites if the atlas cannot load.
+- `game-art.js` draws the interiors: room-aware floors (oak planks, checker tile, carpet, concrete), painted walls with depth, windows and picture frames, rugs, staircases, furniture and a sprite for every prop, plus story decals like the crumb trail and fur tufts that clear as the case is solved.
+- The world renders at 2× resolution so the art stays crisp when scaled to fill the screen.
 - Responsive investigation HUD, suspect portraits, redesigned dialogue staging, evidence satchel, and a mobile-specific title composition.
 - **Fixed-timestep game loop** (60 logic updates/sec) — the game runs at the same speed on 60 Hz, 90 Hz, and 120 Hz displays.
 - **Offscreen-canvas caching** for the static tile layer, minimap, and vignette — instead of procedurally redrawing ~300 tiles every frame, cutting CPU/battery use dramatically on phones.
 - Save/load via `localStorage`. Settings (volume, screen shake, particles) persist.
-- Script load order: `data/maps.js` → `data/dialogue.js` → `game-engine.js` → `game-main.js`.
+- Script load order: `data/maps.js` → `data/dialogue.js` → `game-engine.js` → `game-art.js` → `game-main.js`.
+- Story data (dialogue, chapters, evidence, deduction questions, verdicts) lives in `data/dialogue.js`.

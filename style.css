@@ -1603,3 +1603,323 @@ html, body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ======================== Case File Polish (story + layout fixes) ======================== */
+
+/* ---- Room labels & HUD ---- */
+.hud-btn { position: relative; }
+.hud-btn.has-new::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f2b84b;
+  box-shadow: 0 0 0 2px rgba(23,18,26,.9), 0 0 10px rgba(242,184,75,.8);
+  animation: newDot 1.2s ease-in-out infinite alternate;
+}
+@keyframes newDot { from { transform: scale(.8); } to { transform: scale(1.15); } }
+
+/* ---- Chapter title card ---- */
+#chapter-card {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translate(-50%, 10px);
+  z-index: 96;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 42px 20px;
+  min-width: min(440px, 86vw);
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(20,14,20,.92) 0%, rgba(20,14,20,.78) 60%, rgba(20,14,20,0) 100%);
+  transition: opacity .7s ease, transform .7s ease;
+}
+#chapter-card.show { opacity: 1; transform: translate(-50%, 0); }
+.chapter-kicker {
+  color: var(--rose);
+  font: 700 11px/1 'Outfit', sans-serif;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+}
+.chapter-title {
+  color: #fff1d6;
+  font: italic 700 clamp(24px, 4vw, 38px)/1.1 Georgia, serif;
+  text-shadow: 0 4px 22px rgba(0,0,0,.6);
+}
+.chapter-rule {
+  width: 90px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.chapter-sub { color: var(--parchment); font: 14px/1.4 Georgia, serif; }
+
+/* ---- Evidence banner ---- */
+#evidence-banner {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translate(-50%, -12px);
+  z-index: 97;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px 9px 12px;
+  border: 1px solid rgba(242,184,75,.55);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(40,28,20,.96), rgba(58,36,30,.94));
+  box-shadow: 0 14px 34px rgba(0,0,0,.45), 0 0 24px rgba(242,184,75,.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s ease, transform .35s ease;
+}
+#evidence-banner.visible { opacity: 1; transform: translate(-50%, 0); }
+.evidence-banner-icon { font-size: 26px; }
+#evidence-banner small {
+  display: block;
+  color: #f2b84b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+#evidence-banner strong { color: var(--cream); font: 700 15px/1.2 Georgia, serif; }
+
+/* ---- Dialogue: portraits no longer overlap the text ---- */
+#dialogue-box { padding-left: 176px; }
+#dialogue-portraits {
+  width: 136px;
+  height: 128px;
+  display: block;
+}
+#dialogue-portraits .dialogue-portrait { position: absolute; }
+#dialogue-portrait-cat { left: 0; top: 0; width: 112px; height: 112px; }
+#dialogue-portrait-marice {
+  right: 0;
+  bottom: 0;
+  left: auto;
+  top: auto;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  transform: none;
+  border-radius: 12px 12px 4px 12px;
+}
+#dialogue-portraits.solo #dialogue-portrait-marice {
+  left: 0;
+  top: 0;
+  width: 112px;
+  height: 112px;
+}
+
+/* ---- Dialogue choices ---- */
+#dialogue-choices {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 2px;
+}
+#dialogue-choices.active { display: flex; }
+.dialogue-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 12px;
+  border: 1px solid rgba(222,190,132,.35);
+  border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  color: var(--cream);
+  font: 15px/1.3 Georgia, serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .15s;
+}
+.dialogue-choice img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(222,190,132,.6);
+}
+.choice-key {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(217,173,98,.2);
+  color: #f2d18f;
+  font: 700 12px/1 'Outfit', sans-serif;
+}
+.dialogue-choice.selected,
+.dialogue-choice:hover {
+  background: rgba(217,173,98,.18);
+  border-color: var(--gold);
+  transform: translateX(4px);
+}
+.dialogue-choice.selected .choice-key { background: var(--gold); color: #22151d; }
+
+/* ---- Case log: evidence board ---- */
+#quest-panel {
+  max-height: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(145deg, rgba(23,18,26,.96), rgba(42,23,40,.94));
+  border-color: var(--line);
+}
+#quest-list { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.evidence-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 16px 2px 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(222,190,132,.25);
+}
+.evidence-header h4 { color: #f2d18f; font: 700 15px/1 Georgia, serif; }
+#evidence-count { color: var(--parchment); font-size: 12px; }
+.evidence-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: rgba(255,244,220,.06);
+  border-left: 3px solid var(--gold);
+}
+.evidence-item.missing { opacity: .45; border-left-color: rgba(222,190,132,.3); }
+.evidence-icon { font-size: 18px; line-height: 1.2; }
+.evidence-item strong { display: block; color: var(--cream); font: 700 13px/1.3 Georgia, serif; }
+.evidence-item p { color: rgba(247,234,210,.72); font-size: 11.5px; line-height: 1.4; }
+
+/* ---- Ending: fits on short screens, pillows stay on the bed ---- */
+#ending-overlay {
+  justify-content: flex-start;
+  overflow-y: auto;
+  gap: 12px;
+  padding: max(24px, 4vh) 20px 28px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(92,54,78,.55), transparent 60%),
+    rgba(12,9,13,.94);
+}
+#ending-overlay > * { flex-shrink: 0; }
+#ending-overlay h1 {
+  margin-top: auto;
+  color: #fff1d6;
+  font: italic 700 clamp(28px, 5vw, 44px)/1 Georgia, serif;
+  text-shadow: 0 0 24px rgba(217,173,98,.45);
+  animation: none;
+}
+#ending-bed { width: 360px; height: 170px; border-radius: 18px; }
+.bed-pillow {
+  top: 20px;
+  width: 21%;
+  height: auto;
+  aspect-ratio: 1;
+}
+.bed-pillow img { width: 82%; height: 82%; }
+.bed-pillow.marice { left: 3%; }
+.bed-pillow.alice { left: 27%; }
+.bed-pillow.olive { left: 51%; }
+.bed-pillow.beatrice { left: 75%; }
+#ending-line {
+  color: #f2d18f;
+  font: italic 700 17px/1.5 Georgia, serif;
+  max-width: 480px;
+}
+.ending-sub { color: rgba(247,234,210,.8); font: 14px/1.6 Georgia, serif; max-width: 460px; }
+#ending-stats {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  max-width: 560px;
+  border-color: var(--line);
+  color: var(--parchment);
+  font-weight: 600;
+}
+.ending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: auto;
+}
+
+/* ---- Controls hint: show the right controls for the device ---- */
+.hint-touch { display: none; }
+@media (hover: none), (pointer: coarse) {
+  .hint-keys { display: none; }
+  .hint-touch { display: block; }
+  #controls-hint { top: 74px; bottom: auto; }
+}
+
+/* ---- Phones, portrait ---- */
+@media (hover: none) and (orientation: portrait), (pointer: coarse) and (orientation: portrait) {
+  #bottom-buttons { flex-direction: column; bottom: 88px; right: 16px; gap: 8px; }
+  #inventory-bar { bottom: 164px; max-width: 64vw; flex-wrap: wrap; justify-content: center; }
+  .action-btn { width: 64px; height: 64px; }
+  #interact-prompt { bottom: 208px; }
+  #evidence-banner { top: 70px; }
+}
+
+/* ---- Phones, landscape: controls in the side gutters, game in the middle ---- */
+@media (hover: none) and (orientation: landscape) and (max-height: 540px),
+       (pointer: coarse) and (orientation: landscape) and (max-height: 540px) {
+  #hud { top: 6px; left: 8px; right: 8px; }
+  .hud-location { min-width: 0; max-width: 168px; padding: 7px 10px 7px 32px; }
+  .hud-location::before { left: 9px; top: 11px; font-size: 18px; }
+  .hud-label, #hud-objective { display: none; }
+  #floor-label { font-size: 13px; }
+  .hud-case { max-width: 168px; padding: 5px 7px 5px 10px; gap: 6px; }
+  #quest-counter { font-size: 11px; }
+  .suspect-portraits { gap: 3px; }
+  .suspect-portraits img { width: 24px; height: 24px; }
+  #mobile-controls { bottom: 8px; padding: 0 10px; }
+  #dpad { grid-template-columns: 44px 44px 44px; grid-template-rows: 44px 44px 44px; }
+  .dpad-btn { width: 44px; height: 44px; font-size: 16px; }
+  .action-btn { width: 64px; height: 64px; }
+  #bottom-buttons { flex-direction: column; bottom: 84px; right: 18px; gap: 6px; }
+  .hud-btn { width: 36px; height: 36px; font-size: 15px; }
+  #inventory-bar { bottom: 6px; min-height: 34px; padding: 4px 10px; max-width: 44vw; }
+  #controls-hint { top: 8px; }
+  #interact-prompt { bottom: 48px; }
+  #toast { top: 52px; }
+  #evidence-banner { top: 8px; }
+  #chapter-card { top: 16%; }
+  #dialogue-overlay { padding: 6px 8px 8px; }
+  #dialogue-box { min-height: 0; padding: 12px 14px 10px 96px; }
+  #dialogue-portraits { left: 12px; width: 76px; height: 72px; }
+  #dialogue-portrait-cat, #dialogue-portraits.solo #dialogue-portrait-marice { width: 64px; height: 64px; }
+  #dialogue-portrait-marice { width: 34px; height: 34px; }
+  #dialogue-text { font-size: 13px; min-height: 0; }
+  .dialogue-choice { padding: 4px 10px; font-size: 13px; }
+  .dialogue-choice img { width: 22px; height: 22px; }
+  #ending-bed { height: 120px; width: 280px; }
+}
+
+@media (max-width: 760px) {
+  #dialogue-box { padding-left: 112px; }
+  #dialogue-portraits { left: 14px; width: 86px; height: 82px; }
+  #dialogue-portrait-cat, #dialogue-portraits.solo #dialogue-portrait-marice { width: 72px; height: 72px; }
+  #dialogue-portrait-marice { width: 38px; height: 38px; transform: none; margin: 0; }
+  .dialogue-choice { font-size: 13px; }
+  #ending-bed { width: 300px; height: 140px; }
+}
+
+#save-indicator { top: 86px; right: 22px; }
+@media (min-width: 1000px) and (hover: hover) and (pointer: fine) {
+  /* Park the first-run controls hint between the HUD cards, clear of the interact prompt */
+  #controls-hint { top: 24px; bottom: auto; }
+}
+@media (hover: none), (pointer: coarse) {
+  #save-indicator { top: 52px; right: 10px; }
+}

@@ -93,10 +93,22 @@
 
     <!-- Controls hint overlay (first-time) -->
     <div id="controls-hint">
-      <div>WASD / Arrows: Move</div>
-      <div>E / Space: Interact</div>
-      <div>H: Hint &nbsp; Q: Case Log &nbsp; P: Pause</div>
+      <div class="hint-keys">WASD / Arrows: Move</div>
+      <div class="hint-keys">E / Space: Interact</div>
+      <div class="hint-keys">H: Hint &nbsp; Q: Case Log &nbsp; P: Pause</div>
+      <div class="hint-touch">Drag to walk &nbsp;•&nbsp; Tap to investigate</div>
     </div>
+
+    <!-- Chapter title card -->
+    <div id="chapter-card" aria-live="polite">
+      <span class="chapter-kicker"></span>
+      <span class="chapter-title"></span>
+      <span class="chapter-rule"></span>
+      <span class="chapter-sub"></span>
+    </div>
+
+    <!-- New evidence banner -->
+    <div id="evidence-banner" role="status" aria-live="polite"></div>
 
     <!-- Floor transition fade overlay -->
     <div id="transition-overlay">
@@ -144,6 +156,7 @@
         </div>
         <div id="dialogue-speaker">Speaker</div>
         <div id="dialogue-text">Dialogue text goes here...</div>
+        <div id="dialogue-choices" role="group" aria-label="Choose an answer"></div>
         <div id="dialogue-advance">Tap / Space / Enter to continue</div>
       </div>
     </div>
@@ -193,16 +206,20 @@
       <p class="ending-sub">
         The Great Treat Heist is solved. Detective Marice settles into bed with the witness, the muscle,
         and the mastermind curled close — all three serving their snuggle sentence, purring without remorse.
+        On her pillow, exactly as promised: one Purrpop. Her cut of the loot.
       </p>
       <div id="ending-stats">
         <span id="stat-time">⏱ --:--</span>
+        <span id="stat-evidence">🔎 Evidence: 0/7</span>
         <span id="stat-toys">🐾 Toys: 0/3</span>
         <span id="stat-diary">📖 Diary: 0/4</span>
         <span id="stat-pets">❤ Pets: 0</span>
       </div>
-      <button id="btn-keep-playing" class="title-btn">Keep Playing 🐾</button>
-      <button id="btn-restart" class="title-btn" style="font-size:14px;padding:10px 28px;">Play Again</button>
-      <button id="btn-ending-title" class="title-btn" style="font-size:14px;padding:10px 28px;">Back to Title</button>
+      <div class="ending-actions">
+        <button id="btn-keep-playing" class="title-btn">Keep Playing 🐾</button>
+        <button id="btn-restart" class="title-btn secondary">Play Again</button>
+        <button id="btn-ending-title" class="title-btn secondary">Back to Title</button>
+      </div>
     </div>
 
     <!-- Pause Overlay -->
@@ -246,6 +263,11 @@
           <span class="quest-text">Recover Marice's diary pages</span>
           <span class="quest-status pending">0/4</span>
         </div>
+        <div class="evidence-header">
+          <h4>🔎 Evidence Board</h4>
+          <span id="evidence-count">0 / 7</span>
+        </div>
+        <div id="evidence-list"></div>
       </div>
     </div>
 
@@ -320,6 +342,8 @@
   <script src="data/dialogue.js"></script>
   <!-- Game engine (state, audio, dialogue, world, render, save) -->
   <script src="game-engine.js"></script>
+  <!-- Interior art (room materials, furniture, props, story decals) -->
+  <script src="game-art.js"></script>
   <!-- Game entry (numpad, title, ending, init) -->
   <script src="game-main.js"></script>
 
