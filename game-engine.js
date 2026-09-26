@@ -33,8 +33,12 @@ let ctx = canvas.getContext('2d');
 const CANVAS_W = MAP_COLS * TILE_SIZE; // 480
 const CANVAS_H = MAP_ROWS * TILE_SIZE; // 360
 
-canvas.width = CANVAS_W;
-canvas.height = CANVAS_H;
+// The world is authored in 480x360 logical pixels but rendered at 2x so the
+// painted character art, text and fine prop detail stay crisp when the canvas
+// is scaled up to fill the screen.
+const RENDER_SCALE = 2;
+canvas.width = CANVAS_W * RENDER_SCALE;
+canvas.height = CANVAS_H * RENDER_SCALE;
 
 // Scale canvas for display.
 // Reserve space for HUD and on-screen controls, with a small margin.
@@ -45,28 +49,61 @@ function resizeCanvas() {
   var viewportW = vv ? vv.width : window.innerWidth;
   var viewportH = vv ? vv.height : window.innerHeight;
 
+  // The HUD floats with an offset from the top, so reserve down to its bottom edge.
   var hudEl = document.getElementById('hud');
-  var hudH = hudEl ? hudEl.getBoundingClientRect().height : 32;
+  var hudH = hudEl ? hudEl.getBoundingClientRect().bottom + 6 : 32;
 
   function bottomReserveFromElement(el) {
     if (!el || el.offsetParent === null) return 0;
     var r = el.getBoundingClientRect();
+    // Only elements docked in the lower half push the canvas up.
+    if (r.top < viewportH / 2) return 0;
     return Math.max(0, viewportH - r.top + 10);
   }
 
-  // On desktop, touch controls are hidden via CSS, so reserve less space.
-  var bottomH = desktopLike ? 90 : 0;
-  bottomH = Math.max(
-    bottomH,
-    bottomReserveFromElement(document.getElementById('mobile-controls')),
-    bottomReserveFromElement(document.getElementById('inventory-bar')),
-    bottomReserveFromElement(document.getElementById('bottom-buttons')),
-    bottomReserveFromElement(document.getElementById('controls-hint'))
-  );
+  function rect(id) {
+    var el = document.getElementById(id);
+    if (!el || el.offsetParent === null) return null;
+    return el.getBoundingClientRect();
+  }
 
   var margin = 10;
-  var maxW = viewportW - margin * 2;
-  var maxH = viewportH - hudH - bottomH;
+  var maxW, maxH, topReserve, bottomReserve;
+  var touchLandscape = !desktopLike && viewportW > viewportH && viewportH <= 540;
+
+  if (touchLandscape) {
+    // Phone on its side: HUD and controls live in the side gutters, so the
+    // game gets the full height between them instead of a strip on top.
+    var side = 0;
+    var dpad = rect('dpad');
+    if (dpad) side = Math.max(side, dpad.right);
+    ['action-buttons', 'bottom-buttons'].forEach(function (id) {
+      var r = rect(id);
+      if (r) side = Math.max(side, viewportW - r.left);
+    });
+    var loc = document.querySelector('.hud-location');
+    var cse = document.querySelector('.hud-case');
+    if (loc) side = Math.max(side, loc.getBoundingClientRect().right);
+    if (cse) side = Math.max(side, viewportW - cse.getBoundingClientRect().left);
+    topReserve = 8;
+    bottomReserve = Math.max(8, bottomReserveFromElement(document.getElementById('inventory-bar')));
+    maxW = viewportW - (side + 8) * 2;
+    maxH = viewportH - topReserve - bottomReserve;
+  } else {
+    // On desktop, touch controls are hidden via CSS, so reserve less space.
+    var bottomH = desktopLike ? 90 : 0;
+    bottomH = Math.max(
+      bottomH,
+      bottomReserveFromElement(document.getElementById('mobile-controls')),
+      bottomReserveFromElement(document.getElementById('inventory-bar')),
+      bottomReserveFromElement(document.getElementById('bottom-buttons')),
+      bottomReserveFromElement(document.getElementById('controls-hint'))
+    );
+    topReserve = hudH;
+    bottomReserve = bottomH;
+    maxW = viewportW - margin * 2;
+    maxH = viewportH - hudH - bottomH;
+  }
   if (maxW <= 0 || maxH <= 0) return;
   var scaleW = maxW / CANVAS_W;
   var scaleH = maxH / CANVAS_H;
@@ -74,6 +111,10 @@ function resizeCanvas() {
   if (!isFinite(scale) || scale <= 0) scale = 1;
   canvas.style.width = (CANVAS_W * scale) + 'px';
   canvas.style.height = (CANVAS_H * scale) + 'px';
+  // Centre the canvas in the space between the HUD and the controls rather
+  // than in the whole screen, so it never slides under either.
+  canvas.style.marginTop = Math.max(0, topReserve - bottomReserve) + 'px';
+  canvas.style.marginBottom = Math.max(0, bottomReserve - topReserve) + 'px';
 }
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', resizeCanvas);
@@ -99,17 +140,33 @@ const DEFAULT_FLAGS = {
   garden_visited: false,
   cat_toys_found: [],
   diary_pages_found: [],
+  evidence: [],
+  chapters_seen: [],
+  verdict: null,
   pet_count: 0
 };
+
+// A fresh copy of the default flags — the list-valued flags get their own
+// arrays so progress never leaks into DEFAULT_FLAGS itself.
+function freshFlags() {
+  return Object.assign({}, DEFAULT_FLAGS, {
+    cat_toys_found: [],
+    diary_pages_found: [],
+    evidence: [],
+    chapters_seen: []
+  });
+}
 
 // Free-roam mode: after the ending the player can keep exploring with the
 // whole cat parade trailing behind them.
 let freeRoam = false;
 
 // Cat coat colours (body, accent) — shared by static sprites and followers.
+// Matches the real girls: Alice is a sleek black-and-white tuxedo, Olive a
+// big fluffy white cat with black patches, Beatrice a long-haired black cat.
 const CAT_COLORS = {
-  alice: ['#c8722e', '#f0c070'],
-  olive: ['#6b92c8', '#c2d8f0'],
+  alice: ['#f2efe8', '#232326'],
+  olive: ['#ece3cf', '#3a302c'],
   beatrice: ['#21211f', '#5d5e53']
 };
 
@@ -125,7 +182,7 @@ let gameState = {
   currentFloor: FLOOR_IDS.OUTSIDE,
   player: { row: outsideStart.row, col: outsideStart.col, facing: 'down' },
   inventory: [],          // array of item ID strings
-  flags: Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [], diary_pages_found: [] }),
+  flags: freshFlags(),
   // Smooth movement animation
   moving: false,
   moveProgress: 0,
@@ -805,8 +862,16 @@ function drawCharacterArt(spriteIndex, x, y, isMoving, isCat) {
   const sourceY = isCat ? characterAtlas.naturalHeight * 0.17 : characterAtlas.naturalHeight * 0.09;
   const sourceH = isCat ? characterAtlas.naturalHeight * 0.68 : characterAtlas.naturalHeight * 0.77;
   const bob = isMoving ? Math.sin(animTimer * 0.46) * 1.3 : 0;
-  const destW = isCat ? 29 : 29;
-  const destH = isCat ? 34 : 43;
+  // Idle breathing: a barely-there squash so nobody looks like a statue.
+  const breathe = isMoving ? 0 : Math.sin(animTimer * 0.05 + spriteIndex) * 0.5;
+  const destW = 29;
+  const destH = (isCat ? 34 : 43) + breathe;
+
+  // Soft contact shadow grounds the painted sprites on the floor.
+  ctx.fillStyle = 'rgba(25,12,8,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(x + TILE_SIZE / 2, y + TILE_SIZE - 2, isCat ? 9 : 8, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.save();
   ctx.imageSmoothingEnabled = true;
@@ -849,9 +914,21 @@ const dialogueSpeaker = document.getElementById('dialogue-speaker');
 const dialogueText = document.getElementById('dialogue-text');
 const dialogueAdvance = document.getElementById('dialogue-advance');
 
+const dialogueChoicesEl = document.getElementById('dialogue-choices');
+// Active choice prompt: { options: [{ label, portrait? }], onPick, selected }
+let dialogueChoices = null;
+
 function startDialogue(dialogueKey, catName, callback) {
   const messages = DIALOGUE[dialogueKey];
   if (!messages || messages.length === 0) return;
+  startDialogueLines(messages, catName, callback);
+}
+
+// Play an explicit list of lines. opts.quiet skips the greeting meow (used
+// when a scene is chained from several short dialogues).
+function startDialogueLines(messages, catName, callback, opts) {
+  if (!messages || messages.length === 0) return;
+  clearDialogueChoices();
 
   dialogueQueue = messages;
   dialogueIndex = 0;
@@ -860,7 +937,7 @@ function startDialogue(dialogueKey, catName, callback) {
   dialogueActive = true;
 
   // Cat meow when talking to a cat — each cat has her own voice
-  if (catName) {
+  if (catName && !(opts && opts.quiet)) {
     playSfx('cat_meow', catName);
   }
 
@@ -915,9 +992,7 @@ function startTypewriter(text) {
   if (instantCb && instantCb.checked) {
     typewriterIndex = typewriterText.length;
     dialogueText.textContent = typewriterText;
-    typewriterDone = true;
-    dialogueAdvance.textContent = 'Tap / Space / Enter to continue';
-    dialogueAdvance.style.visibility = 'visible';
+    onTypewriterDone();
     return;
   }
 
@@ -939,9 +1014,112 @@ function finishTypewriter() {
   typewriterTimer = null;
   typewriterIndex = typewriterText.length;
   dialogueText.textContent = typewriterText;
+  onTypewriterDone();
+}
+
+function onTypewriterDone() {
   typewriterDone = true;
+  const msg = dialogueQueue[dialogueIndex];
+  if (msg && msg.choices && dialogueChoices) {
+    renderDialogueChoices();
+    dialogueAdvance.style.visibility = 'hidden';
+    return;
+  }
   dialogueAdvance.textContent = 'Tap / Space / Enter to continue';
   dialogueAdvance.style.visibility = 'visible';
+}
+
+// ---- Dialogue choices ----
+// Ask a question in the dialogue box and let the player pick an answer.
+// onPick(index) runs after the box closes, so it can start the next scene.
+function startChoiceDialogue(speaker, text, catName, options, onPick) {
+  startDialogueLines([{ speaker: speaker, text: text, choices: true }], catName, null, { quiet: true });
+  dialogueChoices = { options: options, onPick: onPick, selected: 0 };
+  if (typewriterDone) {
+    renderDialogueChoices();
+    dialogueAdvance.style.visibility = 'hidden';
+  }
+}
+
+function renderDialogueChoices() {
+  if (!dialogueChoices || !dialogueChoicesEl) return;
+  dialogueChoicesEl.innerHTML = '';
+  dialogueChoices.options.forEach(function (opt, i) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dialogue-choice' + (i === dialogueChoices.selected ? ' selected' : '');
+    const key = document.createElement('span');
+    key.className = 'choice-key';
+    key.textContent = String(i + 1);
+    btn.appendChild(key);
+    if (opt.portrait && portraits[opt.portrait] && !portraits[opt.portrait]._loadFailed) {
+      const img = document.createElement('img');
+      img.src = portraits[opt.portrait].src;
+      img.alt = '';
+      btn.appendChild(img);
+    }
+    const label = document.createElement('span');
+    label.textContent = opt.label;
+    btn.appendChild(label);
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pickDialogueChoice(i);
+    });
+    btn.addEventListener('pointerenter', function () { selectDialogueChoice(i); });
+    dialogueChoicesEl.appendChild(btn);
+  });
+  dialogueChoicesEl.classList.add('active');
+}
+
+function selectDialogueChoice(i) {
+  if (!dialogueChoices) return;
+  const n = dialogueChoices.options.length;
+  dialogueChoices.selected = (i + n) % n;
+  Array.prototype.forEach.call(dialogueChoicesEl.children, function (el, idx) {
+    el.classList.toggle('selected', idx === dialogueChoices.selected);
+  });
+}
+
+function pickDialogueChoice(i) {
+  if (!dialogueChoices || !typewriterDone) return;
+  const onPick = dialogueChoices.onPick;
+  clearDialogueChoices();
+  closeDialogue();
+  playSfx('interact');
+  if (onPick) onPick(i);
+}
+
+function clearDialogueChoices() {
+  dialogueChoices = null;
+  if (dialogueChoicesEl) {
+    dialogueChoicesEl.innerHTML = '';
+    dialogueChoicesEl.classList.remove('active');
+  }
+}
+
+// Keyboard control for an open choice prompt. Returns true if handled.
+function handleChoiceKey(code) {
+  if (!dialogueActive || !dialogueChoices) return false;
+  if (!typewriterDone) { finishTypewriter(); return true; }
+  if (code === 'ArrowUp' || code === 'KeyW' || code === 'ArrowLeft' || code === 'KeyA') {
+    selectDialogueChoice(dialogueChoices.selected - 1);
+    return true;
+  }
+  if (code === 'ArrowDown' || code === 'KeyS' || code === 'ArrowRight' || code === 'KeyD') {
+    selectDialogueChoice(dialogueChoices.selected + 1);
+    return true;
+  }
+  const digit = /^Digit([1-9])$/.exec(code) || /^Numpad([1-9])$/.exec(code);
+  if (digit) {
+    const idx = Number(digit[1]) - 1;
+    if (idx < dialogueChoices.options.length) pickDialogueChoice(idx);
+    return true;
+  }
+  if (code === 'Enter' || code === 'Space' || code === 'KeyE') {
+    pickDialogueChoice(dialogueChoices.selected);
+    return true;
+  }
+  return false;
 }
 
 function advanceDialogue() {
@@ -952,6 +1130,8 @@ function advanceDialogue() {
     finishTypewriter();
     return;
   }
+  // Waiting on the player to pick an answer
+  if (dialogueChoices) return;
 
   dialogueIndex++;
   if (dialogueIndex >= dialogueQueue.length) {
@@ -981,6 +1161,7 @@ function closeDialogue() {
 // Force dialogue UI/state closed without running callbacks.
 // Used by hard resets (new game/restart) to avoid stale state.
 function hideDialogue() {
+  clearDialogueChoices();
   dialogueActive = false;
   dialogueQueue = [];
   dialogueIndex = 0;
@@ -1324,6 +1505,117 @@ function drawParticles() {
   }
 }
 
+// ======================== STORY: EVIDENCE, CHAPTERS, DEDUCTION ========================
+
+// Log a piece of evidence in the Case Log. Returns true if it was new.
+function addEvidence(id) {
+  if (!Array.isArray(gameState.flags.evidence)) gameState.flags.evidence = [];
+  if (gameState.flags.evidence.includes(id)) return false;
+  const ev = EVIDENCE.find(function (e) { return e.id === id; });
+  if (!ev) return false;
+  gameState.flags.evidence.push(id);
+  updateQuestList();
+  saveGame();
+
+  const px = gameState.player.col * TILE_SIZE + TILE_SIZE / 2;
+  const py = gameState.player.row * TILE_SIZE;
+  spawnTextParticle(px, py - 10, '🔎', '#ffe08a');
+  const btn = document.getElementById('btn-toggle-quest');
+  if (btn && !document.getElementById('quest-panel').classList.contains('active')) {
+    btn.classList.remove('has-new');
+    void btn.offsetWidth;
+    btn.classList.add('has-new');
+  }
+  showEvidenceBanner(ev);
+  return true;
+}
+
+let evidenceBannerTimer = null;
+function showEvidenceBanner(ev) {
+  const el = document.getElementById('evidence-banner');
+  if (!el) return;
+  el.innerHTML = '';
+  const icon = document.createElement('span');
+  icon.className = 'evidence-banner-icon';
+  icon.textContent = ev.icon;
+  const body = document.createElement('span');
+  const kicker = document.createElement('small');
+  kicker.textContent = 'Evidence logged';
+  const title = document.createElement('strong');
+  title.textContent = ev.title;
+  body.appendChild(kicker);
+  body.appendChild(title);
+  el.appendChild(icon);
+  el.appendChild(body);
+  el.classList.add('visible');
+  if (evidenceBannerTimer) clearTimeout(evidenceBannerTimer);
+  evidenceBannerTimer = setTimeout(function () { el.classList.remove('visible'); }, 2600);
+}
+
+// Show a chapter title card the first time each part of the case begins.
+let chapterCardTimer = null;
+function showChapterCard(key) {
+  const ch = CHAPTERS[key];
+  if (!ch) return;
+  if (!Array.isArray(gameState.flags.chapters_seen)) gameState.flags.chapters_seen = [];
+  if (gameState.flags.chapters_seen.includes(key)) return;
+  gameState.flags.chapters_seen.push(key);
+  saveGame();
+
+  const el = document.getElementById('chapter-card');
+  if (!el) return;
+  el.querySelector('.chapter-kicker').textContent = ch.kicker;
+  el.querySelector('.chapter-title').textContent = ch.title;
+  el.querySelector('.chapter-sub').textContent = ch.sub;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  if (chapterCardTimer) clearTimeout(chapterCardTimer);
+  chapterCardTimer = setTimeout(function () { el.classList.remove('show'); }, 3800);
+}
+
+const SUSPECT_OPTIONS = [
+  { label: 'Alice', value: 'alice', portrait: 'alice' },
+  { label: 'Olive', value: 'olive', portrait: 'olive' },
+  { label: 'Beatrice', value: 'beatrice', portrait: 'beatrice' }
+];
+
+// Beatrice won't confess until Marice lays out who did what. Wrong answers
+// earn a rebuttal and the same question again — no fail state, just sass.
+function runDeduction(onSolved) {
+  let step = 0;
+  function ask() {
+    const q = DEDUCTION[step];
+    startChoiceDialogue('Beatrice', q.question, 'beatrice', SUSPECT_OPTIONS, function (i) {
+      const pick = SUSPECT_OPTIONS[i].value;
+      if (pick === q.answer) {
+        playSfx('item_pickup');
+        startDialogueLines(q.right, 'beatrice', function () {
+          step++;
+          if (step < DEDUCTION.length) ask();
+          else onSolved();
+        }, { quiet: true });
+      } else {
+        playSfx('error');
+        triggerScreenShake(2, 8);
+        startDialogueLines([{ speaker: 'Beatrice', text: q.wrong[pick] }], 'beatrice', ask, { quiet: true });
+      }
+    });
+  }
+  ask();
+}
+
+// The player sentences the gang; the verdict shapes the Case Closed screen.
+function runVerdict(onDone) {
+  const options = VERDICTS.map(function (v) { return { label: v.choice }; });
+  startChoiceDialogue('Marice', 'The court will now deliver its verdict. The defendants will rise. (They will not rise.)', 'beatrice', options, function (i) {
+    const verdict = VERDICTS[i];
+    gameState.flags.verdict = verdict.id;
+    saveGameImmediate();
+    startDialogueLines([verdict.reply], 'beatrice', onDone, { quiet: true });
+  });
+}
+
 // ======================== QUEST TRACKING ========================
 
 function updateQuestCounter() {
@@ -1338,10 +1630,16 @@ function updateQuestCounter() {
     var portrait = document.getElementById('hud-cat-' + catName);
     if (portrait) portrait.classList.toggle('solved', !!gameState.flags[catName + '_fed']);
   });
+  refreshObjective();
+}
+
+// Keep the HUD objective in sync with progress (cheap: only touches the DOM
+// when the text actually changes).
+function refreshObjective() {
   var objective = document.getElementById('hud-objective');
-  if (objective) {
-    objective.textContent = getNextTaskHint() || 'Free roam with the whole cat crew';
-  }
+  if (!objective) return;
+  var text = getNextTaskHint() || 'Case closed — free roam with the whole cat crew';
+  if (objective.textContent !== text) objective.textContent = text;
 }
 
 function updateQuestList() {
@@ -1365,6 +1663,33 @@ function updateQuestList() {
     status.textContent = found >= 3 ? '✅' : found + '/3';
     status.classList.toggle('complete', found >= 3);
     status.classList.toggle('pending', found < 3);
+  }
+
+  // Evidence board
+  const evidenceList = document.getElementById('evidence-list');
+  if (evidenceList && typeof EVIDENCE !== 'undefined') {
+    const found = Array.isArray(gameState.flags.evidence) ? gameState.flags.evidence : [];
+    evidenceList.innerHTML = '';
+    EVIDENCE.forEach(function (ev) {
+      const have = found.includes(ev.id);
+      const row = document.createElement('div');
+      row.className = 'evidence-item' + (have ? '' : ' missing');
+      const icon = document.createElement('span');
+      icon.className = 'evidence-icon';
+      icon.textContent = have ? ev.icon : '❔';
+      const body = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = have ? ev.title : 'Unknown evidence';
+      const text = document.createElement('p');
+      text.textContent = have ? ev.text : 'Keep investigating…';
+      body.appendChild(title);
+      body.appendChild(text);
+      row.appendChild(icon);
+      row.appendChild(body);
+      evidenceList.appendChild(row);
+    });
+    const count = document.getElementById('evidence-count');
+    if (count) count.textContent = found.length + ' / ' + EVIDENCE.length;
   }
 
   // Diary pages side quest
@@ -1483,6 +1808,7 @@ function changeFloorTo(newFloor, row, col, facing) {
 
     setTimeout(function () {
       overlay.classList.remove('active');
+      if (typeof CHAPTERS !== 'undefined' && CHAPTERS[newFloor]) showChapterCard(newFloor);
     }, 400);
   }, 350);
 }
@@ -1609,13 +1935,14 @@ function handleStairTransition(row, col) {
           removeItem(ITEMS.LAUNDRY_BASKET);
           gameState.flags.laundry_cleared = true;
           startDialogue('laundry_pile_clear', null, function () {
+            addEvidence('avalanche');
             triggerScreenShake(4, 12);
             showToast('Stairway cleared!');
             saveGameImmediate();
             changeFloor('upstairs');
           });
         } else {
-          startDialogue('laundry_pile_blocked', null, null);
+          startDialogue('laundry_pile_blocked', null, function () { addEvidence('avalanche'); });
         }
         return true;
       }
@@ -1929,6 +2256,25 @@ function handleInteraction(obj) {
       startDialogue('cupboard_empty', null, null);
       break;
 
+    // ---- CRIME SCENE EVIDENCE ----
+    case 'treat_jar':
+      if (gameState.flags.game_complete) {
+        startDialogue('treat_jar_done', null, null);
+      } else {
+        startDialogue('treat_jar', null, function () {
+          addEvidence('jar');
+          addEvidence('crumbs');
+        });
+      }
+      break;
+    case 'pet_cam':
+      if (gameState.flags.game_complete) {
+        startDialogue('pet_cam_done', null, null);
+      } else {
+        startDialogue('pet_cam', null, function () { addEvidence('petcam'); });
+      }
+      break;
+
     case 'cupboard_purrpops':
       // Cupboard is empty once both cats that need purrpops have been fed,
       // or if the player is already carrying purrpops
@@ -1970,6 +2316,7 @@ function handleInteraction(obj) {
         startDialogue('alice_after', 'alice', function () {
           showToast('New clue: check under the sofa blanket!');
           markCatFed('alice');
+          addEvidence('testimony');
           saveGameImmediate();
         });
       } else if (gameState.inventory.length > 0) {
@@ -2001,13 +2348,14 @@ function handleInteraction(obj) {
         removeItem(ITEMS.BASEMENT_KEY);
         gameState.flags.basement_unlocked = true;
         startDialogue('basement_door_unlock', null, function () {
+          addEvidence('crumbs');
           triggerScreenShake(5, 15);
           playSfx('door_unlock');
           showToast('Basement unlocked — after them, detective!');
           changeFloor('basement');
         });
       } else {
-        startDialogue('basement_door_locked', null, null);
+        startDialogue('basement_door_locked', null, function () { addEvidence('crumbs'); });
       }
       break;
 
@@ -2025,6 +2373,7 @@ function handleInteraction(obj) {
           gameState.flags.has_laundry_basket = true;
           showToast('Olive flipped! Got the Laundry Basket — clear those stairs!');
           markCatFed('olive');
+          addEvidence('olive');
           saveGameImmediate();
         });
       } else if (gameState.inventory.length > 0) {
@@ -2046,13 +2395,21 @@ function handleInteraction(obj) {
       } else if (hasItem(ITEMS.PURRPOPS) && !hasItem(ITEMS.FEAST_PLATE)) {
         startDialogue('beatrice_wrong_item', 'beatrice', null);
       } else if (hasItem(ITEMS.FEAST_PLATE)) {
-        removeItem(ITEMS.FEAST_PLATE);
-        gameState.flags.beatrice_fed = true;
-        gameState.flags.game_complete = true;
-        startDialogue('beatrice_after', 'beatrice', function () {
-          markCatFed('beatrice');
-          saveGameImmediate();
-          showEnding();
+        // The climax: lay out the case, hear the confession, pass sentence.
+        // Nothing is committed until the deduction is solved, so quitting
+        // mid-scene keeps the feast in the satchel.
+        startDialogue('beatrice_deduce_intro', 'beatrice', function () {
+          runDeduction(function () {
+            removeItem(ITEMS.FEAST_PLATE);
+            gameState.flags.beatrice_fed = true;
+            gameState.flags.game_complete = true;
+            markCatFed('beatrice');
+            addEvidence('confession');
+            saveGameImmediate();
+            startDialogue('beatrice_after', 'beatrice', function () {
+              runVerdict(function () { showEnding(); });
+            });
+          });
         });
       } else if (gameState.inventory.length > 0) {
         startDialogue('cat_wrong_item_generic', 'beatrice', null);
@@ -2286,15 +2643,21 @@ function checkLaundryInteraction() {
   // Check if adjacent to stairs and facing them
   const facing = getFacingTile();
   if (s.rows.includes(facing.row) && s.cols.includes(facing.col)) {
+    if (dialogueActive || gameState.moving) return false;
+    markPlayerActivity();
     if (hasItem(ITEMS.LAUNDRY_BASKET)) {
       removeItem(ITEMS.LAUNDRY_BASKET);
       gameState.flags.laundry_cleared = true;
       startDialogue('laundry_pile_clear', null, function () {
+        addEvidence('avalanche');
         showToast('Avalanche cleared — the trail leads up!');
-        saveGame();
+        saveGameImmediate();
       });
-      return true;
+    } else {
+      // Interacting with the pile without the basket used to do nothing.
+      startDialogue('laundry_pile_blocked', null, function () { addEvidence('avalanche'); });
     }
+    return true;
   }
   return false;
 }
@@ -3636,8 +3999,13 @@ function drawTile(floor, row, col) {
     drawGardenTile(tile, x, y, row, col);
     return;
   }
+  // Interiors use the room-aware storybook renderer in game-art.js
+  if (typeof drawInteriorBase === 'function') {
+    drawInteriorBase(floor, row, col);
+    return;
+  }
 
-  // Base tile color
+  // Base tile color (fallback renderer)
   ctx.fillStyle = palette[tile] || palette[T.FLOOR];
   ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
@@ -3725,9 +4093,11 @@ function drawFurnitureBlock(floor, row, col, x, y) {
 }
 
 function drawInteractables(floor) {
+  const indoors = gameState.currentFloor !== FLOOR_IDS.OUTSIDE && gameState.currentFloor !== FLOOR_IDS.GARDEN;
   for (const obj of floor.interactables) {
     const x = obj.col * TILE_SIZE;
     const y = obj.row * TILE_SIZE;
+    if (indoors && typeof ART !== 'undefined' && ART.drawInteractable(obj, x, y)) continue;
 
     switch (obj.type) {
       case 'cupboard_empty':
@@ -4284,18 +4654,28 @@ function drawFollowers() {
 function drawRoomLabels(floorId) {
   const labels = ROOM_LABELS[floorId];
   if (!labels) return;
+  const indoors = floorId !== FLOOR_IDS.OUTSIDE && floorId !== FLOOR_IDS.GARDEN;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.font = '8px monospace';
   ctx.textAlign = 'center';
-
+  ctx.textBaseline = 'middle';
   for (const label of labels) {
     const x = label.col * TILE_SIZE + TILE_SIZE / 2;
-    const y = label.row * TILE_SIZE - 2;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText(label.text, x, y);
+    if (indoors) {
+      // Stencilled onto the floor, like a storybook map
+      const y = label.row * TILE_SIZE + TILE_SIZE / 2;
+      ctx.font = 'italic bold 8px Georgia, serif';
+      ctx.fillStyle = 'rgba(255,248,230,0.35)';
+      ctx.fillText(label.text, x + 0.5, y + 0.5);
+      ctx.fillStyle = 'rgba(55,32,20,0.42)';
+      ctx.fillText(label.text, x, y);
+    } else {
+      ctx.font = '8px monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillText(label.text, x, label.row * TILE_SIZE - 6);
+    }
   }
   ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 // ======================== DYNAMIC LIGHTING ========================
@@ -4304,7 +4684,7 @@ function drawRoomLabels(floorId) {
 var FLOOR_AMBIENT = {
   outside: { r: 255, g: 180, b: 100, a: 0.08 },  // warm sunset
   main: { r: 255, g: 220, b: 170, a: 0.05 },      // warm interior
-  basement: { r: 220, g: 230, b: 255, a: 0.12 },     // cool fluorescent
+  basement: { r: 40, g: 50, b: 80, a: 0.14 },       // cool, dim basement
   upstairs: { r: 255, g: 230, b: 200, a: 0.06 },   // soft warm
   garden: { r: 255, g: 200, b: 120, a: 0.07 }    // golden-hour backyard
 };
@@ -4354,8 +4734,8 @@ function drawLighting(floor) {
   var floorId = gameState.currentFloor;
   var outdoors = floorId === FLOOR_IDS.OUTSIDE || floorId === FLOOR_IDS.GARDEN;
   var daypart = outdoors ? getDaypart() : null;
-  var lightCoreAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.22 : 0.12;
-  var lightMidAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.12 : 0.06;
+  var lightCoreAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.1 : 0.12;
+  var lightMidAlpha = floorId === FLOOR_IDS.BASEMENT ? 0.05 : 0.06;
   if (daypart === 'night') {
     // Porch and patio lights glow much brighter after dark.
     lightCoreAlpha = 0.3;
@@ -4412,11 +4792,12 @@ function ensureMinimapCache(floor, offsetX, offsetY, mapW, mapH, dotSize) {
   if (minimapCacheKey === gameState.currentFloor && minimapCacheCanvas) return;
   if (!minimapCacheCanvas) {
     minimapCacheCanvas = document.createElement('canvas');
-    minimapCacheCanvas.width = mapW + 4;
-    minimapCacheCanvas.height = mapH + 16;
+    minimapCacheCanvas.width = (mapW + 4) * RENDER_SCALE;
+    minimapCacheCanvas.height = (mapH + 16) * RENDER_SCALE;
   }
   var mctx = minimapCacheCanvas.getContext('2d');
-  mctx.clearRect(0, 0, minimapCacheCanvas.width, minimapCacheCanvas.height);
+  mctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
+  mctx.clearRect(0, 0, mapW + 4, mapH + 16);
   // Local coordinates: cache origin corresponds to (offsetX - 2, offsetY - 12)
   mctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   mctx.fillRect(0, 0, mapW + 4, mapH + 16);
@@ -4463,7 +4844,7 @@ function drawMinimap() {
 
   // Static frame + tiles from the per-floor cache
   ensureMinimapCache(floor, offsetX, offsetY, mapW, mapH, dotSize);
-  ctx.drawImage(minimapCacheCanvas, offsetX - 2, offsetY - 12);
+  ctx.drawImage(minimapCacheCanvas, offsetX - 2, offsetY - 12, mapW + 4, mapH + 16);
 
   // Draw interactable markers (cats shown as larger, distinct dots)
   // Fed cats get a gold ring; unfed cats get a white ring.
@@ -4472,8 +4853,7 @@ function drawMinimap() {
     if (obj.type === 'cat_alice' || obj.type === 'cat_olive' || obj.type === 'cat_beatrice') {
       var catName = obj.type.replace('cat_', '');
       var isFed = gameState.flags[catName + '_fed'];
-      var catColor = obj.type === 'cat_alice' ? '#c8722e' :
-        obj.type === 'cat_olive' ? '#6b92c8' : '#aaaaaa';
+      var catColor = CAT_COLORS[catName][catName === 'beatrice' ? 1 : 0];
       var cx2 = offsetX + obj.col * dotSize;
       var cy2 = offsetY + obj.row * dotSize;
       // Ring: gold if fed, white if not
@@ -4537,8 +4917,8 @@ function drawObjectivePingWorld() {
 // procedurally redrawing ~300 tiles every frame — a large CPU/battery win on
 // phones. The cache rebuilds when the floor (or the laundry pile) changes.
 var floorCacheCanvas = document.createElement('canvas');
-floorCacheCanvas.width = CANVAS_W;
-floorCacheCanvas.height = CANVAS_H;
+floorCacheCanvas.width = CANVAS_W * RENDER_SCALE;
+floorCacheCanvas.height = CANVAS_H * RENDER_SCALE;
 var floorCacheKey = null;
 
 function ensureFloorCache() {
@@ -4546,12 +4926,19 @@ function ensureFloorCache() {
   if (key === floorCacheKey) return;
   var mainCtx = ctx;
   ctx = floorCacheCanvas.getContext('2d');
+  ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
   var floor = getCurrentFloor();
   for (var r = 0; r < MAP_ROWS; r++) {
     for (var c = 0; c < MAP_COLS; c++) {
       drawTile(floor, r, c);
     }
+  }
+  // Second pass: rugs and multi-tile furniture sit on top of the finished floor.
+  var indoors = gameState.currentFloor !== FLOOR_IDS.OUTSIDE && gameState.currentFloor !== FLOOR_IDS.GARDEN;
+  if (indoors && typeof drawInteriorObjects === 'function') {
+    drawInteriorObjects(floor);
+    if (gameState.currentFloor === FLOOR_IDS.MAIN && !gameState.flags.laundry_cleared) drawLaundryAvalanche();
   }
   drawRoomLabels(gameState.currentFloor);
   drawOutsideOverlay();
@@ -4584,7 +4971,8 @@ function getVignetteCanvas(outerAlpha) {
 function render() {
   const floor = getCurrentFloor();
 
-  // Clear
+  // Clear (all drawing below is in logical 480x360 coordinates)
+  ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
   // Apply screen shake offset
@@ -4594,7 +4982,10 @@ function render() {
 
   // Draw the pre-rendered static layer (tiles, room labels, outside overlay)
   ensureFloorCache();
-  ctx.drawImage(floorCacheCanvas, 0, 0);
+  ctx.drawImage(floorCacheCanvas, 0, 0, CANVAS_W, CANVAS_H);
+
+  // Story decals (crumb trail, fur tufts) change with case progress
+  if (typeof drawStoryDecals === 'function') drawStoryDecals(gameState.currentFloor);
 
   // Draw interactables
   drawInteractables(floor);
@@ -4626,8 +5017,7 @@ function render() {
     }
 
     if (obj || isStairInteract) {
-      ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
-      ctx.fillRect(facing.col * TILE_SIZE, facing.row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      drawInteractReticle(facing.col * TILE_SIZE, facing.row * TILE_SIZE);
     }
   }
 
@@ -4643,6 +5033,26 @@ function render() {
   // Draw subtle vignette effect (not affected by shake) from the cache
   const vignetteOuterAlpha = gameState.currentFloor === FLOOR_IDS.BASEMENT ? 0.12 : 0.18;
   ctx.drawImage(getVignetteCanvas(vignetteOuterAlpha), 0, 0);
+}
+
+// Pulsing corner brackets around whatever Marice is facing.
+function drawInteractReticle(x, y) {
+  var pulse = (Math.sin(animTimer * 0.18) + 1) / 2;
+  var inset = 1 + pulse * 1.5;
+  var len = 6;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,226,140,' + (0.7 + pulse * 0.3) + ')';
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = 'rgba(255,200,90,0.8)';
+  ctx.shadowBlur = 4;
+  ctx.beginPath();
+  var x0 = x + inset, y0 = y + inset, x1 = x + TILE_SIZE - inset, y1 = y + TILE_SIZE - inset;
+  ctx.moveTo(x0, y0 + len); ctx.lineTo(x0, y0); ctx.lineTo(x0 + len, y0);
+  ctx.moveTo(x1 - len, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + len);
+  ctx.moveTo(x1, y1 - len); ctx.lineTo(x1, y1); ctx.lineTo(x1 - len, y1);
+  ctx.moveTo(x0 + len, y1); ctx.lineTo(x0, y1); ctx.lineTo(x0, y1 - len);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ======================== GAME LOOP ========================
@@ -4682,6 +5092,7 @@ function updateStep() {
     updateScreenShake();
     updateInteractPrompt();
     updateCatCalls();
+    if (animTimer % 20 === 0) refreshObjective();
   }
   animTimer++;
 }
@@ -4733,6 +5144,8 @@ document.addEventListener('keydown', function (e) {
     if (qp) {
       qp.classList.toggle('active');
       if (sp) sp.classList.remove('active');
+      var qb = document.getElementById('btn-toggle-quest');
+      if (qb) qb.classList.remove('has-new');
     }
     e.preventDefault();
     return;
@@ -4749,6 +5162,12 @@ document.addEventListener('keydown', function (e) {
 
   // Block all other game input when paused
   if (gamePaused) return;
+
+  // Answering a question in the dialogue box
+  if (handleChoiceKey(e.code)) {
+    e.preventDefault();
+    return;
+  }
 
   keysDown[e.code] = true;
 
@@ -4866,8 +5285,17 @@ function setupMobileControls() {
   // Interact button
   const interactBtn = document.getElementById('btn-interact');
   if (interactBtn) {
+    // pointerdown gives an instant response on touch; the click that follows
+    // the same press must be ignored or it would advance dialogue twice.
+    // Plain clicks (keyboard activation, no pointer events) still work.
+    var lastInteractPointerAt = 0;
     function doInteract(e) {
       e.preventDefault();
+      if (e.type === 'click') {
+        if (Date.now() - lastInteractPointerAt < 700) return;
+      } else {
+        lastInteractPointerAt = Date.now();
+      }
       markPlayerActivity();
       if (dialogueActive) {
         advanceDialogue();
@@ -5044,7 +5472,7 @@ function loadGame() {
       ? data.inventory.filter(function (item) { return validItems.includes(item); })
       : [];
 
-    const mergedFlags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [], diary_pages_found: [] }, data.flags || {});
+    const mergedFlags = Object.assign(freshFlags(), data.flags || {});
     const validToyIds = ['jingle_ball', 'feather_wand', 'laser_pointer'];
     mergedFlags.cat_toys_found = Array.isArray(mergedFlags.cat_toys_found)
       ? Array.from(new Set(mergedFlags.cat_toys_found.filter(function (toyId) { return validToyIds.includes(toyId); })))
@@ -5053,6 +5481,22 @@ function loadGame() {
       ? Array.from(new Set(mergedFlags.diary_pages_found.filter(function (pageId) { return DIARY_PAGE_IDS.includes(pageId); })))
       : [];
     mergedFlags.pet_count = Number.isFinite(mergedFlags.pet_count) ? mergedFlags.pet_count : 0;
+    const evidenceIds = EVIDENCE.map(function (ev) { return ev.id; });
+    mergedFlags.evidence = Array.isArray(mergedFlags.evidence)
+      ? Array.from(new Set(mergedFlags.evidence.filter(function (id) { return evidenceIds.includes(id); })))
+      : [];
+    mergedFlags.chapters_seen = Array.isArray(mergedFlags.chapters_seen)
+      ? mergedFlags.chapters_seen.filter(function (id) { return typeof id === 'string'; })
+      : [];
+    // Older saves predate chapter cards — don't replay chapters already lived.
+    if (floorId !== FLOOR_IDS.OUTSIDE || mergedFlags.front_door_unlocked) {
+      ['prologue', 'main'].forEach(function (k) { if (!mergedFlags.chapters_seen.includes(k)) mergedFlags.chapters_seen.push(k); });
+    }
+    if (mergedFlags.basement_unlocked && !mergedFlags.chapters_seen.includes('basement')) mergedFlags.chapters_seen.push('basement');
+    if (mergedFlags.laundry_cleared && !mergedFlags.chapters_seen.includes('upstairs')) mergedFlags.chapters_seen.push('upstairs');
+    if (mergedFlags.garden_visited && !mergedFlags.chapters_seen.includes('garden')) mergedFlags.chapters_seen.push('garden');
+    const verdictIds = VERDICTS.map(function (v) { return v.id; });
+    mergedFlags.verdict = verdictIds.includes(mergedFlags.verdict) ? mergedFlags.verdict : null;
 
     gameState.currentFloor = floorId;
     gameState.player.row = canStandHere ? savedRow : floorStart.row;

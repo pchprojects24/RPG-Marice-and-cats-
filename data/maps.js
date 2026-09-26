@@ -205,18 +205,18 @@ const mainFloorGrid = [
   // Row 2: kitchen cupboard wall
   [1,4,4,4,4,6,6,4,1,0,0,0,4,0,0,0,0,0,0,1],
   // Row 3: kitchen floor + dining room
-  [1,4,0,0,0,4,4,0,1,2,2,0,0,0,4,0,0,0,0,1],
-  // Row 4: kitchen floor + dining passage
-  [1,0,0,0,0,6,6,6,1,2,2,0,0,0,0,0,0,0,0,1],
+  [1,4,0,0,0,4,4,0,1,2,2,4,0,0,4,0,0,0,0,1],
+  // Row 4: kitchen floor + kitchen island (col 6 = tipped treat jar) + dining passage
+  // (col 7 is open floor so the sink and coffee station can be reached)
+  [1,0,0,0,0,6,4,0,1,2,2,0,0,0,0,0,0,0,0,1],
   // Row 5: kitchen/living divider wall with opening
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1],
   // Row 6: living room area + basement door
-  [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,4,0,0,1,1],
+  [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,4,4,0,1,1],
   // Row 7: living room - sofa area
   [1,0,0,2,0,0,4,0,0,0,5,5,0,0,0,0,0,0,4,1],
-  // Row 8: living room
-  // Row 8: living room (col 4 = cat toy behind bookshelf)
-  [1,0,4,0,4,4,0,0,0,0,0,0,0,0,0,0,2,0,1,1],
+  // Row 8: living room (cols 3-5 = sofa, col 5 is the blanket cushion)
+  [1,0,4,2,2,4,0,0,0,0,0,0,0,0,0,0,2,0,1,1],
   // Row 9: living room / half-bath divider (door moved to east wall)
   [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   // Row 10: half-bath (col 4 = hidden diary page)
@@ -250,8 +250,13 @@ const mainFloorInteractables = [
   // Alice on cat tree in dining room (near sliding door)
   { row: 3, col: 14, type: 'cat_alice', label: 'Alice', sprite: 'cat_alice' },
 
-  // Dining room table and chairs
-  { row: 2, col: 12, type: 'dining_table', label: 'Dining Table', sprite: 'dining', dialogueKey: 'dining_table' },
+  // Dining room: table (furniture tiles 3-4 / 9-10) with a pulled-out chair,
+  // and the pet cam that someone turned to face the wall.
+  { row: 3, col: 11, type: 'dining_table', label: 'Dining Table', sprite: 'dining', dialogueKey: 'dining_table' },
+  { row: 2, col: 12, type: 'pet_cam', label: 'Pet Cam', sprite: 'generic' },
+
+  // The scene of the crime: the treat jar, tipped over on the kitchen island
+  { row: 4, col: 6, type: 'treat_jar', label: 'Treat Jar', sprite: 'generic' },
   { row: 4, col: 14, type: 'china_cabinet', label: 'China Cabinet', sprite: 'cabinet', dialogueKey: 'china_cabinet' },
   { row: 4, col: 16, type: 'plant', label: 'Potted Plant', sprite: 'plant', dialogueKey: 'plant' },
 
@@ -264,7 +269,7 @@ const mainFloorInteractables = [
   { row: 7, col: 6, type: 'coffee_table', label: 'Coffee Table', sprite: 'coffee_table', dialogueKey: 'coffee_table' },
   { row: 6, col: 15, type: 'tv', label: 'TV Console', sprite: 'tv', dialogueKey: 'tv' },
   { row: 8, col: 2, type: 'bookshelf', label: 'Bookshelf', sprite: 'bookshelf', dialogueKey: 'bookshelf' },
-  { row: 8, col: 4, type: 'cat_toy_feather_wand', label: 'Behind bookshelf', sprite: 'generic' },
+  { row: 6, col: 16, type: 'cat_toy_feather_wand', label: 'Behind the TV', sprite: 'generic' },
   { row: 8, col: 16, type: 'reading_chair', label: 'Reading Chair', sprite: 'chair', dialogueKey: 'reading_chair' },
 
   // Sofa with blanket (living room) - hides basement key
@@ -392,14 +397,14 @@ const upstairsGrid = [
   [1,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,1],
   // Row 6: hallway
   [1,1,1,3,1,1,0,0,0,1,0,0,0,1,1,3,1,1,1,1],
-  // Row 7: office + hallway + washroom (col 3 = cat toy laser)
-  [1,0,0,4,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+  // Row 7: office + hallway + washroom
+  [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
   // Row 8: office with desk
   [1,0,0,2,0,1,0,0,0,0,0,0,0,1,0,0,0,2,0,1],
   // Row 9
   [1,0,0,2,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
-  // Row 10: office
-  [1,0,0,0,0,1,0,0,0,0,0,0,0,1,2,0,0,0,0,1],
+  // Row 10: office (col 3 = desk drawer hiding the laser pointer)
+  [1,0,0,4,0,1,0,0,0,0,0,0,0,1,2,0,0,0,0,1],
   // Row 11
   [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,2,0,0,1],
   // Row 12: stairs
@@ -425,8 +430,8 @@ const upstairsInteractables = [
   { row: 3, col: 17, type: 'guest_dresser', label: 'Dresser', sprite: 'dresser' },
 
   // Office items
-  { row: 7, col: 2, type: 'filing_cabinet', label: 'Filing Cabinet', sprite: 'files' },
-  { row: 7, col: 3, type: 'cat_toy_laser_pointer', label: 'Drawer', sprite: 'generic' },
+  { row: 7, col: 1, type: 'filing_cabinet', label: 'Filing Cabinet', sprite: 'files' },
+  { row: 10, col: 3, type: 'cat_toy_laser_pointer', label: 'Desk Drawer', sprite: 'generic' },
   { row: 10, col: 2, type: 'office_chair', label: 'Office Chair', sprite: 'chair' },
   { row: 7, col: 4, type: 'printer', label: 'Printer', sprite: 'printer' },
   { row: 11, col: 3, type: 'bookcase', label: 'Bookcase', sprite: 'bookcase' },
@@ -497,21 +502,21 @@ const FLOORS = {
 // Room label data for rendering room names on the map
 const ROOM_LABELS = {
   main: [
-    { text: 'Kitchen', row: 2, col: 2 },
-    { text: 'Dining Room', row: 2, col: 12 },
-    { text: 'Living Room', row: 8, col: 10 },
-    { text: 'Half-Bath', row: 10, col: 2 },
+    { text: 'Kitchen', row: 3, col: 3 },
+    { text: 'Dining Room', row: 1, col: 15 },
+    { text: 'Living Room', row: 13, col: 15 },
+    { text: 'Half-Bath', row: 13, col: 2 },
   ],
   basement: [
-    { text: 'Lobby', row: 2, col: 4 },
-    { text: 'Rec Room', row: 4, col: 14 },
-    { text: 'Washroom', row: 8, col: 3 },
+    { text: 'Lobby', row: 1, col: 5 },
+    { text: 'Rec Room', row: 1, col: 14 },
+    { text: 'Washroom', row: 13, col: 4 },
   ],
   upstairs: [
-    { text: 'Main Bedroom', row: 1, col: 2 },
-    { text: 'Guest Bedroom', row: 1, col: 13 },
-    { text: "Marice's Office", row: 8, col: 1 },
-    { text: 'Washroom', row: 8, col: 15 },
+    { text: 'Main Bedroom', row: 5, col: 4 },
+    { text: 'Guest Bedroom', row: 1, col: 11 },
+    { text: 'Office', row: 13, col: 2 },
+    { text: 'Washroom', row: 13, col: 16 },
   ],
   outside: [
     { text: 'Front Yard', row: 7, col: 3 },

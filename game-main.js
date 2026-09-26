@@ -114,7 +114,7 @@ function startNewGame() {
   gameState.currentFloor = FLOOR_IDS.OUTSIDE;
   gameState.player = { row: outsideStart.row, col: outsideStart.col, facing: 'down' };
   gameState.inventory = [];
-  gameState.flags = Object.assign({}, DEFAULT_FLAGS, { cat_toys_found: [], diary_pages_found: [] });
+  gameState.flags = freshFlags();
   trailReset();
   objectivePing = null;
   objectivePingUntil = 0;
@@ -133,11 +133,17 @@ function startNewGame() {
   var hint = document.getElementById('controls-hint');
   if (hint) hint.classList.remove('hidden');
 
-  // Show intro dialogue after a short delay
+  // Prologue title card, then the intro once it has had a moment to land
+  showChapterCard('prologue');
+  var session = ++newGameSession;
   setTimeout(function () {
+    // Skip if the player already quit or restarted in the meantime
+    if (session !== newGameSession || !isGamePlayActive()) return;
     startDialogue('intro', null, null);
-  }, 500);
+  }, 2600);
 }
+
+var newGameSession = 0;
 
 // Hide controls hint after first few movements
 var moveCount = 0;
@@ -185,6 +191,14 @@ function showEnding() {
     var timeEl = document.getElementById('stat-time');
     if (timeEl) timeEl.textContent = '⏱ ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
   }
+  var verdict = (typeof VERDICTS !== 'undefined') && VERDICTS.find(function (v) { return v.id === gameState.flags.verdict; });
+  var lineEl = document.getElementById('ending-line');
+  if (lineEl) lineEl.textContent = (verdict || VERDICTS[0]).ending;
+  var evidenceEl = document.getElementById('stat-evidence');
+  if (evidenceEl) {
+    var evCount = Array.isArray(gameState.flags.evidence) ? gameState.flags.evidence.length : 0;
+    evidenceEl.textContent = '🔎 Evidence: ' + evCount + '/' + EVIDENCE.length + (evCount === EVIDENCE.length ? ' ✨' : '');
+  }
   var toysEl = document.getElementById('stat-toys');
   if (toysEl) {
     var toysCount = gameState.flags.cat_toys_found ? gameState.flags.cat_toys_found.length : 0;
@@ -227,15 +241,12 @@ function init() {
     startNewGame();
   });
 
+  // Always wire Continue: a save can appear after page load (start a case,
+  // quit to title) and the button must work then too.
   const continueBtn = document.getElementById('btn-continue');
-  if (hasSavedGame()) {
-    continueBtn.style.display = 'inline-block';
-    continueBtn.addEventListener('click', function () {
-      continueGame();
-    });
-  } else {
-    continueBtn.style.display = 'none';
-  }
+  continueBtn.addEventListener('click', function () {
+    continueGame();
+  });
 
   // Ending screen restart
   document.getElementById('btn-restart').addEventListener('click', function () {
@@ -294,6 +305,7 @@ function init() {
   }
 
   btnToggleQuest.addEventListener('click', function () {
+    btnToggleQuest.classList.remove('has-new');
     questPanel.classList.toggle('active');
     // Close settings if open
     document.getElementById('settings-panel').classList.remove('active');
@@ -358,9 +370,11 @@ function init() {
     btnQuitTitle.addEventListener('click', function () {
       gamePaused = false;
       document.getElementById('pause-overlay').classList.remove('active');
+      saveGameImmediate();
+      hideDialogue();
       stopMusic();
       stopAmbient();
-      document.getElementById('title-screen').style.display = 'flex';
+      showTitleScreen();
     });
   }
 
@@ -410,6 +424,10 @@ function init() {
 
   var instantDialogueCheckbox = document.getElementById('instant-dialogue');
   if (instantDialogueCheckbox) instantDialogueCheckbox.addEventListener('change', saveSettings);
+
+  // Re-measure once the stylesheet and HUD have laid out
+  resizeCanvas();
+  window.addEventListener('load', resizeCanvas);
 
   // Start game loop
   requestAnimationFrame(gameLoop);

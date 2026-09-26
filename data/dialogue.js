@@ -14,6 +14,10 @@
  * Each dialogue is an array of message objects:
  *   { speaker: "Marice"|"Alice"|"Olive"|"Beatrice", text: "..." }
  *
+ * The case is told in chapters (CHAPTERS), collects EVIDENCE into the Case
+ * Log, and ends with a deduction (DEDUCTION) and a verdict (VERDICTS) chosen
+ * by the player.
+ *
  * Cat dialogues show the cat and Marice portraits together.
  * Speaker names are shown as tags above the text.
  */
@@ -24,9 +28,10 @@ const DIALOGUE = {
   // TUTORIAL / INTRO
   // ============================
   intro: [
-    { speaker: 'Marice', text: "I was gone for TWENTY MINUTES. And my phone just buzzed: 'PET CAM ALERT — MOTION DETECTED: KITCHEN.'" },
-    { speaker: 'Marice', text: "The photo shows the treat jar... on its side... EMPTY. And now the girls aren't even at the window. Suspicious. Extremely suspicious." },
-    { speaker: 'Marice', text: "Alright. Deep breath. Detective Marice is on the case. First: get inside. The house plaque by the door should remind me of my own door code..." }
+    { speaker: 'Marice', text: "Twenty minutes. I was gone for TWENTY MINUTES — one quick trip for oat milk — and my phone buzzes: 'PET CAM ALERT — MOTION DETECTED: KITCHEN.'" },
+    { speaker: 'Marice', text: "One blurry photo. The treat jar, on its side. Empty. Then the feed cuts out. Cameras don't turn themselves to face the wall." },
+    { speaker: 'Marice', text: "And the girls aren't in the front window to greet me. They are ALWAYS in the window. This wasn't an accident. This was a heist." },
+    { speaker: 'Marice', text: "Deep breath. Detective Marice is on the case. Step one: get inside. The house plaque by the door hides my door code in a riddle..." }
   ],
 
   // ============================
@@ -50,13 +55,13 @@ const DIALOGUE = {
   // B) After giving Purrpops
   alice_after: [
     { speaker: 'Marice', text: "One consulting fee, paid in full. Now spill it, Alice." },
-    { speaker: 'Alice', text: "*crunch crunch* ...Very well. At approximately snack o'clock, a low, fast, GRAY-ISH shadow dragged the treat jar toward the basement door. I said nothing. I was on break." },
+    { speaker: 'Alice', text: "*crunch crunch* ...Very well. At approximately snack o'clock, a large, very FLUFFY white blur rolled the jar off the island and hauled it toward the basement door. I said nothing. I was on break." },
     { speaker: 'Alice', text: "One more thing, detective. The basement key was 'hidden' under the sofa blanket last week. By whom? I've already said too much. *grooms paw*" }
   ],
 
   // Alice — already helped
   alice_done: [
-    { speaker: 'Alice', text: "*yawn* My testimony stands. Shadow. Basement. Key under the sofa blanket. Case practically solves itself." },
+    { speaker: 'Alice', text: "*yawn* My testimony stands. Fluffy blur. Basement. Key under the sofa blanket. Case practically solves itself." },
     { speaker: 'Marice', text: "You know, for a witness, you knew an awful lot of specifics, Alice." },
     { speaker: 'Alice', text: "...This interview is over. I have a nap at three." }
   ],
@@ -82,7 +87,7 @@ const DIALOGUE = {
   // D) After giving Purrpops
   olive_after: [
     { speaker: 'Olive', text: "*ZOOM* GIMME GIMME— *cronch cronch* ...Okay. OKAY. I'll talk. But I want it on the record that I'm adorable." },
-    { speaker: 'Olive', text: "I carried the jar. But I'm just the muscle! The PLAN came from upstairs. From... The Blanket. That's all I can say. She hears everything." },
+    { speaker: 'Olive', text: "I carried the jar. But I'm just the muscle! The PLAN came from upstairs. From... The Blanket. She watched the whole job from the stairs. She hears everything." },
     { speaker: 'Olive', text: "She triggered the laundry avalanche on the stairs to cover the escape route. Take this basket — you'll never make it up there without it. Good luck, detective. You never saw me." }
   ],
 
@@ -123,11 +128,20 @@ const DIALOGUE = {
     { speaker: 'Marice', text: "I don't think that's going to loosen any whiskered lips." }
   ],
 
-  // F) After receiving Shrimp & Salmon Feast — THE CONFESSION
+  // F) Bringing the feast — Beatrice demands Marice lay out the case first
+  beatrice_deduce_intro: [
+    { speaker: 'Marice', text: "One Shrimp & Salmon Feast, plated like a civilized meal. Now — the confession. All of it." },
+    { speaker: 'Beatrice', text: "*muffled* Not so fast. A blanket of my standing does not confess to a detective who hasn't done her homework." },
+    { speaker: 'Beatrice', text: "Lay out the case. Who did what. Get it right and the feast buys a full confession. Get it wrong and I go back to being linens." }
+  ],
+
+  // G) THE CONFESSION — after the deduction is solved
   beatrice_after: [
-    { speaker: 'Marice', text: "One Shrimp & Salmon Feast, as demanded. Now — the confession. All of it." },
-    { speaker: 'Beatrice', text: "*emerges majestically* Very well. It was a three-cat job. Alice ran lookout from her tower — 'witness,' HA. Olive hauled the jar. I planned it all from this very blanket. Motive? Dinner was SEVEN MINUTES LATE on Tuesday. We do not forgive." },
-    { speaker: 'Beatrice', text: "*purring intensely* ...The verdict, detective? Make it quick. This blanket is warm, and frankly, you look like you need a snuggle more than justice." }
+    { speaker: 'Beatrice', text: "*emerges majestically* ...Fine. FINE. It was a three-cat job. Alice ran lookout from her tower — 'witness,' HA. Olive hauled the jar. I planned it all from this very blanket." },
+    { speaker: 'Beatrice', text: "Motive? Dinner was SEVEN MINUTES LATE on Tuesday. We do not forgive. We do not forget. We do, however, share." },
+    { speaker: 'Marice', text: "...Share?" },
+    { speaker: 'Beatrice', text: "Check your pillow, detective. We left you your cut of the loot. One Purrpop. We are criminals, not MONSTERS." },
+    { speaker: 'Beatrice', text: "*purring intensely* Now. Your verdict. Make it quick — this blanket is warm, and frankly, you look like you need a snuggle more than justice." }
   ],
 
   // ============================
@@ -166,6 +180,30 @@ const DIALOGUE = {
     { speaker: 'Marice', text: "A can of Shrimp & Salmon Feast — the good stuff I save for special occasions. If the rumors are true, this is exactly what a certain mastermind charges for a confession. Let me plate it properly." }
   ],
 
+  // ============================
+  // CRIME SCENE EVIDENCE
+  // ============================
+
+  treat_jar: [
+    { speaker: 'Marice', text: "The scene of the crime. My treat jar — tipped on its side, lid off, licked so clean it squeaks." },
+    { speaker: 'Marice', text: "The lid was pried open with... patience. And paws. No thumbs were involved in this crime, which is somehow MORE insulting." },
+    { speaker: 'Marice', text: "And a trail of crumbs leading across the living room, straight to the basement door. A sloppy getaway. Or a very confident one." }
+  ],
+
+  treat_jar_done: [
+    { speaker: 'Marice', text: "The jar: upright, refilled, and under new management. There is a brick on the lid now. Justice has a weight limit." }
+  ],
+
+  pet_cam: [
+    { speaker: 'Marice', text: "The pet cam. Someone rotated it to face the wall. Premeditated." },
+    { speaker: 'Marice', text: "*scrubs the footage* Three seconds before it goes dark: a big, FLUFFY white tail sweeps across the frame..." },
+    { speaker: 'Marice', text: "...and in the background, halfway up the stairs, something that looks exactly like a blanket. Watching. Blankets don't WATCH." }
+  ],
+
+  pet_cam_done: [
+    { speaker: 'Marice', text: "The pet cam is back on, pointed firmly at the treat jar. I'm told the gang has 'lawyered up.'" }
+  ],
+
   sofa_blanket: [
     { speaker: 'Marice', text: "Under the sofa blanket... the basement key! Exactly where Alice said. 'Hidden last week,' she said. This heist was PREMEDITATED." }
   ],
@@ -175,7 +213,7 @@ const DIALOGUE = {
   ],
 
   basement_door_locked: [
-    { speaker: 'Marice', text: "Locked. The culprit dragged the jar down THERE and locked the door behind them? These cats are more organized than my taxes." }
+    { speaker: 'Marice', text: "The crumb trail ends right here. Locked. The culprit hauled the jar down THERE and locked the door behind them? These cats are more organized than my taxes." }
   ],
 
   basement_door_unlock: [
@@ -511,7 +549,7 @@ const DIALOGUE = {
   ],
 
   cat_toy_feather_wand: [
-    { speaker: 'Marice', text: "The feather wand, hidden behind the boxes! It's been 'missing' for weeks. MISSING. I searched everywhere!" },
+    { speaker: 'Marice', text: "The feather wand, stuffed behind the TV console! It's been 'missing' for weeks. MISSING. I searched everywhere!" },
     { speaker: 'Marice', text: "This is Alice's favorite — she does actual backflips for it. The 'innocent witness' has a secret loot stash too. The plot thickens." }
   ],
 
@@ -535,13 +573,13 @@ const DIALOGUE = {
 
   diary_page_alice: [
     { speaker: 'Marice', text: "A diary page, tucked away in the half-bath of all places." },
-    { speaker: 'Marice', text: "*reading* 'Met a tiny orange kitten today. She inspected the whole house, then sat on the highest shelf like a queen claiming her castle.'" },
+    { speaker: 'Marice', text: "*reading* 'Met a tiny black-and-white kitten today, with a smudge on her nose like she'd been caught in the ink. She inspected the whole house, then sat on the highest shelf like a queen claiming her castle.'" },
     { speaker: 'Marice', text: "Alice hasn't changed one bit. Queen of the house — and apparently, its most unreliable witness." }
   ],
 
   diary_page_olive: [
     { speaker: 'Marice', text: "Another diary page! How did this end up down in the rec room?" },
-    { speaker: 'Marice', text: "*reading* 'The new kitten Olive discovered the basement today. She zoomed up and down the stairs 14 times. I counted.'" },
+    { speaker: 'Marice', text: "*reading* 'The new kitten Olive is mostly fluff. Today she discovered the basement and zoomed up and down the stairs 14 times. I counted.'" },
     { speaker: 'Marice', text: "Fourteen zoomies. Years later, she'd use those exact stairs for a getaway. It was all training." }
   ],
 
@@ -555,3 +593,96 @@ const DIALOGUE = {
     { speaker: 'Marice', text: "I already tucked that diary page safely in my pocket." }
   ]
 };
+
+// ============================================================
+// CHAPTER CARDS — shown the first time each part of the case begins
+// ============================================================
+const CHAPTERS = {
+  prologue: { kicker: 'Prologue', title: 'Twenty Minutes', sub: 'Somebody robbed the treat jar.' },
+  main: { kicker: 'Chapter One', title: 'The Scene of the Crime', sub: 'A tipped jar. A trail of crumbs. A witness with a price.' },
+  basement: { kicker: 'Chapter Two', title: 'The Muscle', sub: 'The crumbs lead down.' },
+  upstairs: { kicker: 'Chapter Three', title: 'The Blanket', sub: 'Every heist has a mastermind.' },
+  garden: { kicker: 'Epilogue', title: 'Supervised Outdoor Time', sub: 'Three reformed criminals. One very suspicious bird feeder.' }
+};
+
+// ============================================================
+// EVIDENCE — logged in the Case Log as the investigation unfolds
+// ============================================================
+const EVIDENCE = [
+  { id: 'jar', icon: '🫙', title: 'The Treat Jar', text: 'Tipped on the kitchen island and licked clean. Pried open by paws, not thumbs.' },
+  { id: 'petcam', icon: '📷', title: 'Pet Cam Footage', text: 'A fluffy white tail, then the camera turned to the wall. A blanket watching from the stairs.' },
+  { id: 'crumbs', icon: '🍪', title: 'The Crumb Trail', text: 'From the kitchen straight to the locked basement door.' },
+  { id: 'testimony', icon: '🗣️', title: "Alice's Testimony", text: "A fluffy white blur hauled the jar downstairs. The 'witness' knew where the key was hidden." },
+  { id: 'olive', icon: '🐾', title: "Olive's Statement", text: "\"I'm just the muscle. The plan came from The Blanket.\"" },
+  { id: 'avalanche', icon: '🧺', title: 'The Laundry Avalanche', text: 'Staged on the stairs to slow the investigation. Signed with a paw print.' },
+  { id: 'confession', icon: '📜', title: 'Signed Confession', text: 'Three-cat job. Motive: dinner was seven minutes late on Tuesday.' }
+];
+
+// ============================================================
+// DEDUCTION — Marice lays out the case before Beatrice confesses.
+// Each question lists the options, the correct answer, the line that
+// lands it, and Beatrice's rebuttal for each wrong guess.
+// ============================================================
+const DEDUCTION = [
+  {
+    question: 'Question one. Who kept LOOKOUT from the high ground while the job went down?',
+    answer: 'alice',
+    right: [
+      { speaker: 'Marice', text: "Alice. Best vantage point in the house — she told me so herself. And a 'witness' who knew exactly where the basement key was hidden." },
+      { speaker: 'Beatrice', text: '...Lucky guess.' }
+    ],
+    wrong: {
+      olive: "OLIVE? On lookout? Olive cannot watch a bowl of water without trying to fight it. Again, detective.",
+      beatrice: "Me? A lookout? I'm the talent, darling. Try again."
+    }
+  },
+  {
+    question: 'Question two. Who did the heavy lifting — rolling the jar off the island and hauling it downstairs?',
+    answer: 'olive',
+    right: [
+      { speaker: 'Marice', text: 'Olive. A fluffy white tail on the pet cam, a crumb trail all the way to her treadmill, and she handed me the laundry basket herself.' },
+      { speaker: 'Beatrice', text: '*sigh* Good muscle is so hard to find.' }
+    ],
+    wrong: {
+      alice: 'Alice lifts nothing heavier than her own opinion. Next.',
+      beatrice: 'I do not HAUL. I delegate. Honestly.'
+    }
+  },
+  {
+    question: 'And the final question. Who was the brains of the whole operation?',
+    answer: 'beatrice',
+    right: [
+      { speaker: 'Marice', text: "You, Beatrice. The blanket on the stairs in the pet cam footage. The staged laundry avalanche. The trail of long black fur to this very bed. And the 'I am a blanket' act." },
+      { speaker: 'Beatrice', text: '...' }
+    ],
+    wrong: {
+      alice: 'Alice? Alice would have written the plan down and left it on the coffee table. Amateur hour.',
+      olive: '*snort* Olive once got stuck in a paper bag for forty minutes. Try again.'
+    }
+  }
+];
+
+// ============================================================
+// VERDICTS — the player sentences the gang. Each verdict changes the
+// final line on the Case Closed screen.
+// ============================================================
+const VERDICTS = [
+  {
+    id: 'adorable',
+    choice: 'Guilty of being adorable.',
+    reply: { speaker: 'Beatrice', text: 'The court is wise. The court may now pet me.' },
+    ending: 'Marice: "Verdict: guilty on three counts of being adorable. Sentence: dinner on time, forever — and snuggles, effective immediately."'
+  },
+  {
+    id: 'snuggles',
+    choice: 'Guilty — life sentence in my lap.',
+    reply: { speaker: 'Beatrice', text: 'A harsh sentence. We accept. Unanimously. *three cats begin purring at once*' },
+    ending: 'Marice: "Guilty as charged. The sentence is life... in my lap. No parole. Purring is mandatory."'
+  },
+  {
+    id: 'dismissed',
+    choice: "Case dismissed. (Dinner's at six. SHARP.)",
+    reply: { speaker: 'Beatrice', text: 'Six. Sharp. ...We shall see.' },
+    ending: 'Marice: "Case dismissed on grounds of extreme cuteness. But dinner is at SIX. Sharp. We are not doing this again."'
+  }
+];
