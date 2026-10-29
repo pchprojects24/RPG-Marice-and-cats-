@@ -8,18 +8,21 @@
 let numpadCallback = null;
 
 function showNumpad(onSubmit) {
+  resetGameInput();
   numpadCallback = onSubmit;
   const input = document.getElementById('numpad-input');
   input.value = '';
   document.getElementById('numpad-error').textContent = '';
   document.getElementById('numpad-overlay').classList.add('active');
-  setTimeout(function () { input.focus(); }, 50);
+  syncScreenAccessibility();
 }
 
 function hideNumpad() {
+  resetGameInput();
   document.getElementById('numpad-overlay').classList.remove('active');
   numpadCallback = null;
   document.getElementById('numpad-input').value = '';
+  syncScreenAccessibility();
 }
 
 function numpadSubmit() {
@@ -80,19 +83,34 @@ function hasSavedGame() {
 }
 
 function showTitleScreen() {
+  cancelFloorTransition();
+  resetGameInput();
+  gameSessionActive = false;
+  newGameSession++;
+  pendingIntroSession = null;
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
   document.getElementById('title-screen').style.display = 'flex';
   // Re-evaluate whether a save exists without mutating the live game state.
   var continueBtn = document.getElementById('btn-continue');
   if (continueBtn) {
     continueBtn.style.display = hasSavedGame() ? 'inline-block' : 'none';
   }
+  syncScreenAccessibility();
 }
 
 function hideTitleScreen() {
   document.getElementById('title-screen').style.display = 'none';
+  syncScreenAccessibility();
 }
 
 function startNewGame() {
+  cancelFloorTransition();
+  gameSessionActive = false;
+  pendingIntroSession = null;
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  resetGameInput();
+  gamePaused = false;
+  document.getElementById('pause-overlay').classList.remove('active');
   initAudio();
   markPlayerActivity();
   clearSave();
@@ -126,6 +144,7 @@ function startNewGame() {
   updateQuestCounter();
   updateQuestList();
   hideTitleScreen();
+  gameSessionActive = true;
   startMusic(FLOOR_IDS.OUTSIDE);
   startAmbient(FLOOR_IDS.OUTSIDE);
 
@@ -139,11 +158,12 @@ function startNewGame() {
   setTimeout(function () {
     // Skip if the player already quit or restarted in the meantime
     if (session !== newGameSession || !isGamePlayActive()) return;
-    startDialogue('intro', null, null);
+    pendingIntroSession = session;
   }, 2600);
 }
 
 var newGameSession = 0;
+var pendingIntroSession = null;
 
 // Hide controls hint after first few movements
 var moveCount = 0;
@@ -161,6 +181,13 @@ function continueGame() {
     return;
   }
 
+  resetGameInput();
+  gamePaused = false;
+  pendingIntroSession = null;
+  ['pause-overlay', 'quest-panel', 'settings-panel'].forEach(function (id) {
+    document.getElementById(id).classList.remove('active');
+  });
+  gameSessionActive = true;
   initAudio();
   markPlayerActivity();
   gameStartTime = Date.now();
@@ -178,11 +205,17 @@ function continueGame() {
   // Hide controls hint for returning players
   var hint = document.getElementById('controls-hint');
   if (hint) hint.classList.add('hidden');
+
+  // Persist any repaired legacy rewards before resuming an interrupted ending.
+  saveGameImmediate();
+  resumePendingEnding();
 }
 
 // ======================== ENDING SCREEN ========================
 
 function showEnding() {
+  cancelFloorTransition();
+  resetGameInput();
   // Populate stats (total play time across sessions, not just this one)
   var elapsed = Math.floor(getTotalPlayTimeMs() / 1000);
   if (elapsed > 0) {
@@ -216,10 +249,12 @@ function showEnding() {
   var petsEl = document.getElementById('stat-pets');
   if (petsEl) petsEl.textContent = '❤ Pets: ' + (gameState.flags.pet_count || 0);
   document.getElementById('ending-overlay').classList.add('active');
+  syncScreenAccessibility();
 }
 
 function hideEnding() {
   document.getElementById('ending-overlay').classList.remove('active');
+  syncScreenAccessibility();
 }
 
 function restartGame() {
@@ -238,25 +273,27 @@ function init() {
 
   // Title screen buttons
   document.getElementById('btn-new-game').addEventListener('click', function () {
-    startNewGame();
+    if (document.getElementById('title-screen').style.display !== 'none') startNewGame();
   });
 
   // Always wire Continue: a save can appear after page load (start a case,
   // quit to title) and the button must work then too.
   const continueBtn = document.getElementById('btn-continue');
   continueBtn.addEventListener('click', function () {
-    continueGame();
+    if (document.getElementById('title-screen').style.display !== 'none') continueGame();
   });
 
   // Ending screen restart
   document.getElementById('btn-restart').addEventListener('click', function () {
-    restartGame();
+    if (document.getElementById('ending-overlay').classList.contains('active')) restartGame();
   });
 
   // Ending screen — keep playing (free roam with the cat parade)
   var btnKeepPlaying = document.getElementById('btn-keep-playing');
   if (btnKeepPlaying) {
     btnKeepPlaying.addEventListener('click', function () {
+      if (!document.getElementById('ending-overlay').classList.contains('active')) return;
+      resetGameInput();
       hideEnding();
       freeRoam = true;
       markPlayerActivity();
@@ -268,6 +305,7 @@ function init() {
   var btnEndingTitle = document.getElementById('btn-ending-title');
   if (btnEndingTitle) {
     btnEndingTitle.addEventListener('click', function () {
+      if (!document.getElementById('ending-overlay').classList.contains('active')) return;
       hideEnding();
       stopMusic();
       stopAmbient();
@@ -277,7 +315,7 @@ function init() {
 
   // Dialogue overlay click to advance
   dialogueOverlay.addEventListener('click', function () {
-    advanceDialogue();
+    if (getGameScreen() === 'dialogue') advanceDialogue();
   });
 
   // Resume AudioContext on any click (e.g. after tab background)
@@ -305,20 +343,13 @@ function init() {
   }
 
   btnToggleQuest.addEventListener('click', function () {
-    btnToggleQuest.classList.remove('has-new');
-    questPanel.classList.toggle('active');
-    // Close settings if open
-    document.getElementById('settings-panel').classList.remove('active');
-    if (questPanel.classList.contains('active')) {
-      btnCloseQuest.focus();
-    } else {
-      btnToggleQuest.focus();
-    }
+    toggleGamePanel('quest-panel');
   });
 
   btnCloseQuest.addEventListener('click', function () {
+    resetGameInput();
     questPanel.classList.remove('active');
-    btnToggleQuest.focus();
+    syncScreenAccessibility('btn-toggle-quest');
   });
 
   // Settings panel toggle
@@ -327,33 +358,38 @@ function init() {
   const btnCloseSettings = document.getElementById('btn-close-settings');
 
   btnToggleSettings.addEventListener('click', function () {
-    settingsPanel.classList.toggle('active');
-    // Close quest if open
-    questPanel.classList.remove('active');
-    if (settingsPanel.classList.contains('active')) {
-      btnCloseSettings.focus();
-    } else {
-      btnToggleSettings.focus();
-    }
+    toggleGamePanel('settings-panel');
   });
 
   btnCloseSettings.addEventListener('click', function () {
+    resetGameInput();
     settingsPanel.classList.remove('active');
-    btnToggleSettings.focus();
+    syncScreenAccessibility('btn-toggle-settings');
   });
 
   // Escape closes Quest/Settings panel, or toggles pause
   document.addEventListener('keydown', function (e) {
-    if (e.code !== 'Escape') return;
-    if (document.getElementById('numpad-overlay').classList.contains('active')) return;
+    if (e.code !== 'Escape' || e.repeat || e.defaultPrevented) return;
+    if (getGameScreen() === 'inactive' || getGameScreen() === 'hidden' || getGameScreen() === 'transition') return;
+    resetGameInput();
+    if (document.getElementById('numpad-overlay').classList.contains('active')) {
+      hideNumpad();
+      e.preventDefault();
+      return;
+    }
+    if (gamePaused) {
+      togglePause();
+      e.preventDefault();
+      return;
+    }
     if (dialogueOverlay.classList.contains('active')) return;
     if (questPanel.classList.contains('active')) {
       questPanel.classList.remove('active');
-      btnToggleQuest.focus();
+      syncScreenAccessibility('btn-toggle-quest');
       e.preventDefault();
     } else if (settingsPanel.classList.contains('active')) {
       settingsPanel.classList.remove('active');
-      btnToggleSettings.focus();
+      syncScreenAccessibility('btn-toggle-settings');
       e.preventDefault();
     } else {
       togglePause();
@@ -368,6 +404,8 @@ function init() {
   var btnQuitTitle = document.getElementById('btn-quit-title');
   if (btnQuitTitle) {
     btnQuitTitle.addEventListener('click', function () {
+      if (getGameScreen() !== 'paused') return;
+      resetGameInput();
       gamePaused = false;
       document.getElementById('pause-overlay').classList.remove('active');
       saveGameImmediate();
@@ -398,6 +436,8 @@ function init() {
     saveSettings();
     showToast('Settings saved!', 1500);
     settingsPanel.classList.remove('active');
+    resetGameInput();
+    syncScreenAccessibility('btn-toggle-settings');
   });
 
   // Live-update toggles — also persist immediately so changes survive a reload

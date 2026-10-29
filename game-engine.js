@@ -136,6 +136,7 @@ const DEFAULT_FLAGS = {
   laundry_cleared: false,
   sofa_searched: false,
   game_complete: false,
+  ending_pending: false,
   front_door_unlocked: false,
   garden_visited: false,
   cat_toys_found: [],
@@ -160,6 +161,8 @@ function freshFlags() {
 // Free-roam mode: after the ending the player can keep exploring with the
 // whole cat parade trailing behind them.
 let freeRoam = false;
+// Saves belong only to a game explicitly started or successfully continued.
+let gameSessionActive = false;
 
 // Cat coat colours (body, accent) — shared by static sprites and followers.
 // Matches the real girls: Alice is a sleek black-and-white tuxedo, Olive a
@@ -935,6 +938,7 @@ function startDialogueLines(messages, catName, callback, opts) {
   dialogueCat = catName;
   dialogueCallback = callback || null;
   dialogueActive = true;
+  resetGameInput();
 
   // Cat meow when talking to a cat — each cat has her own voice
   if (catName && !(opts && opts.quiet)) {
@@ -943,7 +947,7 @@ function startDialogueLines(messages, catName, callback, opts) {
 
   showDialogueMessage();
   dialogueOverlay.classList.add('active');
-  dialogueOverlay.setAttribute('aria-hidden', 'false');
+  syncScreenAccessibility();
 }
 
 function showDialogueMessage() {
@@ -975,7 +979,8 @@ function showDialogueMessage() {
     dialogueSpeaker.style.color = '#ffd700';
   }
 
-  // Start typewriter effect
+  // Announce complete lines once, independently of the visual typewriter.
+  document.getElementById('dialogue-announcement').textContent = msg.speaker + ': ' + msg.text;
   startTypewriter(msg.text);
 }
 
@@ -985,8 +990,8 @@ function startTypewriter(text) {
   typewriterIndex = 0;
   typewriterDone = false;
   dialogueText.textContent = '';
-  dialogueAdvance.textContent = 'Tap / Space to show full text';
-  dialogueAdvance.style.visibility = 'hidden';
+  dialogueAdvance.textContent = 'Show full text';
+  dialogueAdvance.style.visibility = 'visible';
 
   var instantCb = document.getElementById('instant-dialogue');
   if (instantCb && instantCb.checked) {
@@ -1025,7 +1030,7 @@ function onTypewriterDone() {
     dialogueAdvance.style.visibility = 'hidden';
     return;
   }
-  dialogueAdvance.textContent = 'Tap / Space / Enter to continue';
+  dialogueAdvance.textContent = 'Continue';
   dialogueAdvance.style.visibility = 'visible';
 }
 
@@ -1066,17 +1071,22 @@ function renderDialogueChoices() {
       pickDialogueChoice(i);
     });
     btn.addEventListener('pointerenter', function () { selectDialogueChoice(i); });
+    btn.addEventListener('focus', function () { selectDialogueChoice(i); });
     dialogueChoicesEl.appendChild(btn);
   });
   dialogueChoicesEl.classList.add('active');
+  if (activeAccessiblePanel === 'dialogue-overlay') {
+    dialogueChoicesEl.children[dialogueChoices.selected].focus({ preventScroll: true });
+  }
 }
 
-function selectDialogueChoice(i) {
+function selectDialogueChoice(i, moveFocus) {
   if (!dialogueChoices) return;
   const n = dialogueChoices.options.length;
   dialogueChoices.selected = (i + n) % n;
   Array.prototype.forEach.call(dialogueChoicesEl.children, function (el, idx) {
     el.classList.toggle('selected', idx === dialogueChoices.selected);
+    if (moveFocus && idx === dialogueChoices.selected) el.focus({ preventScroll: true });
   });
 }
 
@@ -1100,13 +1110,14 @@ function clearDialogueChoices() {
 // Keyboard control for an open choice prompt. Returns true if handled.
 function handleChoiceKey(code) {
   if (!dialogueActive || !dialogueChoices) return false;
+  if (!/^(Arrow(Up|Down|Left|Right)|Key[WASDE]|Digit[1-9]|Numpad[1-9]|Enter|Space)$/.test(code)) return false;
   if (!typewriterDone) { finishTypewriter(); return true; }
   if (code === 'ArrowUp' || code === 'KeyW' || code === 'ArrowLeft' || code === 'KeyA') {
-    selectDialogueChoice(dialogueChoices.selected - 1);
+    selectDialogueChoice(dialogueChoices.selected - 1, true);
     return true;
   }
   if (code === 'ArrowDown' || code === 'KeyS' || code === 'ArrowRight' || code === 'KeyD') {
-    selectDialogueChoice(dialogueChoices.selected + 1);
+    selectDialogueChoice(dialogueChoices.selected + 1, true);
     return true;
   }
   const digit = /^Digit([1-9])$/.exec(code) || /^Numpad([1-9])$/.exec(code);
@@ -1144,7 +1155,7 @@ function advanceDialogue() {
 function closeDialogue() {
   dialogueActive = false;
   dialogueOverlay.classList.remove('active');
-  dialogueOverlay.setAttribute('aria-hidden', 'true');
+  syncScreenAccessibility();
 
   // Clean up typewriter
   if (typewriterTimer) clearInterval(typewriterTimer);
@@ -1168,7 +1179,7 @@ function hideDialogue() {
   dialogueCat = null;
   dialogueCallback = null;
   dialogueOverlay.classList.remove('active');
-  dialogueOverlay.setAttribute('aria-hidden', 'true');
+  syncScreenAccessibility();
 
   if (typewriterTimer) clearInterval(typewriterTimer);
   typewriterTimer = null;
@@ -1385,6 +1396,7 @@ function setObjectivePing(target, durationMs) {
 }
 
 function showHintAndPing() {
+  if (getGameScreen() !== 'exploration') return;
   const hint = getNextTaskHint();
   const target = getNextTaskTarget();
   if (target) {
@@ -1407,11 +1419,7 @@ function showHintAndPing() {
 function setupIdleHints() {
   if (idleHintTimer) clearInterval(idleHintTimer);
   idleHintTimer = setInterval(() => {
-    if (dialogueActive) return;
-    const titleScreen = document.getElementById('title-screen');
-    if (titleScreen && window.getComputedStyle(titleScreen).display !== 'none') return;
-    if (document.getElementById('ending-overlay').classList.contains('active')) return;
-    if (document.getElementById('numpad-overlay').classList.contains('active')) return;
+    if (getGameScreen() !== 'exploration') return;
 
     const now = Date.now();
     if (now - lastPlayerActionAt < IDLE_HINT_DELAY_MS) return;
@@ -1616,6 +1624,27 @@ function runVerdict(onDone) {
   });
 }
 
+// A solved deduction is a checkpoint, not a completed ending. Reloading
+// replays the confession or the selected verdict's reply without losing a choice.
+function resumePendingEnding() {
+  if (!gameState.flags.ending_pending) return;
+  const verdict = VERDICTS.find(function (v) { return v.id === gameState.flags.verdict; });
+  if (verdict) {
+    startDialogueLines([verdict.reply], 'beatrice', completeEnding, { quiet: true });
+  } else {
+    startDialogue('beatrice_after', 'beatrice', function () {
+      runVerdict(completeEnding);
+    });
+  }
+}
+
+function completeEnding() {
+  gameState.flags.ending_pending = false;
+  gameState.flags.game_complete = true;
+  saveGameImmediate();
+  showEnding();
+}
+
 // ======================== QUEST TRACKING ========================
 
 function updateQuestCounter() {
@@ -1787,35 +1816,72 @@ const FLOOR_NAMES = {
   [FLOOR_IDS.GARDEN]: 'Backyard Garden'
 };
 
+// Both fade timers belong to one transition. Identity checks also reject a
+// callback that was already queued when its timer was cancelled.
+let activeFloorTransition = null;
+
+function cancelFloorTransition() {
+  const transition = activeFloorTransition;
+  activeFloorTransition = null;
+  if (transition) {
+    clearTimeout(transition.arrivalTimer);
+    clearTimeout(transition.revealTimer);
+    resetGameInput();
+  }
+  document.getElementById('transition-overlay').classList.remove('active');
+  document.getElementById('transition-label').textContent = '';
+}
+
+function isSafeFloorArrival(floor, row, col) {
+  return Number.isInteger(row) && Number.isInteger(col) &&
+    !isTileBlocked(floor, row, col) && floor.grid[row][col] !== T.STAIRS;
+}
+
 function changeFloorTo(newFloor, row, col, facing) {
-  var overlay = document.getElementById('transition-overlay');
-  var label = document.getElementById('transition-label');
+  if (activeFloorTransition || getGameScreen() !== 'exploration') return false;
+  if (!Object.prototype.hasOwnProperty.call(FLOORS, newFloor)) return false;
+  const floor = FLOORS[newFloor];
+  const arrivalRow = row === undefined ? floor.start.row : row;
+  const arrivalCol = col === undefined ? floor.start.col : col;
+  if (!isSafeFloorArrival(floor, arrivalRow, arrivalCol)) return false;
+  const arrivalFacing = ['up', 'down', 'left', 'right'].includes(facing) ? facing : 'down';
+  const transition = { arrivalTimer: null, revealTimer: null };
+  activeFloorTransition = transition;
 
-  label.textContent = FLOOR_NAMES[newFloor] || newFloor;
-  overlay.classList.add('active');
+  document.getElementById('transition-label').textContent = FLOOR_NAMES[newFloor] || newFloor;
+  document.getElementById('transition-overlay').classList.add('active');
+  resetGameInput();
 
-  setTimeout(function () {
+  transition.arrivalTimer = setTimeout(function () {
+    if (activeFloorTransition !== transition) return;
+    if (!gameSessionActive || !isGamePlayActive() || !isSafeFloorArrival(floor, arrivalRow, arrivalCol)) {
+      cancelFloorTransition();
+      return;
+    }
+    transition.arrivalTimer = null;
+    resetGameInput();
     gameState.currentFloor = newFloor;
-    var floor = FLOORS[newFloor];
-    gameState.player.row = (row !== undefined) ? row : floor.start.row;
-    gameState.player.col = (col !== undefined) ? col : floor.start.col;
-    gameState.player.facing = facing || 'down';
+    gameState.player = { row: arrivalRow, col: arrivalCol, facing: arrivalFacing };
     trailReset();
     updateFloorLabel();
-    saveGame();
+    // The destination is durable even if the page closes during the reveal.
+    saveGameImmediate();
     startMusic(newFloor);
     startAmbient(newFloor);
 
-    setTimeout(function () {
-      overlay.classList.remove('active');
-      if (typeof CHAPTERS !== 'undefined' && CHAPTERS[newFloor]) showChapterCard(newFloor);
+    transition.revealTimer = setTimeout(function () {
+      if (activeFloorTransition !== transition) return;
+      const stillPlaying = gameSessionActive && isGamePlayActive();
+      cancelFloorTransition();
+      if (stillPlaying && typeof CHAPTERS !== 'undefined' && CHAPTERS[newFloor]) showChapterCard(newFloor);
     }, 400);
   }, 350);
+  return true;
 }
 
 // Convenience wrapper — use floor's default start position.
 function changeFloor(newFloor) {
-  changeFloorTo(newFloor, undefined, undefined, 'down');
+  return changeFloorTo(newFloor, undefined, undefined, 'down');
 }
 
 function updateFloorLabel() {
@@ -1889,7 +1955,7 @@ function getCatPosition(catName) {
 }
 
 function tryMove(dir) {
-  if (gameState.moving || dialogueActive) return;
+  if (getGameScreen() !== 'exploration' || gameState.moving) return;
   markPlayerActivity();
 
   const p = gameState.player;
@@ -1932,9 +1998,9 @@ function handleStairTransition(row, col) {
       if (!gameState.flags.laundry_cleared) {
         if (hasItem(ITEMS.LAUNDRY_BASKET)) {
           // Player walked into the laundry pile while carrying the basket — clear it
-          removeItem(ITEMS.LAUNDRY_BASKET);
-          gameState.flags.laundry_cleared = true;
           startDialogue('laundry_pile_clear', null, function () {
+            removeItem(ITEMS.LAUNDRY_BASKET);
+            gameState.flags.laundry_cleared = true;
             addEvidence('avalanche');
             triggerScreenShake(4, 12);
             showToast('Stairway cleared!');
@@ -1996,6 +2062,8 @@ function updateMovement() {
 // ======================== INTERACTION SYSTEM ========================
 
 function tryInteract() {
+  const screen = getGameScreen();
+  if (screen !== 'exploration' && screen !== 'dialogue') return;
   markPlayerActivity();
   if (dialogueActive) {
     advanceDialogue();
@@ -2311,9 +2379,9 @@ function handleInteraction(obj) {
         startDialogue('alice_wrong_item', 'alice', null);
       } else if (hasItem(ITEMS.PURRPOPS)) {
         // Give purrpops to Alice
-        removeItem(ITEMS.PURRPOPS);
-        gameState.flags.alice_fed = true;
         startDialogue('alice_after', 'alice', function () {
+          removeItem(ITEMS.PURRPOPS);
+          gameState.flags.alice_fed = true;
           showToast('New clue: check under the sofa blanket!');
           markCatFed('alice');
           addEvidence('testimony');
@@ -2331,10 +2399,11 @@ function handleInteraction(obj) {
       if (gameState.flags.sofa_searched || gameState.flags.has_basement_key || !gameState.flags.alice_fed) {
         startDialogue('sofa_blanket_empty', null, null);
       } else {
-        gameState.flags.sofa_searched = true;
-        gameState.flags.has_basement_key = true;
         startDialogue('sofa_blanket', null, function () {
+          gameState.flags.sofa_searched = true;
+          gameState.flags.has_basement_key = true;
           addItem(ITEMS.BASEMENT_KEY);
+          saveGameImmediate();
           showToast('Got the Basement Key — the trail leads down!');
         });
       }
@@ -2345,13 +2414,14 @@ function handleInteraction(obj) {
       if (gameState.flags.basement_unlocked) {
         changeFloor('basement');
       } else if (hasItem(ITEMS.BASEMENT_KEY)) {
-        removeItem(ITEMS.BASEMENT_KEY);
-        gameState.flags.basement_unlocked = true;
         startDialogue('basement_door_unlock', null, function () {
+          removeItem(ITEMS.BASEMENT_KEY);
+          gameState.flags.basement_unlocked = true;
           addEvidence('crumbs');
           triggerScreenShake(5, 15);
           playSfx('door_unlock');
           showToast('Basement unlocked — after them, detective!');
+          saveGameImmediate();
           changeFloor('basement');
         });
       } else {
@@ -2366,9 +2436,9 @@ function handleInteraction(obj) {
       } else if (hasItem(ITEMS.FEAST_PLATE) && !hasItem(ITEMS.PURRPOPS)) {
         startDialogue('olive_wrong_item', 'olive', null);
       } else if (hasItem(ITEMS.PURRPOPS)) {
-        removeItem(ITEMS.PURRPOPS);
-        gameState.flags.olive_fed = true;
         startDialogue('olive_after', 'olive', function () {
+          removeItem(ITEMS.PURRPOPS);
+          gameState.flags.olive_fed = true;
           addItem(ITEMS.LAUNDRY_BASKET);
           gameState.flags.has_laundry_basket = true;
           showToast('Olive flipped! Got the Laundry Basket — clear those stairs!');
@@ -2385,7 +2455,9 @@ function handleInteraction(obj) {
 
     // ---- BEATRICE ----
     case 'cat_beatrice':
-      if (gameState.flags.beatrice_fed) {
+      if (gameState.flags.ending_pending) {
+        resumePendingEnding();
+      } else if (gameState.flags.beatrice_fed) {
         // Game already complete — show a short post-game dialogue then re-show the ending
         startDialogue('beatrice_done', 'beatrice', function () {
           if (!document.getElementById('ending-overlay').classList.contains('active')) {
@@ -2402,13 +2474,11 @@ function handleInteraction(obj) {
           runDeduction(function () {
             removeItem(ITEMS.FEAST_PLATE);
             gameState.flags.beatrice_fed = true;
-            gameState.flags.game_complete = true;
+            gameState.flags.ending_pending = true;
             markCatFed('beatrice');
             addEvidence('confession');
             saveGameImmediate();
-            startDialogue('beatrice_after', 'beatrice', function () {
-              runVerdict(function () { showEnding(); });
-            });
+            resumePendingEnding();
           });
         });
       } else if (gameState.inventory.length > 0) {
@@ -2634,6 +2704,7 @@ function enterGarden() {
 
 // Check stair-step for laundry clearing (when player tries to go upstairs)
 function checkLaundryInteraction() {
+  if (getGameScreen() !== 'exploration') return false;
   if (gameState.currentFloor !== FLOOR_IDS.MAIN) return false;
   if (gameState.flags.laundry_cleared) return false;
 
@@ -2646,9 +2717,9 @@ function checkLaundryInteraction() {
     if (dialogueActive || gameState.moving) return false;
     markPlayerActivity();
     if (hasItem(ITEMS.LAUNDRY_BASKET)) {
-      removeItem(ITEMS.LAUNDRY_BASKET);
-      gameState.flags.laundry_cleared = true;
       startDialogue('laundry_pile_clear', null, function () {
+        removeItem(ITEMS.LAUNDRY_BASKET);
+        gameState.flags.laundry_cleared = true;
         addEvidence('avalanche');
         showToast('Avalanche cleared — the trail leads up!');
         saveGameImmediate();
@@ -5058,15 +5129,133 @@ function drawInteractReticle(x, y) {
 // ======================== GAME LOOP ========================
 
 let keysDown = {};
+let inputGeneration = 0;
+
+// Derive input ownership in one place, using the same panels that are visible.
+function getGameScreen() {
+  if (!gameSessionActive || !isGamePlayActive()) return 'inactive';
+  if (document.hidden) return 'hidden';
+  if (document.getElementById('numpad-overlay').classList.contains('active')) return 'code';
+  if (document.getElementById('transition-overlay').classList.contains('active')) return 'transition';
+  if (gamePaused) return 'paused';
+  if (document.getElementById('quest-panel').classList.contains('active') ||
+      document.getElementById('settings-panel').classList.contains('active')) return 'menu';
+  return dialogueActive ? 'dialogue' : 'exploration';
+}
+
+function focusGameCanvas() {
+  canvas.setAttribute('tabindex', '-1');
+  canvas.focus({ preventScroll: true });
+}
+
+// The visible top screen owns focus. Inert siblings also leave the accessibility
+// tree, so an offscreen menu or ending cannot expose controls or story spoilers.
+const ACCESSIBLE_PANELS = ['title-screen', 'ending-overlay', 'numpad-overlay',
+  'pause-overlay', 'settings-panel', 'quest-panel', 'dialogue-overlay'];
+const PANEL_INITIAL_FOCUS = {
+  'title-screen': 'btn-new-game', 'ending-overlay': 'btn-keep-playing',
+  'numpad-overlay': 'numpad-input', 'pause-overlay': 'btn-resume',
+  'settings-panel': 'btn-close-settings', 'quest-panel': 'btn-close-quest',
+  'dialogue-overlay': 'dialogue-advance'
+};
+let activeAccessiblePanel = null;
+
+function panelFocusTargets(panel) {
+  return Array.from(panel.querySelectorAll('button, input, select, textarea, a[href], [tabindex]'))
+    .filter(function (el) {
+      return !el.disabled && el.tabIndex >= 0 && !el.closest('[inert]') &&
+        el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+    });
+}
+
+function focusActivePanel() {
+  const panel = document.getElementById(activeAccessiblePanel);
+  const choices = activeAccessiblePanel === 'dialogue-overlay' && dialogueChoices && typewriterDone;
+  const target = choices ? dialogueChoicesEl.children[dialogueChoices.selected]
+    : document.getElementById(PANEL_INITIAL_FOCUS[activeAccessiblePanel]);
+  (target || panel).focus({ preventScroll: true });
+}
+
+function syncScreenAccessibility(returnFocusId) {
+  const next = ACCESSIBLE_PANELS.find(function (id) {
+    const panel = document.getElementById(id);
+    return id === 'title-screen' ? panel.style.display !== 'none' : panel.classList.contains('active');
+  }) || null;
+  const changed = next !== activeAccessiblePanel;
+  activeAccessiblePanel = next;
+  Array.from(document.getElementById('game-container').children).forEach(function (child) {
+    child.inert = next !== null && child.id !== next;
+  });
+  ACCESSIBLE_PANELS.forEach(function (id) {
+    const panel = document.getElementById(id);
+    panel.inert = id !== next;
+    if (id === next) panel.setAttribute('aria-hidden', 'false');
+  });
+  // Move focus before hiding its previous owner from assistive technology.
+  if (next) {
+    if (changed || !document.getElementById(next).contains(document.activeElement)) focusActivePanel();
+  } else if (changed || returnFocusId) {
+    if (returnFocusId) document.getElementById(returnFocusId).focus({ preventScroll: true });
+    else focusGameCanvas();
+  }
+  ACCESSIBLE_PANELS.forEach(function (id) {
+    if (id !== next) document.getElementById(id).setAttribute('aria-hidden', 'true');
+  });
+  document.getElementById('btn-toggle-quest').setAttribute('aria-expanded', String(next === 'quest-panel'));
+  document.getElementById('btn-toggle-settings').setAttribute('aria-expanded', String(next === 'settings-panel'));
+}
+
+// Native Tab movement is retained between controls; only the ends wrap.
+document.addEventListener('keydown', function (e) {
+  if (e.code !== 'Tab' || !activeAccessiblePanel || e.ctrlKey || e.metaKey || e.altKey) return;
+  const panel = document.getElementById(activeAccessiblePanel);
+  const targets = panelFocusTargets(panel);
+  const first = targets[0] || panel;
+  const last = targets[targets.length - 1] || panel;
+  if (!targets.length || !targets.includes(document.activeElement) ||
+      (e.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus({ preventScroll: true });
+  }
+});
+
+document.addEventListener('focusin', function (e) {
+  if (activeAccessiblePanel && !document.getElementById(activeAccessiblePanel).contains(e.target)) {
+    focusActivePanel();
+  }
+});
+
+function resetGameInput() {
+  Object.keys(keysDown).forEach(function (key) { keysDown[key] = false; });
+  inputGeneration++;
+  // Cancel a partial step at its last committed tile, without creating a save.
+  gameState.moving = false;
+  gameState.moveProgress = 0;
+  gameState.moveFrom = null;
+  gameState.moveTo = null;
+}
+
+function toggleGamePanel(id) {
+  const screen = getGameScreen();
+  if (screen !== 'exploration' && screen !== 'menu') return;
+  resetGameInput();
+  const panel = document.getElementById(id);
+  const opening = !panel.classList.contains('active');
+  document.getElementById('quest-panel').classList.remove('active');
+  document.getElementById('settings-panel').classList.remove('active');
+  panel.classList.toggle('active', opening);
+  const quest = id === 'quest-panel';
+  if (quest) document.getElementById('btn-toggle-quest').classList.remove('has-new');
+  syncScreenAccessibility(opening ? null : (quest ? 'btn-toggle-quest' : 'btn-toggle-settings'));
+}
 
 function togglePause() {
-  var titleScreen = document.getElementById('title-screen');
-  if (titleScreen && titleScreen.style.display !== 'none') return;
-  if (document.getElementById('ending-overlay').classList.contains('active')) return;
-  if (document.getElementById('numpad-overlay').classList.contains('active')) return;
-  if (dialogueActive) return;
+  const screen = getGameScreen();
+  if (screen !== 'exploration' && screen !== 'paused') return;
+  resetGameInput();
   gamePaused = !gamePaused;
   document.getElementById('pause-overlay').classList.toggle('active', gamePaused);
+  syncScreenAccessibility();
 }
 
 // Fixed-timestep loop: game logic always advances at 60 updates/second no
@@ -5079,7 +5268,12 @@ var lastFrameTime = 0;
 var updateAccumulator = 0;
 
 function updateStep() {
-  if (!gamePaused) {
+  if (getGameScreen() === 'exploration') {
+    if (pendingIntroSession === newGameSession) {
+      pendingIntroSession = null;
+      startDialogue('intro', null, null);
+      return;
+    }
     // Handle continuous input
     if (!dialogueActive && !gameState.moving) {
       if (keysDown['ArrowUp'] || keysDown['KeyW']) tryMove('up');
@@ -5093,6 +5287,13 @@ function updateStep() {
     updateInteractPrompt();
     updateCatCalls();
     if (animTimer % 20 === 0) refreshObjective();
+  } else {
+    resetGameInput();
+    if (getGameScreen() === 'dialogue') updateInteractPrompt();
+    else {
+      document.getElementById('btn-interact').disabled = true;
+      document.getElementById('interact-prompt').classList.remove('visible');
+    }
   }
   animTimer++;
 }
@@ -5120,68 +5321,54 @@ function gameLoop(now) {
 // ======================== INPUT HANDLING ========================
 
 document.addEventListener('keydown', function (e) {
-  // Resume AudioContext if suspended (e.g. after tab background)
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
+  // Native controls keep their keyboard behavior, including Enter/Space clicks
+  // and arrow keys on volume sliders. They must not also operate the world.
+  const target = e.target;
+  if (target && target.closest) {
+    if (target.closest('input, select, textarea, [contenteditable="true"]')) return;
+    if (['Enter', 'Space'].includes(e.code) && target.closest('button, a')) return;
   }
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  const screen = getGameScreen();
+  if (!['exploration', 'dialogue', 'menu', 'paused'].includes(screen)) return;
 
-  // Block game input while code entry overlay is open
-  if (document.getElementById('numpad-overlay').classList.contains('active')) {
-    return;
-  }
-
-  // P key always toggles pause (when game is active)
-  if (e.code === 'KeyP') {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (e.code === 'KeyP' && !e.repeat && (screen === 'exploration' || screen === 'paused')) {
     togglePause();
     e.preventDefault();
     return;
   }
-
-  // Q / I key toggles quest log
-  if (e.code === 'KeyQ' || e.code === 'KeyI') {
-    var qp = document.getElementById('quest-panel');
-    var sp = document.getElementById('settings-panel');
-    if (qp) {
-      qp.classList.toggle('active');
-      if (sp) sp.classList.remove('active');
-      var qb = document.getElementById('btn-toggle-quest');
-      if (qb) qb.classList.remove('has-new');
-    }
+  if ((e.code === 'KeyQ' || e.code === 'KeyI') && !e.repeat && (screen === 'exploration' || screen === 'menu')) {
+    toggleGamePanel('quest-panel');
     e.preventDefault();
     return;
   }
-
-  // H key shows hint and pings the next objective
-  if (e.code === 'KeyH') {
-    if (!dialogueActive) {
-      showHintAndPing();
-    }
+  if (screen === 'menu' || screen === 'paused') return;
+  if (e.code === 'KeyH' && screen === 'exploration' && !e.repeat) {
+    showHintAndPing();
     e.preventDefault();
     return;
   }
-
-  // Block all other game input when paused
-  if (gamePaused) return;
-
-  // Answering a question in the dialogue box
-  if (handleChoiceKey(e.code)) {
-    e.preventDefault();
+  if (screen === 'dialogue') {
+    if (!e.repeat && handleChoiceKey(e.code)) {
+      e.preventDefault();
+      return;
+    }
+    if (['KeyE', 'Space', 'Enter'].includes(e.code)) {
+      e.preventDefault();
+      if (!e.repeat) advanceDialogue();
+    }
     return;
   }
-
-  keysDown[e.code] = true;
-
-  // Interact / advance dialogue
-  if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) {
     e.preventDefault();
-    if (dialogueActive) {
-      advanceDialogue();
-    } else {
-      // Check laundry first, then normal interact
-      if (!checkLaundryInteraction()) {
-        tryInteract();
-      }
-    }
+    // A key held across a blocking screen needs a fresh press after it closes.
+    if (!e.repeat) keysDown[e.code] = true;
+    return;
+  }
+  if (['KeyE', 'Space', 'Enter'].includes(e.code)) {
+    e.preventDefault();
+    if (!e.repeat && !checkLaundryInteraction()) tryInteract();
   }
 });
 
@@ -5194,8 +5381,12 @@ document.addEventListener('keyup', function (e) {
 // stays paused on return so nothing happens while the player wasn't looking.
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) {
-    if (!gamePaused && !dialogueActive && isGamePlayActive()) {
-      togglePause();
+    resetGameInput();
+    if (!gamePaused && !dialogueActive && gameSessionActive && isGamePlayActive() &&
+        !document.getElementById('numpad-overlay').classList.contains('active')) {
+      gamePaused = true;
+      document.getElementById('pause-overlay').classList.add('active');
+      syncScreenAccessibility();
     }
     if (audioCtx && audioCtx.state === 'running') {
       try { audioCtx.suspend(); } catch (e) {}
@@ -5207,19 +5398,7 @@ document.addEventListener('visibilitychange', function () {
   }
 });
 
-window.addEventListener('blur', function () {
-  // Clear all held keys so movement doesn't continue after alt-tab / focus loss
-  Object.keys(keysDown).forEach(function (key) { keysDown[key] = false; });
-  // Also stop any in-progress movement to prevent the player sliding into walls
-  if (gameState.moving) {
-    gameState.player.row = gameState.moveTo ? gameState.moveTo.row : gameState.player.row;
-    gameState.player.col = gameState.moveTo ? gameState.moveTo.col : gameState.player.col;
-    gameState.moving = false;
-    gameState.moveProgress = 0;
-    gameState.moveFrom = null;
-    gameState.moveTo = null;
-  }
-});
+window.addEventListener('blur', resetGameInput);
 
 // Mobile D-Pad
 function setupMobileControls() {
@@ -5250,6 +5429,7 @@ function setupMobileControls() {
 
     function onDown(e) {
       e.preventDefault();
+      if (getGameScreen() !== 'exploration') return;
       markPlayerActivity();
       clearDpadKeys();
       keysDown[codeByDir[dir]] = true;
@@ -5291,6 +5471,7 @@ function setupMobileControls() {
     var lastInteractPointerAt = 0;
     function doInteract(e) {
       e.preventDefault();
+      if (!['exploration', 'dialogue'].includes(getGameScreen())) return;
       if (e.type === 'click') {
         if (Date.now() - lastInteractPointerAt < 700) return;
       } else {
@@ -5330,6 +5511,7 @@ function setupSwipeControls() {
   let startX = 0, startY = 0, startT = 0;
   let dragged = false;
   let curDir = null;
+  let gestureGeneration = 0;
 
   const codeByDir = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
 
@@ -5342,7 +5524,8 @@ function setupSwipeControls() {
   }
 
   function onDown(e) {
-    if (dialogueActive || gamePaused) return;
+    if (getGameScreen() !== 'exploration') return;
+    gestureGeneration = inputGeneration;
     active = true;
     dragged = false;
     var pt = e.touches ? e.touches[0] : e;
@@ -5354,6 +5537,11 @@ function setupSwipeControls() {
 
   function onMove(e) {
     if (!active) return;
+    if (gestureGeneration !== inputGeneration || getGameScreen() !== 'exploration') {
+      active = false;
+      clearDir();
+      return;
+    }
     var pt = e.touches ? e.touches[0] : e;
     var dx = pt.clientX - startX;
     var dy = pt.clientY - startY;
@@ -5372,7 +5560,9 @@ function setupSwipeControls() {
   function onUp(e) {
     if (!active) return;
     active = false;
-    var wasTap = !dragged && (Date.now() - startT) < TAP_TIME;
+    var wasTap = e.type !== 'pointercancel' && e.type !== 'pointerleave' && e.type !== 'touchcancel' &&
+      gestureGeneration === inputGeneration && getGameScreen() === 'exploration' &&
+      !dragged && (Date.now() - startT) < TAP_TIME;
     clearDir();
     if (wasTap && !dialogueActive && !gamePaused) {
       if (!checkLaundryInteraction()) tryInteract();
@@ -5401,6 +5591,7 @@ var saveDebounceTimer = null;
 var saveIndicatorTimer = null;
 
 function saveGame() {
+  if (!gameSessionActive || !isGamePlayActive()) return;
   // Debounce saves — wait 500ms of inactivity before writing
   if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
   saveDebounceTimer = setTimeout(doSaveGame, 500);
@@ -5413,6 +5604,7 @@ function saveGameImmediate() {
 }
 
 function doSaveGame() {
+  if (!gameSessionActive || !isGamePlayActive()) return;
   const data = {
     currentFloor: gameState.currentFloor,
     player: { row: gameState.player.row, col: gameState.player.col, facing: gameState.player.facing },
@@ -5436,6 +5628,38 @@ function showSaveIndicator() {
   saveIndicatorTimer = setTimeout(function () {
     el.classList.remove('visible');
   }, 1200);
+}
+
+// Repair rewards split across dialogue callbacks by older versions. Only
+// restore items that have not already been spent unlocking their destination.
+// Work on validated load data; do not replay effects or modify the live scene.
+function repairQuestProgress(flags, inventory) {
+  function ensureItem(id) {
+    if (!inventory.includes(id)) inventory.push(id);
+  }
+  function ensureEvidence(id) {
+    if (!flags.evidence.includes(id)) flags.evidence.push(id);
+  }
+  if (flags.alice_fed === true) ensureEvidence('testimony');
+  if (flags.sofa_searched === true || flags.has_basement_key === true) {
+    flags.sofa_searched = true;
+    flags.has_basement_key = true;
+    if (!flags.basement_unlocked) ensureItem(ITEMS.BASEMENT_KEY);
+  }
+  if (flags.basement_unlocked === true) ensureEvidence('crumbs');
+  if (flags.olive_fed === true) {
+    flags.has_laundry_basket = true;
+    if (!flags.laundry_cleared) ensureItem(ITEMS.LAUNDRY_BASKET);
+    ensureEvidence('olive');
+  }
+  if (flags.laundry_cleared === true) ensureEvidence('avalanche');
+  flags.ending_pending = flags.ending_pending === true;
+  if (flags.beatrice_fed === true) {
+    ensureEvidence('confession');
+    // Legacy completion was saved before a verdict could be selected.
+    if (!flags.verdict) flags.ending_pending = true;
+  }
+  if (flags.ending_pending) flags.game_complete = false;
 }
 
 function loadGame() {
@@ -5497,7 +5721,9 @@ function loadGame() {
     if (mergedFlags.garden_visited && !mergedFlags.chapters_seen.includes('garden')) mergedFlags.chapters_seen.push('garden');
     const verdictIds = VERDICTS.map(function (v) { return v.id; });
     mergedFlags.verdict = verdictIds.includes(mergedFlags.verdict) ? mergedFlags.verdict : null;
+    repairQuestProgress(mergedFlags, inventory);
 
+    cancelFloorTransition();
     gameState.currentFloor = floorId;
     gameState.player.row = canStandHere ? savedRow : floorStart.row;
     gameState.player.col = canStandHere ? savedCol : floorStart.col;

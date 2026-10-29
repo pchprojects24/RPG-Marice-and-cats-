@@ -89,5 +89,24 @@ The game ships a web-app manifest, so you can **Add to Home Screen** (Safari sha
 - **Fixed-timestep game loop** (60 logic updates/sec) — the game runs at the same speed on 60 Hz, 90 Hz, and 120 Hz displays.
 - **Offscreen-canvas caching** for the static tile layer, minimap, and vignette — instead of procedurally redrawing ~300 tiles every frame, cutting CPU/battery use dramatically on phones.
 - Save/load via `localStorage`. Settings (volume, screen shake, particles) persist.
+- Quest exchanges commit their item, progress, and evidence together after dialogue. Interrupted exchanges can be retried; older saves missing a required key or basket are repaired on Continue. An interrupted ending resumes the confession or selected verdict reply before free roam unlocks.
+- Keyboard, D-pad, and swipe input share screen checks: exploration stops behind menus, code entry, transitions, pause, and the ending. Held input is cleared when a blocking screen opens. Only a started or successfully continued game can save, and returning to the title cancels pending autosaves.
+- Floor changes allow one transition at a time. Restarting, loading, showing the ending, or returning to the title cancels both fade timers; already queued callbacks cannot affect a later game. Arrival positions are checked before the fade and again before arrival, and the new floor is saved immediately on arrival.
+- Hidden screens are inert and excluded from the accessibility tree. The active title or dialog owns keyboard focus; Tab wraps within it, and closing a panel returns to its opener or the game. Dialogue has a keyboard-focusable Continue button and announces complete lines independently of its visual typewriter.
 - Script load order: `data/maps.js` → `data/dialogue.js` → `game-engine.js` → `game-art.js` → `game-main.js`.
 - Story data (dialogue, chapters, evidence, deduction questions, verdicts) lives in `data/dialogue.js`.
+
+## Regression checks
+
+With Node.js 20 or later, run `node --test tests/*.test.cjs`.
+These dependency-free checks execute the game scripts with a minimal DOM and
+controlled save timers. They cover interrupted exchanges, legacy-save recovery,
+all three verdicts, and an uninterrupted complete case. Input checks cover
+screen blocking, native controls, held keys, pointer and legacy touch gestures,
+focus, and safe title/Continue behavior. Transition checks cover duplicate
+requests, cancellation during either fade phase, stale callbacks, saved arrivals,
+and all authored destination positions. Accessibility checks cover focus ownership,
+Tab boundaries, native slider keys, Escape from code-entry buttons, stacked pause
+and settings, dialogue choices, ending exits, and focus restoration. The minimal
+DOM does not simulate layout, native Tab traversal, or screen-reader speech;
+browser and assistive-technology checks remain necessary.
