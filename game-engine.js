@@ -29,6 +29,11 @@ const canvas = document.getElementById('game-canvas');
 // Reassignable so static layers (tiles, minimap) can be pre-rendered into
 // offscreen canvases by temporarily pointing the shared ctx at them.
 let ctx = canvas.getContext('2d');
+var worldFrameDirty = true;
+
+function invalidateWorldFrame() {
+  worldFrameDirty = true;
+}
 
 const CANVAS_W = MAP_COLS * TILE_SIZE; // 480
 const CANVAS_H = MAP_ROWS * TILE_SIZE; // 360
@@ -43,6 +48,7 @@ canvas.height = CANVAS_H * RENDER_SCALE;
 // Scale canvas for display.
 // Reserve space for HUD and on-screen controls, with a small margin.
 function resizeCanvas() {
+  invalidateWorldFrame();
   var desktopLike = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   var vv = window.visualViewport;
@@ -856,6 +862,8 @@ preloadPortraits();
 // Hand-painted top-down character art. The procedural sprites below remain as
 // a resilient fallback while the atlas is loading or if an asset is missing.
 const characterAtlas = new Image();
+characterAtlas.onload = invalidateWorldFrame;
+characterAtlas.onerror = invalidateWorldFrame;
 characterAtlas.src = 'assets/art/character-atlas.png';
 
 function drawCharacterArt(spriteIndex, x, y, isMoving, isCat) {
@@ -1862,6 +1870,7 @@ function changeFloorTo(newFloor, row, col, facing) {
     resetGameInput();
     gameState.currentFloor = newFloor;
     gameState.player = { row: arrivalRow, col: arrivalCol, facing: arrivalFacing };
+    invalidateWorldFrame();
     trailReset();
     updateFloorLabel();
     // The destination is durable even if the page closes during the reveal.
@@ -1893,6 +1902,7 @@ function updateFloorLabel() {
 // Returns true when a tile can be stood on (not a wall, furniture, or counter).
 // Used by loadGame to validate saved player positions.
 function isWalkable(row, col, floor) {
+  if (!Number.isInteger(row) || !Number.isInteger(col)) return false;
   if (row < 0 || row >= MAP_ROWS || col < 0 || col >= MAP_COLS) return false;
   const tile = floor.grid[row][col];
   return tile !== T.WALL && tile !== T.FURNITURE && tile !== T.COUNTER;
@@ -5150,9 +5160,11 @@ function focusGameCanvas() {
 
 // The visible top screen owns focus. Inert siblings also leave the accessibility
 // tree, so an offscreen menu or ending cannot expose controls or story spoilers.
-const ACCESSIBLE_PANELS = ['title-screen', 'ending-overlay', 'numpad-overlay',
+const ACCESSIBLE_PANELS = ['save-recovery-overlay', 'new-case-overlay', 'title-screen', 'ending-overlay', 'numpad-overlay',
   'pause-overlay', 'settings-panel', 'quest-panel', 'dialogue-overlay'];
 const PANEL_INITIAL_FOCUS = {
+  'save-recovery-overlay': 'btn-cancel-recovery',
+  'new-case-overlay': 'btn-cancel-new-case',
   'title-screen': 'btn-new-game', 'ending-overlay': 'btn-keep-playing',
   'numpad-overlay': 'numpad-input', 'pause-overlay': 'btn-resume',
   'settings-panel': 'btn-close-settings', 'quest-panel': 'btn-close-quest',
@@ -5254,6 +5266,7 @@ function togglePause() {
   if (screen !== 'exploration' && screen !== 'paused') return;
   resetGameInput();
   gamePaused = !gamePaused;
+  resetFrameClock();
   document.getElementById('pause-overlay').classList.toggle('active', gamePaused);
   syncScreenAccessibility();
 }
@@ -5264,8 +5277,14 @@ function togglePause() {
 // animation frame.
 var UPDATE_STEP_MS = 1000 / 60;
 var MAX_UPDATE_STEPS = 5; // cap catch-up work after a long stall
-var lastFrameTime = 0;
+var lastFrameTime = null;
 var updateAccumulator = 0;
+var lastRenderMode = null;
+
+function resetFrameClock() {
+  lastFrameTime = null;
+  updateAccumulator = 0;
+}
 
 function updateStep() {
   if (getGameScreen() === 'exploration') {
@@ -5299,7 +5318,29 @@ function updateStep() {
 }
 
 function gameLoop(now) {
-  if (!lastFrameTime) lastFrameTime = now;
+  // Keep one lightweight frame callback so UI state changes are picked up on
+  // the next frame. CSS overlays and dialogue timers run independently.
+  requestAnimationFrame(gameLoop);
+  const mode = document.hidden || !gameSessionActive || !isGamePlayActive()
+    ? 'covered' : gamePaused ? 'paused' : 'active';
+  const changed = mode !== lastRenderMode;
+  lastRenderMode = mode;
+  if (mode !== 'active') {
+    resetFrameClock();
+    if (changed) {
+      resetGameInput();
+      document.getElementById('btn-interact').disabled = true;
+      document.getElementById('interact-prompt').classList.remove('visible');
+    }
+    // A paused game keeps a still world behind its translucent overlay.
+    // Redraw only on entry, resize, asset arrival, or a pending floor arrival.
+    if (mode === 'paused' && (changed || worldFrameDirty)) {
+      render();
+      worldFrameDirty = false;
+    }
+    return;
+  }
+  if (lastFrameTime === null) lastFrameTime = now;
   var elapsed = now - lastFrameTime;
   lastFrameTime = now;
   // Clamp huge gaps (tab was backgrounded) so we don't fast-forward the world.
@@ -5315,7 +5356,7 @@ function gameLoop(now) {
   if (steps === MAX_UPDATE_STEPS) updateAccumulator = 0;
 
   render();
-  requestAnimationFrame(gameLoop);
+  worldFrameDirty = false;
 }
 
 // ======================== INPUT HANDLING ========================
@@ -5380,6 +5421,8 @@ document.addEventListener('keyup', function (e) {
 // phone, locking the screen) and suspend audio to save battery. The game
 // stays paused on return so nothing happens while the player wasn't looking.
 document.addEventListener('visibilitychange', function () {
+  // Hidden tabs may receive no animation callbacks at all.
+  resetFrameClock();
   if (document.hidden) {
     resetGameInput();
     if (!gamePaused && !dialogueActive && gameSessionActive && isGamePlayActive() &&
@@ -5586,6 +5629,8 @@ function setupSwipeControls() {
 // ======================== SAVE / LOAD ========================
 
 const SAVE_KEY = 'marice_cats_adventure_save';
+const SAVE_BACKUP_KEY = SAVE_KEY + '_backup';
+const SAVE_REJECTED_KEY = SAVE_KEY + '_rejected';
 const SETTINGS_KEY = 'marice_cats_settings';
 var saveDebounceTimer = null;
 var saveIndicatorTimer = null;
@@ -5613,7 +5658,20 @@ function doSaveGame() {
     playTimeMs: getTotalPlayTimeMs()
   };
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    // Only validated snapshots can become a primary save or its backup.
+    validateSavedGame(data);
+    const next = JSON.stringify(data);
+    const previous = localStorage.getItem(SAVE_KEY);
+    if (previous && readSaveCandidate(previous)) {
+      localStorage.setItem(SAVE_BACKUP_KEY, previous);
+    } else {
+      // Preserve an unreadable slot before a running case replaces it.
+      if (previous) localStorage.setItem(SAVE_REJECTED_KEY, previous);
+      if (!readSaveCandidate(localStorage.getItem(SAVE_BACKUP_KEY))) {
+        localStorage.setItem(SAVE_BACKUP_KEY, next);
+      }
+    }
+    localStorage.setItem(SAVE_KEY, next);
     showSaveIndicator();
   } catch (e) {
     showToast('Save failed; check storage.');
@@ -5662,85 +5720,156 @@ function repairQuestProgress(flags, inventory) {
   if (flags.ending_pending) flags.game_complete = false;
 }
 
-function loadGame() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
+// Validate into a separate candidate before changing any live state or timers.
+// Missing optional fields are supported for older saves; malformed supplied
+// values are rejected rather than silently discarded and then autosaved.
+var lastLoadError = '';
 
-    const validFloorIds = Object.values(FLOOR_IDS);
-    const floorId = validFloorIds.includes(data.currentFloor) ? data.currentFloor : FLOOR_IDS.OUTSIDE;
-    const floor = FLOORS[floorId] || FLOORS[FLOOR_IDS.OUTSIDE];
-
-    const startsByFloor = {
-      outside: outsideStart,
-      main: mainFloorStart,
-      basement: basementStart,
-      upstairs: upstairsStart,
-      garden: gardenStart
-    };
-    const floorStart = startsByFloor[floorId] || outsideStart;
-
-    const savedRow = data.player && Number.isFinite(data.player.row) ? data.player.row : floorStart.row;
-    const savedCol = data.player && Number.isFinite(data.player.col) ? data.player.col : floorStart.col;
-    const inBounds =
-      savedRow >= 0 && savedRow < MAP_ROWS &&
-      savedCol >= 0 && savedCol < MAP_COLS;
-
-    // Recover gracefully from malformed/old save data that points to walls or invalid tiles.
-    const canStandHere = inBounds && isWalkable(savedRow, savedCol, floor);
-    const validFacing = ['up', 'down', 'left', 'right'];
-
-    const validItems = Object.values(ITEMS);
-    const inventory = Array.isArray(data.inventory)
-      ? data.inventory.filter(function (item) { return validItems.includes(item); })
-      : [];
-
-    const mergedFlags = Object.assign(freshFlags(), data.flags || {});
-    const validToyIds = ['jingle_ball', 'feather_wand', 'laser_pointer'];
-    mergedFlags.cat_toys_found = Array.isArray(mergedFlags.cat_toys_found)
-      ? Array.from(new Set(mergedFlags.cat_toys_found.filter(function (toyId) { return validToyIds.includes(toyId); })))
-      : [];
-    mergedFlags.diary_pages_found = Array.isArray(mergedFlags.diary_pages_found)
-      ? Array.from(new Set(mergedFlags.diary_pages_found.filter(function (pageId) { return DIARY_PAGE_IDS.includes(pageId); })))
-      : [];
-    mergedFlags.pet_count = Number.isFinite(mergedFlags.pet_count) ? mergedFlags.pet_count : 0;
-    const evidenceIds = EVIDENCE.map(function (ev) { return ev.id; });
-    mergedFlags.evidence = Array.isArray(mergedFlags.evidence)
-      ? Array.from(new Set(mergedFlags.evidence.filter(function (id) { return evidenceIds.includes(id); })))
-      : [];
-    mergedFlags.chapters_seen = Array.isArray(mergedFlags.chapters_seen)
-      ? mergedFlags.chapters_seen.filter(function (id) { return typeof id === 'string'; })
-      : [];
-    // Older saves predate chapter cards — don't replay chapters already lived.
-    if (floorId !== FLOOR_IDS.OUTSIDE || mergedFlags.front_door_unlocked) {
-      ['prologue', 'main'].forEach(function (k) { if (!mergedFlags.chapters_seen.includes(k)) mergedFlags.chapters_seen.push(k); });
+function validateSavedGame(data) {
+  function record(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+  function requireValid(condition, message) {
+    if (!condition) throw new Error(message);
+  }
+  function list(value, allowed, message) {
+    requireValid(Array.isArray(value) && value.every(function (id) { return allowed.includes(id); }), message);
+    return value.slice();
+  }
+  requireValid(record(data), 'The saved case has an invalid format.');
+  requireValid(Object.values(FLOOR_IDS).includes(data.currentFloor), 'The saved location is not supported.');
+  const floorId = data.currentFloor;
+  requireValid(record(data.player), 'The saved player position is missing or invalid.');
+  requireValid(isWalkable(data.player.row, data.player.col, FLOORS[floorId]),
+    'The saved position is invalid or blocked.');
+  const facing = data.player.facing === undefined ? 'down' : data.player.facing;
+  requireValid(['up', 'down', 'left', 'right'].includes(facing), 'The saved facing direction is invalid.');
+  const inventory = data.inventory === undefined ? [] : list(data.inventory, Object.values(ITEMS), 'The saved inventory is invalid.');
+  const suppliedFlags = data.flags === undefined ? {} : data.flags;
+  requireValid(record(suppliedFlags), 'The saved progress has an invalid format.');
+  const flags = freshFlags();
+  const collectionIds = {
+    cat_toys_found: ['jingle_ball', 'feather_wand', 'laser_pointer'],
+    diary_pages_found: DIARY_PAGE_IDS,
+    evidence: EVIDENCE.map(function (ev) { return ev.id; }),
+    chapters_seen: Object.keys(CHAPTERS)
+  };
+  Object.keys(suppliedFlags).forEach(function (key) {
+    requireValid(Object.prototype.hasOwnProperty.call(DEFAULT_FLAGS, key), 'The saved progress contains unsupported fields.');
+    const value = suppliedFlags[key];
+    if (typeof DEFAULT_FLAGS[key] === 'boolean') {
+      requireValid(typeof value === 'boolean', 'The saved progress contains an invalid on/off value.');
+      flags[key] = value;
+    } else if (Object.prototype.hasOwnProperty.call(collectionIds, key)) {
+      flags[key] = Array.from(new Set(list(value, collectionIds[key], 'The saved collections contain invalid entries.')));
+    } else if (key === 'pet_count') {
+      requireValid(Number.isSafeInteger(value) && value >= 0, 'The saved pet count is invalid.');
+      flags.pet_count = value;
+    } else if (key === 'verdict') {
+      requireValid(value === null || VERDICTS.some(function (v) { return v.id === value; }), 'The saved verdict is not supported.');
+      flags.verdict = value;
     }
-    if (mergedFlags.basement_unlocked && !mergedFlags.chapters_seen.includes('basement')) mergedFlags.chapters_seen.push('basement');
-    if (mergedFlags.laundry_cleared && !mergedFlags.chapters_seen.includes('upstairs')) mergedFlags.chapters_seen.push('upstairs');
-    if (mergedFlags.garden_visited && !mergedFlags.chapters_seen.includes('garden')) mergedFlags.chapters_seen.push('garden');
-    const verdictIds = VERDICTS.map(function (v) { return v.id; });
-    mergedFlags.verdict = verdictIds.includes(mergedFlags.verdict) ? mergedFlags.verdict : null;
-    repairQuestProgress(mergedFlags, inventory);
+  });
+  const playTimeMs = data.playTimeMs === undefined ? 0 : data.playTimeMs;
+  requireValid(Number.isSafeInteger(playTimeMs) && playTimeMs >= 0, 'The saved play time is invalid.');
 
-    cancelFloorTransition();
-    gameState.currentFloor = floorId;
-    gameState.player.row = canStandHere ? savedRow : floorStart.row;
-    gameState.player.col = canStandHere ? savedCol : floorStart.col;
-    gameState.player.facing = validFacing.includes(data.player && data.player.facing) ? data.player.facing : 'down';
-    gameState.inventory = inventory;
-    gameState.flags = mergedFlags;
-    playTimeOffsetMs = Number.isFinite(data.playTimeMs) && data.playTimeMs >= 0 ? data.playTimeMs : 0;
+  // Older saves predate chapter cards and atomic quest rewards. Repair only
+  // after every supplied field passes validation, using these private copies.
+  function seen(key) { if (!flags.chapters_seen.includes(key)) flags.chapters_seen.push(key); }
+  if (floorId !== FLOOR_IDS.OUTSIDE || flags.front_door_unlocked) {
+    seen('prologue');
+    seen('main');
+  }
+  if (flags.basement_unlocked) seen('basement');
+  if (flags.laundry_cleared) seen('upstairs');
+  if (flags.garden_visited) seen('garden');
+  repairQuestProgress(flags, inventory);
+  return { currentFloor: floorId,
+    player: { row: data.player.row, col: data.player.col, facing: facing },
+    inventory: inventory, flags: flags, playTimeMs: playTimeMs };
+}
 
+function loadGame() {
+  lastLoadError = '';
+  let raw;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch (e) {
+    lastLoadError = 'Browser storage could not be read. Try again when storage is available; no saved data was changed.';
+    return false;
+  }
+  if (!raw) {
+    lastLoadError = 'No saved case was found. You can begin a new investigation.';
+    return false;
+  }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    lastLoadError = 'The saved case could not be read. Your saved data has not been changed.';
+    return false;
+  }
+  let candidate;
+  try {
+    candidate = validateSavedGame(data);
+  } catch (e) {
+    lastLoadError = e.message + ' Your saved data has not been changed.';
+    return false;
+  }
+
+  cancelFloorTransition();
+  gameState.currentFloor = candidate.currentFloor;
+  gameState.player = candidate.player;
+  gameState.inventory = candidate.inventory;
+  gameState.flags = candidate.flags;
+  playTimeOffsetMs = candidate.playTimeMs;
+  return true;
+}
+
+// Read-only inspection: an invalid primary never displaces a valid backup.
+function readSaveCandidate(raw) {
+  if (!raw) return null;
+  try { return validateSavedGame(JSON.parse(raw)); } catch (e) { return null; }
+}
+
+function getSaveRecoveryOption() {
+  try {
+    const primary = localStorage.getItem(SAVE_KEY);
+    if (readSaveCandidate(primary)) return null;
+    const backup = localStorage.getItem(SAVE_BACKUP_KEY);
+    return readSaveCandidate(backup) ? { primary: primary, backup: backup } : null;
+  } catch (e) { return null; }
+}
+
+function recoverSavedGame(option) {
+  if (!option) return false;
+  try {
+    // Recheck the decision against storage so a stale dialog cannot replace
+    // a newly saved case or restore a backup that changed in another tab.
+    if (localStorage.getItem(SAVE_KEY) !== option.primary ||
+        localStorage.getItem(SAVE_BACKUP_KEY) !== option.backup ||
+        !readSaveCandidate(option.backup) || readSaveCandidate(option.primary)) {
+      lastLoadError = 'Saved progress changed. Choose Continue or try recovery again.';
+      return false;
+    }
+    if (option.primary) localStorage.setItem(SAVE_REJECTED_KEY, option.primary);
+    localStorage.setItem(SAVE_KEY, option.backup);
+    lastLoadError = '';
     return true;
   } catch (e) {
-    showToast('Could not load save.');
+    lastLoadError = 'Recovery could not be saved. Your current save is still in place; check browser storage and try again.';
     return false;
   }
 }
 
 function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { }
+  try {
+    // Clear the primary last, so a storage failure retains the active case.
+    localStorage.removeItem(SAVE_BACKUP_KEY);
+    localStorage.removeItem(SAVE_REJECTED_KEY);
+    localStorage.removeItem(SAVE_KEY);
+    return true;
+  } catch (e) { return false; }
 }
 
 // ======================== SETTINGS PERSISTENCE ========================

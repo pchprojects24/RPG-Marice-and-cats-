@@ -87,8 +87,12 @@ The game ships a web-app manifest, so you can **Add to Home Screen** (Safari sha
 - The world renders at 2× resolution so the art stays crisp when scaled to fill the screen.
 - Responsive investigation HUD, suspect portraits, redesigned dialogue staging, evidence satchel, and a mobile-specific title composition.
 - **Fixed-timestep game loop** (60 logic updates/sec) — the game runs at the same speed on 60 Hz, 90 Hz, and 120 Hz displays.
+- The frame loop skips world drawing and simulation behind the title, ending, and hidden page. Pause keeps one still frame, refreshing only for resize, character-art loading, or a pending floor arrival. Resume resets elapsed-frame timing to avoid catch-up movement. Visible gameplay, conversations, menus, and transitions retain normal rendering.
 - **Offscreen-canvas caching** for the static tile layer, minimap, and vignette — instead of procedurally redrawing ~300 tiles every frame, cutting CPU/battery use dramatically on phones.
 - Save/load via `localStorage`. Settings (volume, screen shake, particles) persist.
+- Continue is the first, focused title action when saved data exists. Starting a replacement case or replaying from the ending requires a separate confirmation, with Keep Current Case focused by default. Cancelling or pressing Escape preserves the save. Unreadable saved data is also protected from accidental replacement.
+- Save loading validates the entire candidate before changing the live game: supported floor and facing, integer walkable coordinates, known inventory and collection IDs, boolean progress flags, and nonnegative safe-integer counters/time. Missing optional legacy fields receive defaults and existing quest repairs still apply. Invalid supplied values are rejected without changing the save; a persistent title-screen alert explains the failure. The existing save format is retained.
+- Each save retains a validated previous snapshot in a local backup slot. If the primary save is unreadable or missing, the title offers Recover Previous Save with an explicit confirmation. Recovery archives the rejected primary before replacing it; cancellation preserves all slots, and a changed save invalidates an open recovery decision. Backups and archives are stored in the same browser as the primary; clearing browser storage removes them. Starting a new case clears the old case slots after confirmation.
 - Quest exchanges commit their item, progress, and evidence together after dialogue. Interrupted exchanges can be retried; older saves missing a required key or basket are repaired on Continue. An interrupted ending resumes the confession or selected verdict reply before free roam unlocks.
 - Keyboard, D-pad, and swipe input share screen checks: exploration stops behind menus, code entry, transitions, pause, and the ending. Held input is cleared when a blocking screen opens. Only a started or successfully continued game can save, and returning to the title cancels pending autosaves.
 - Floor changes allow one transition at a time. Restarting, loading, showing the ending, or returning to the title cancels both fade timers; already queued callbacks cannot affect a later game. Arrival positions are checked before the fade and again before arrival, and the new floor is saved immediately on arrival.
@@ -109,4 +113,14 @@ and all authored destination positions. Accessibility checks cover focus ownersh
 Tab boundaries, native slider keys, Escape from code-entry buttons, stacked pause
 and settings, dialogue choices, ending exits, and focus restoration. The minimal
 DOM does not simulate layout, native Tab traversal, or screen-reader speech;
-browser and assistive-technology checks remain necessary.
+browser and assistive-technology checks remain necessary. Render-loop checks
+cover idle draw counts, pause/resume timing, hidden pages, paused scene refreshes,
+and fixed-step timing on 60 and 120 Hz displays. New-case checks cover safe
+default focus, exact save preservation on cancellation, explicit replacement,
+unreadable saves, storage-read failures, saves appearing after page load,
+ending replay, and stale confirmation actions. Save-validation checks cover
+malformed structures and values, unchanged stored bytes and live state on failure,
+legacy defaults and repairs, valid destinations, and successful retry. Recovery
+checks cover snapshot rotation, invalid save protection, explicit recovery,
+archive preservation, storage-write failures, stale decisions, keyboard focus,
+and clearing case slots on a confirmed new game.

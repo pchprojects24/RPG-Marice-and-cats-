@@ -1963,3 +1963,43 @@ html, body {
   outline: 3px solid #ffe092;
   outline-offset: 3px;
 }
+
+/* Save replacement requires a separate, clearly labelled decision. */
+#new-case-overlay,
+#save-recovery-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 210;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 7, 12, .88);
+}
+#new-case-overlay.active, #save-recovery-overlay.active { display: flex; }
+#new-case-box, #save-recovery-box {
+  width: min(100%, 480px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 28px;
+  box-sizing: border-box;
+  border: 1px solid #ac8558;
+  border-radius: 16px;
+  background: #211923;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  color: #f8ead5;
+}
+#new-case-heading, #save-recovery-heading { margin: 0 0 14px; font-size: 24px; }
+#new-case-description, #save-recovery-description { margin: 0 0 24px; font: 16px/1.6 Georgia, serif; }
+#new-case-box .title-actions, #save-recovery-box .title-actions { align-items: stretch; flex-direction: column; }
+
+#save-load-error {
+  max-width: 440px;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid #e2bd78;
+  background: rgba(26, 18, 25, .92);
+  color: #f8ead5;
+  font: 14px/1.5 'Outfit', sans-serif;
+}
+#save-load-error:empty { display: none; }

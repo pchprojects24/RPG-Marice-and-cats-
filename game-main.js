@@ -82,7 +82,97 @@ function hasSavedGame() {
   }
 }
 
+let saveRecoveryRequest = null;
+
+function refreshSaveRecovery() {
+  const option = getSaveRecoveryOption();
+  document.getElementById('btn-recover-save').style.display = option ? 'inline-block' : 'none';
+  return option;
+}
+
+function requestSaveRecovery() {
+  if (newCaseRequest || saveRecoveryRequest || document.getElementById('title-screen').style.display === 'none') return;
+  saveRecoveryRequest = refreshSaveRecovery();
+  if (!saveRecoveryRequest) {
+    showTitleScreen();
+    focusActivePanel();
+    document.getElementById('save-load-error').textContent = 'No usable previous save is available.';
+    return;
+  }
+  document.getElementById('save-recovery-overlay').classList.add('active');
+  syncScreenAccessibility();
+}
+
+function cancelSaveRecovery() {
+  if (!saveRecoveryRequest) return;
+  saveRecoveryRequest = null;
+  document.getElementById('save-recovery-overlay').classList.remove('active');
+  syncScreenAccessibility();
+  document.getElementById('btn-recover-save').focus({ preventScroll: true });
+}
+
+function confirmSaveRecovery() {
+  if (!saveRecoveryRequest) return;
+  const option = saveRecoveryRequest;
+  cancelSaveRecovery();
+  if (!recoverSavedGame(option)) {
+    showTitleScreen();
+    focusActivePanel();
+    document.getElementById('save-load-error').textContent = lastLoadError;
+    return;
+  }
+  continueGame();
+}
+
+// Only the explicit confirmation action may replace an existing case.
+let newCaseRequest = null;
+
+function requestNewCase(source) {
+  if (newCaseRequest || saveRecoveryRequest) return;
+  const fromEnding = source === 'ending';
+  if (fromEnding ? !document.getElementById('ending-overlay').classList.contains('active')
+    : document.getElementById('title-screen').style.display === 'none') return;
+  let needsConfirmation = fromEnding;
+  try {
+    // Even an unreadable save should not be discarded without a choice.
+    needsConfirmation = needsConfirmation || !!localStorage.getItem(SAVE_KEY) ||
+      !!localStorage.getItem(SAVE_BACKUP_KEY) || !!localStorage.getItem(SAVE_REJECTED_KEY);
+  } catch (e) {
+    needsConfirmation = true;
+  }
+  if (!needsConfirmation) {
+    startNewGame();
+    return;
+  }
+  newCaseRequest = source;
+  resetGameInput();
+  document.getElementById('new-case-overlay').classList.add('active');
+  syncScreenAccessibility();
+}
+
+function cancelNewCase() {
+  if (!newCaseRequest) return;
+  const opener = newCaseRequest === 'ending' ? 'btn-restart' : 'btn-new-game';
+  newCaseRequest = null;
+  document.getElementById('new-case-overlay').classList.remove('active');
+  syncScreenAccessibility();
+  document.getElementById(opener).focus({ preventScroll: true });
+}
+
+function confirmNewCase() {
+  if (!newCaseRequest || !document.getElementById('new-case-overlay').classList.contains('active')) return;
+  newCaseRequest = null;
+  document.getElementById('new-case-overlay').classList.remove('active');
+  startNewGame();
+}
+
 function showTitleScreen() {
+  saveRecoveryRequest = null;
+  document.getElementById('save-recovery-overlay').classList.remove('active');
+  document.getElementById('save-load-error').textContent = '';
+  newCaseRequest = null;
+  document.getElementById('new-case-overlay').classList.remove('active');
+  resetFrameClock();
   cancelFloorTransition();
   resetGameInput();
   gameSessionActive = false;
@@ -93,17 +183,36 @@ function showTitleScreen() {
   // Re-evaluate whether a save exists without mutating the live game state.
   var continueBtn = document.getElementById('btn-continue');
   if (continueBtn) {
-    continueBtn.style.display = hasSavedGame() ? 'inline-block' : 'none';
+    const saved = hasSavedGame();
+    const recovery = refreshSaveRecovery();
+    continueBtn.style.display = saved ? 'inline-block' : 'none';
+    const newButton = document.getElementById('btn-new-game');
+    newButton.classList.toggle('secondary', saved || !!recovery);
+    newButton.textContent = saved || recovery ? 'Start New Case' : 'Begin the Investigation';
+    PANEL_INITIAL_FOCUS['title-screen'] = saved ? 'btn-continue' : recovery ? 'btn-recover-save' : 'btn-new-game';
   }
   syncScreenAccessibility();
 }
 
 function hideTitleScreen() {
+  document.getElementById('save-load-error').textContent = '';
+  resetFrameClock();
   document.getElementById('title-screen').style.display = 'none';
   syncScreenAccessibility();
 }
 
 function startNewGame() {
+  if (!clearSave()) {
+    syncScreenAccessibility();
+    document.getElementById('save-load-error').textContent = 'Could not start a new case. Check browser storage and try again.';
+    showToast('Could not replace the saved case; check browser storage.');
+    return false;
+  }
+  saveRecoveryRequest = null;
+  document.getElementById('save-recovery-overlay').classList.remove('active');
+  hideEnding();
+  newCaseRequest = null;
+  document.getElementById('new-case-overlay').classList.remove('active');
   cancelFloorTransition();
   gameSessionActive = false;
   pendingIntroSession = null;
@@ -113,7 +222,6 @@ function startNewGame() {
   document.getElementById('pause-overlay').classList.remove('active');
   initAudio();
   markPlayerActivity();
-  clearSave();
   // Reset transient runtime state so restart/new game is always clean.
   moveCount = 0;
   dialogueActive = false;
@@ -176,8 +284,10 @@ function checkHideControlsHint() {
 }
 
 function continueGame() {
+  if (newCaseRequest || saveRecoveryRequest) return;
   if (!loadGame()) {
-    showToast(hasSavedGame() ? 'Could not load saved game.' : 'No save to continue.', 2000);
+    document.getElementById('save-load-error').textContent = lastLoadError;
+    refreshSaveRecovery();
     return;
   }
 
@@ -273,26 +383,33 @@ function init() {
 
   // Title screen buttons
   document.getElementById('btn-new-game').addEventListener('click', function () {
-    if (document.getElementById('title-screen').style.display !== 'none') startNewGame();
+    requestNewCase('title');
   });
 
   // Always wire Continue: a save can appear after page load (start a case,
   // quit to title) and the button must work then too.
   const continueBtn = document.getElementById('btn-continue');
   continueBtn.addEventListener('click', function () {
-    if (document.getElementById('title-screen').style.display !== 'none') continueGame();
+    if (!newCaseRequest && document.getElementById('title-screen').style.display !== 'none') continueGame();
   });
+
+  document.getElementById('btn-recover-save').addEventListener('click', requestSaveRecovery);
+  document.getElementById('btn-cancel-recovery').addEventListener('click', cancelSaveRecovery);
+  document.getElementById('btn-confirm-recovery').addEventListener('click', confirmSaveRecovery);
+
+  document.getElementById('btn-cancel-new-case').addEventListener('click', cancelNewCase);
+  document.getElementById('btn-confirm-new-case').addEventListener('click', confirmNewCase);
 
   // Ending screen restart
   document.getElementById('btn-restart').addEventListener('click', function () {
-    if (document.getElementById('ending-overlay').classList.contains('active')) restartGame();
+    requestNewCase('ending');
   });
 
   // Ending screen — keep playing (free roam with the cat parade)
   var btnKeepPlaying = document.getElementById('btn-keep-playing');
   if (btnKeepPlaying) {
     btnKeepPlaying.addEventListener('click', function () {
-      if (!document.getElementById('ending-overlay').classList.contains('active')) return;
+      if (newCaseRequest || !document.getElementById('ending-overlay').classList.contains('active')) return;
       resetGameInput();
       hideEnding();
       freeRoam = true;
@@ -305,7 +422,7 @@ function init() {
   var btnEndingTitle = document.getElementById('btn-ending-title');
   if (btnEndingTitle) {
     btnEndingTitle.addEventListener('click', function () {
-      if (!document.getElementById('ending-overlay').classList.contains('active')) return;
+      if (newCaseRequest || !document.getElementById('ending-overlay').classList.contains('active')) return;
       hideEnding();
       stopMusic();
       stopAmbient();
@@ -370,6 +487,16 @@ function init() {
   // Escape closes Quest/Settings panel, or toggles pause
   document.addEventListener('keydown', function (e) {
     if (e.code !== 'Escape' || e.repeat || e.defaultPrevented) return;
+    if (saveRecoveryRequest) {
+      cancelSaveRecovery();
+      e.preventDefault();
+      return;
+    }
+    if (newCaseRequest) {
+      cancelNewCase();
+      e.preventDefault();
+      return;
+    }
     if (getGameScreen() === 'inactive' || getGameScreen() === 'hidden' || getGameScreen() === 'transition') return;
     resetGameInput();
     if (document.getElementById('numpad-overlay').classList.contains('active')) {

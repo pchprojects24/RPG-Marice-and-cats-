@@ -174,10 +174,36 @@
           Interrogate the cats. Follow the crumbs. Crack the case.
         </div>
         <div class="title-actions">
+          <button id="btn-continue" class="title-btn" style="display: none">Continue Case</button>
+          <button id="btn-recover-save" class="title-btn" style="display: none" type="button">Recover Previous Save</button>
           <button id="btn-new-game" class="title-btn">Begin the Investigation</button>
-          <button id="btn-continue" class="title-btn secondary">Continue Case</button>
         </div>
+        <p id="save-load-error" role="alert" aria-atomic="true"></p>
         <div class="title-controls">Move with WASD or arrow keys &nbsp;•&nbsp; Press E to investigate</div>
+      </div>
+    </div>
+
+    <!-- Recovery only runs after an explicit choice. -->
+    <div id="save-recovery-overlay" role="alertdialog" aria-modal="true" aria-labelledby="save-recovery-heading" aria-describedby="save-recovery-description" aria-hidden="true" tabindex="-1" inert>
+      <div id="save-recovery-box">
+        <h2 id="save-recovery-heading">Recover the previous save?</h2>
+        <p id="save-recovery-description">Resume your last usable backup. It may have less progress than your latest save. A copy of the current unreadable save will be kept in this browser.</p>
+        <div class="title-actions">
+          <button id="btn-cancel-recovery" class="title-btn" type="button">Keep Current Save</button>
+          <button id="btn-confirm-recovery" class="title-btn secondary" type="button">Recover &amp; Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explicit replacement of an existing case -->
+    <div id="new-case-overlay" role="alertdialog" aria-modal="true" aria-labelledby="new-case-heading" aria-describedby="new-case-description" aria-hidden="true" tabindex="-1" inert>
+      <div id="new-case-box">
+        <h2 id="new-case-heading">Start a new case?</h2>
+        <p id="new-case-description">Starting a new case will replace your saved investigation, including its clues, collected items, and progress. This cannot be undone.</p>
+        <div class="title-actions">
+          <button id="btn-cancel-new-case" class="title-btn" type="button">Keep Current Case</button>
+          <button id="btn-confirm-new-case" class="title-btn secondary" type="button">Replace &amp; Start New</button>
+        </div>
       </div>
     </div>
 

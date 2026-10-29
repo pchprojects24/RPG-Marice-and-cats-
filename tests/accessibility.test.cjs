@@ -174,6 +174,7 @@ test('ending actions release hidden controls for free roam, restart, and title',
     const g = game();
     g.run('showEnding()');
     el(g, action).dispatch('click');
+    if (action === 'btn-restart') el(g, 'btn-confirm-new-case').dispatch('click');
     onlyPanel(g, action === 'btn-ending-title' ? 'title-screen' : null);
     focused(g, action === 'btn-ending-title' ? 'btn-new-game' : 'game-canvas');
   }
